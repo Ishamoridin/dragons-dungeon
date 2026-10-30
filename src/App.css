@@ -38,6 +38,102 @@
 .wound-effective-value {
   font-variant-numeric: tabular-nums;
 }
+
+.ability-trackers {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px dashed var(--skin-border, rgba(255, 255, 255, 0.2));
+  border-radius: 8px;
+}
+
+.ability-trackers-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--skin-muted, #aaa3b4);
+}
+
+.ability-trackers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr));
+  gap: 8px;
+}
+
+.ability-tracker {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.ability-tracker > span:first-child {
+  overflow-wrap: anywhere;
+}
+
+.ability-tracker-add {
+  align-content: center;
+  border-style: dashed;
+}
+
+.ability-tracker-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 6px;
+}
+
+.ability-tracker-controls input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.25));
+  border-radius: 4px;
+}
+
+.ability-tracker-controls button {
+  display: grid;
+  place-items: center;
+  min-height: 26px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.25));
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ability-tracker-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ability-tracker-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ability-tracker-suggestions button {
+  padding: 3px 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--skin-accent, #8967ff);
+  border-radius: 999px;
+  cursor: pointer;
+}
 .settings-menu {
   position: relative;
 }

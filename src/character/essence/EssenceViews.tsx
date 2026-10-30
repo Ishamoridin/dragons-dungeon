@@ -21,6 +21,7 @@ import { SheetArt, SheetEmblem, type ArtKind } from './SheetArt'
 import { ArmourPanel, InjuriesPanel, InventoryPanel } from './EssenceInventory'
 import EssenceTree from './EssenceTree'
 import { EssenceCombatModule, clampCurrent, type CurrentValues, type ResourceKey } from './EssenceCombat'
+import AbilityTrackers from './AbilityTrackers'
 import RollButton from './RollButton'
 import { d20Roll, toRoll } from './Roll20'
 
@@ -693,6 +694,7 @@ export function EssenceSheetBody({
             {weapon.Details && <p>{weapon.Details}</p>}
             {weapon.Pact.Name && <p><strong>Pact: {weapon.Pact.Name}.</strong> {weapon.Pact.Description} {weapon.Pact.Effect}</p>}
             {weapon.Curse.Name && <p><strong>Curse: {weapon.Curse.Name}.</strong> {weapon.Curse.Description} {weapon.Curse.Effect}</p>}
+            <AbilityTrackers abilityKey={`weapon:${weapon.Name}`} sourceText={`${weapon.Details} ${weapon.Pact.Effect} ${weapon.Curse.Effect}`} trackers={data.AbilityTrackers?.[`weapon:${weapon.Name}`]} onEdit={isDm ? onEditData : undefined} />
           </details>
         ))}
       </section>
@@ -720,6 +722,7 @@ export function EssenceSheetBody({
                 <span>Aligned <strong>{stage.AlignedEssence} ({stage.EssenceInvested})</strong></span>
               </div>
               <p>{stage.Details}</p>
+              <AbilityTrackers abilityKey={`resero:${stage.Stage}`} sourceText={stage.Details} trackers={data.AbilityTrackers?.[`resero:${stage.Stage}`]} onEdit={isDm ? onEditData : undefined} />
             </details>
           )
         })}
@@ -747,6 +750,7 @@ export function EssenceSheetBody({
                   <span>Essence <strong>{spell.Essence}</strong></span>
                 </div>
                 <p>{spell.Effect}</p>
+                <AbilityTrackers abilityKey={`spell:${spell.Path}:${spell.Name}`} sourceText={spell.Effect} trackers={data.AbilityTrackers?.[`spell:${spell.Path}:${spell.Name}`]} onEdit={isDm ? onEditData : undefined} />
               </details>
             ))}
           </div>
@@ -767,6 +771,7 @@ export function EssenceSheetBody({
               {toRoll(technique.Name, 'Damage', technique.Damage) && <span>Damage <strong>{technique.Damage}</strong> <RollButton roll={toRoll(technique.Name, 'Damage', technique.Damage)!} /></span>}
             </div>
             <p>{technique.Details}</p>
+            <AbilityTrackers abilityKey={`technique:${technique.Name}`} sourceText={technique.Details} trackers={data.AbilityTrackers?.[`technique:${technique.Name}`]} onEdit={isDm ? onEditData : undefined} />
           </details>
         ))}
       </section>

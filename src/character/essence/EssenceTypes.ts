@@ -135,6 +135,8 @@ export type EssenceCharacterData = {
   Wearables: { mask: number; badge: number; talisman: number; pouch: number; charm: number }
   SheetBonuses: { hp: number; reiryoku: number; willpower: number; armour: number; initiative: number }
   TemporaryResources?: Partial<Record<'hp' | 'reiryoku' | 'willpower', { Current?: number; Max?: number }>>
+  // Named long-term counters (charges, stacks, ranks...) keyed by ability, e.g. "technique:Spirit Hardened (III)".
+  AbilityTrackers?: Record<string, Record<string, number>>
   Essences: EssenceHolding[]
   Mastery: number
   PotentialStored: number
