@@ -16,6 +16,10 @@ The API listens on loopback port 3001. Vite proxies `/api` requests to it. Initi
 
 Never commit `.env`, passwords, or connection strings containing real credentials. Only variables prefixed with `PUBLIC_` can be exposed through Vite. Initial account credentials are used by the server, not shipped in the client.
 
+## Accounts
+
+The sign-in screen includes public registration with email, account login, and password. New registrations are always player accounts; public signup cannot grant DM permissions. Emails and logins must be unique. Passwords require at least 12 characters and are stored as salted Argon2id hashes. The password suggestion button generates a 24-character password locally using browser cryptography. Registration is rate-limited; email delivery verification and password recovery are not implemented yet.
+
 ## Checks
 
 - `npm run build`: TypeScript checks and production frontend build.
@@ -25,6 +29,14 @@ Never commit `.env`, passwords, or connection strings containing real credential
 ## Revision Handling
 
 Saved characters have numeric versions. Undo restores the last database-saved change only when no newer edit would be overwritten. DMs can compare conflicting copies and choose values field by field; independent changes merge automatically. Arrays are selected as complete values to avoid corrupting list positions.
+
+The DM character modal can add or remove tracked Essence quantities. It also provides current/max HP, Reiryoku, and Willpower fields with per-pool Apply controls. These values are saved separately as temporary overrides, leaving attributes and permanent bonuses unchanged. Reset temporary values clears the overrides and restores derived maxima with full current pools. These saves participate in version history and Undo.
+
+## Roll20 Combat Rolls
+
+The summary combat grid has three rows: Defense/Dodge/Armour, Ranged/Weaponry/Brawl, and Initiative/Reiatsu-Mod/Reishi-Mod. All tiles except Initiative copy a `/roll 1d20` command with the current modifier. Right-click copies a Roll20 macro instead.
+
+Direct submission to other browser tabs requires the optional [Roll20 Bridge](browser-extension/roll20-bridge/README.md). Load it unpacked into Chrome or Edge, then reload the app and Roll20 editor tabs. It attempts submission to every open Roll20 editor in that browser profile, without replacing unfinished chat drafts. Without the bridge, the roll remains available to paste from the clipboard.
 
 ## Current Scope
 

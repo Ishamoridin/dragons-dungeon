@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import RegisterModal from './RegisterModal'
 import '../App.css'
 
 type LoginScreenProps = {
@@ -10,6 +11,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [registerOpen, setRegisterOpen] = useState(false)
+  const [notice, setNotice] = useState('')
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -33,6 +36,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       <section className="login-panel">
         <p className="eyebrow">Dragon's Dungeon</p>
         <h1>Sign in</h1>
+        {notice && <p className="registration-status" role="status">{notice}</p>}
         <form className="login-form" onSubmit={submit}>
           <label>
             Username
@@ -58,7 +62,14 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
+        <button type="button" className="register-trigger" disabled={isSubmitting} onClick={() => { setError(''); setNotice(''); setRegisterOpen(true) }}>Register</button>
       </section>
+      {registerOpen && <RegisterModal onClose={() => setRegisterOpen(false)} onRegistered={(login) => {
+        setUsername(login)
+        setPassword('')
+        setRegisterOpen(false)
+        setNotice('Account created. Sign in to continue.')
+      }} />}
     </main>
   )
 }

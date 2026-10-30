@@ -11,6 +11,7 @@ const username = z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/)
 const password = z.string().min(12).max(256)
 const accountInput = z.object({ Username: username, Password: password, Role: z.enum(['player', 'dm']) }).strict()
 const loginInput = z.object({ username: z.string().min(1).max(64), password: z.string().min(1).max(256) }).strict()
+const registrationInput = z.object({ email: z.string().trim().toLowerCase().email().max(254), username, password }).strict()
 const accountUpdate = z.object({ Username: username.optional(), Password: password.optional(), PreferredSkin: z.enum(['basalt', 'tideglass', 'wildwood', 'moonstone', 'matrix', 'sao', 'lcars']).optional(), CurrentPassword: z.string().max(256).optional() }).strict()
 const resourceKinds = new Set(['campaigns', 'items', 'techniques', 'development', 'systems'])
 const systemData = z.object({
@@ -36,6 +37,7 @@ function safeData(value, depth = 0) {
 export async function initializeDatabase(db) {
   await Promise.all([
     db.collection('users').createIndex({ UsernameKey: 1 }, { unique: true }),
+    db.collection('users').createIndex({ Email: 1 }, { unique: true, partialFilterExpression: { Email: { $type: 'string' } } }),
     db.collection('users').createIndex({ Id: 1 }, { unique: true }),
     db.collection('sessions').createIndex({ Digest: 1 }, { unique: true }),
     db.collection('sessions').createIndex({ ExpiresAt: 1 }, { expireAfterSeconds: 0 }),
@@ -86,6 +88,16 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     return record
   }
 
+  app.post('/api/auth/register', rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many registration attempts. Please try again later.' } }), async (req, res) => {
+    const input = registrationInput.parse(req.body)
+    const user = {
+      Id: randomUUID(), Username: input.username, UsernameKey: input.username.toLowerCase(),
+      Email: input.email, EmailVerified: false, Role: 'player',
+      PasswordHash: await hashPassword(input.password), CreatedAt: new Date().toISOString(),
+    }
+    await users.insertOne(user)
+    res.status(201).json(publicUser(user))
+  })
   app.post('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false }), async (req, res) => {
     const input = loginInput.parse(req.body)
     const user = await users.findOne({ UsernameKey: input.username.trim().toLowerCase() })
@@ -290,7 +302,7 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   app.use('/api', (req, res) => res.status(404).json({ error: 'Endpoint not found.' }))
   app.use((error, req, res, next) => {
     const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : error.status ?? 500
-    res.status(status).json({ error: error instanceof z.ZodError ? 'Invalid or missing fields.' : error.code === 11000 ? 'Username already exists.' : status >= 500 ? 'Unable to complete the request.' : error.message })
+    res.status(status).json({ error: error instanceof z.ZodError ? 'Invalid or missing fields.' : error.code === 11000 ? 'Username or email is already in use.' : status >= 500 ? 'Unable to complete the request.' : error.message })
   })
   return app
 }
