@@ -1,0 +1,3 @@
+export type Difference = { Path: string[]; Local?: unknown; Server?: unknown; Base?: unknown; LocalExists: boolean; ServerExists: boolean }
+export function mergeCopies(base: Record<string, unknown> | null, local: Record<string, unknown>, server: Record<string, unknown>): { merged: Record<string, unknown>; differences: Difference[] }
+export function resolveCopies(base: Record<string, unknown> | null, local: Record<string, unknown>, server: Record<string, unknown>, choices: ('local' | 'server')[]): Record<string, unknown>
