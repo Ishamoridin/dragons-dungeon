@@ -1,3 +1,79 @@
+.new-system-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.new-system-button,
+.new-system-footer button {
+  padding: 8px 12px;
+  border: 1px solid var(--skin-border, #555);
+  border-radius: 6px;
+  background: var(--skin-panel-bg, #19171f);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.new-system-footer button[type="submit"] {
+  border-color: var(--skin-accent, #8967ff);
+}
+
+.new-system-form label {
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.new-system-modal {
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+.new-system-form,
+.new-system-form fieldset,
+.new-system-form label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.new-system-form {
+  margin-top: 16px;
+  gap: 16px;
+}
+
+.new-system-form fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  gap: 14px;
+}
+
+.new-system-form input,
+.new-system-form textarea,
+.new-system-form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--skin-border, #555);
+  border-radius: 4px;
+  background: var(--skin-panel-bg, #19171f);
+  color: inherit;
+  font: inherit;
+}
+
+.new-system-form textarea {
+  resize: vertical;
+}
+
+.new-system-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .revision-toolbar {
   position: sticky;
   top: 0;

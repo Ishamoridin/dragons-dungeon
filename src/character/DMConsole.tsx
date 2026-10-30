@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { resourceList, saveResource } from './Api'
+import NewSystemModal from './NewSystemModal'
 import type { CampaignAction, CampaignEventType, NPCFactionGroup } from './Campaign'
 import type Person from './Person'
 import { PlayerClass } from './PlayerClass'
@@ -19,7 +22,7 @@ import {
 import type { User } from './User'
 import PageSkinSelector from './PageSkinSelector'
 import type { PageSkin } from './PageSkin'
-import { DEFAULT_STAT_SYSTEM_ID, STAT_SYSTEMS } from './StatSystems'
+import { DEFAULT_STAT_SYSTEM_ID, STAT_SYSTEMS, type StatSystem } from './StatSystems'
 import { EssenceActions, EssenceMiniSheet, EssenceSheetBody } from './essence/EssenceViews'
 import { computeEssenceStats, damageLabel, ESSENCE_ZODIACS, RESERO_ORDER, spiritWeaponLabel, toParagraphs, ZODIAC_ACTIVE_COST } from './essence/EssenceSystem'
 import type { EssenceCharacterData, EssenceTechnique } from './essence/EssenceTypes'
@@ -1242,6 +1245,8 @@ function FactionModal({
 export default function DMConsole({ user, onSignOut, skin, onSkinChange }: DMConsoleProps) {
   const [characters, setCharacters] = useState<CharacterSheetRecord[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [systems, setSystems] = useState<StatSystem[]>(() => [...STAT_SYSTEMS, ...resourceList<StatSystem>('systems')])
+  const [newSystemOpen, setNewSystemOpen] = useState(false)
   const [selectedSystemId, setSelectedSystemId] = useState(DEFAULT_STAT_SYSTEM_ID)
   const [selectedCampaignName, setSelectedCampaignName] = useState('')
   const [campaignPage, setCampaignPage] = useState<CampaignPage>('Players')
@@ -1266,8 +1271,11 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange }: DMCon
     try {
       const rows = await refreshCharacterSheets(user)
       setCharacters(rows)
+      const availableSystems = [...STAT_SYSTEMS, ...resourceList<StatSystem>('systems')]
+      setSystems(availableSystems)
+      setSelectedSystemId((selected) => availableSystems.some((system) => !system.Hidden && system.Id === selected) ? selected : DEFAULT_STAT_SYSTEM_ID)
       // Campaigns a stat system defines stay listed even when every character in them has been deleted.
-      const names = [...new Set([...STAT_SYSTEMS.flatMap((system) => system.CampaignNames), ...rows.map((row) => row.CampaignName)])]
+      const names = [...new Set([...availableSystems.flatMap((system) => system.CampaignNames), ...rows.map((row) => row.CampaignName)])]
       setSelectedCampaignName((selected) => names.includes(selected) ? selected : names[0] ?? '')
       setCampaigns((existing) => names.map((name) => {
         const current = existing.find((campaign) => campaign.Name === name)
@@ -1421,8 +1429,9 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange }: DMCon
 
   const selectedCharacter = characters.find((record) => record.Id === selectedCharacterId) ?? null
   const previewCharacter = characters.find((record) => record.Id === previewCharacterId) ?? null
-  const activeSystem = STAT_SYSTEMS.find((system) => system.Id === selectedSystemId) ?? STAT_SYSTEMS[0]
-  const isEssenceSystem = activeSystem.Id === 'essence'
+  const visibleSystems = systems.filter((system) => !system.Hidden)
+  const activeSystem = visibleSystems.find((system) => system.Id === selectedSystemId) ?? visibleSystems[0]
+  const isEssenceSystem = activeSystem.Ruleset === 'essence'
   const systemCampaigns = campaigns.filter((campaign) => activeSystem.CampaignNames.includes(campaign.Name))
   const selectedCampaign = systemCampaigns.find((campaign) => campaign.Name === selectedCampaignName) ?? systemCampaigns[0] ?? null
   const campaignCharacters = selectedCampaign
@@ -1517,9 +1526,10 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange }: DMCon
                 setCampaignPage('Players')
               }}
             >
-              {STAT_SYSTEMS.map((system) => <option key={system.Id} value={system.Id}>{system.Name}</option>)}
+              {visibleSystems.map((system) => <option key={system.Id} value={system.Id}>{system.Name}</option>)}
             </select>
           </label>
+          <button type="button" className="new-system-button" onClick={() => setNewSystemOpen(true)}><Plus size={16} aria-hidden="true" />New System</button>
           <PageSkinSelector value={skin} onChange={onSkinChange} />
           <span className="database-status" role="status" aria-live="polite">{status}</span>
           <span className="signed-in-user">{user.Username} · DM</span>
@@ -1527,6 +1537,16 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange }: DMCon
         </div>
       </header>
 
+      {newSystemOpen && <NewSystemModal systems={systems} onClose={() => setNewSystemOpen(false)} onSave={async (system) => {
+        await saveResource('systems', system.Id, system)
+        setSystems((current) => [...current, system])
+        setCampaigns((current) => [...current, ...system.CampaignNames.map((name) => new Campaign(name))])
+        setSelectedSystemId(system.Id)
+        setSelectedCampaignName(system.CampaignNames[0])
+        setCampaignPage('Players')
+        setStatus(`Created ${system.Name}`)
+        setNewSystemOpen(false)
+      }} />}
       {error && <p className="dm-console-error" role="alert">{error}</p>}
       {systemCampaigns.length === 0 && (
         <div className="dm-empty-state"><h2>No campaigns in the {activeSystem.Name} stat system</h2></div>

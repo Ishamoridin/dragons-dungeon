@@ -28,6 +28,8 @@ Saved characters have numeric versions. Undo restores the last database-saved ch
 
 ## Current Scope
 
+The DM stat-system selector starts with Essence. The legacy Default system is named Private and hidden from that selector; Frontier is no longer registered. Existing character records are retained. The New System dialog saves a DM-owned system with a name, description, rules template (Essence or Private), and campaign names. Custom systems persist in MongoDB and participate in Undo and conflict handling. This dialog selects an existing rules engine; it does not yet define arbitrary attributes or formulas.
+
 Character saves and API-owned resources support persistence, history, and ownership checks. Some campaign, catalog, and technique screens still use local in-memory stores and are not yet wired to those resource endpoints. Unsaved form edits and transient combat values are not covered by database Undo.
 
 The Vite development server is not a production hosting setup. Production deployment requires HTTPS, a configured `APP_ORIGIN`, `NODE_ENV=production` for secure cookies, a frontend hosting strategy, and a dependency/security review.
