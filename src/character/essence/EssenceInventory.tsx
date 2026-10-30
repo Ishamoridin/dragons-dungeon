@@ -13,6 +13,15 @@ type Edit = (mutate: (draft: EssenceCharacterData) => void) => void
 const fmt = (value: number): string => Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, '')
 const signed = (value: number): string => (value > 0 ? `+${fmt(value)}` : fmt(value))
 
+const armourTooltip = (piece: EssenceArmourPiece): string => [
+  piece.Name,
+  [piece.Slot, piece.Type].filter(Boolean).join(' · '),
+  `Armour ${fmt(piece.ArmourValue + piece.ArmourMod)}${piece.ArmourMod ? ` (${fmt(piece.ArmourValue)} base, ${signed(piece.ArmourMod)} modifier)` : ''}`,
+  `Dodge ${signed(piece.DodgeMod)} · Defense ${signed(piece.DefenseMod)}`,
+  `Athletics ${signed(piece.AthleticsMod)} · Max Reiryoku ${signed(piece.MaxReiMod)}`,
+  `Burden ${fmt(piece.Burden)}`,
+].join('\n')
+
 function LabeledField({ label, value, set, type = 'text' }: { label: string; value: string; set: (value: string) => void; type?: string }) {
   const id = useId()
   return (
@@ -236,7 +245,7 @@ export function ArmourPanel({ data, onEdit }: { data: EssenceCharacterData; onEd
     if (areas.length === 0) { other.push(piece); return }
     areas.forEach((area) => {
       equipped[area] ??= piece
-      titles[area] = titles[area] ? `${titles[area]}, ${piece.Name}` : piece.Name;
+      titles[area] = titles[area] ? `${titles[area]}\n\n${armourTooltip(piece)}` : armourTooltip(piece);
       (parts[area] ??= []).push(
         <span
           key={`${area}-${piece.Slot}-${piece.Name}-${index}`}
@@ -292,7 +301,7 @@ export function ArmourPanel({ data, onEdit }: { data: EssenceCharacterData; onEd
                 type="button"
                 className="essence-armour-row essence-armour-row-button"
                 key={`${piece.Slot}-${piece.Name}-${index}`}
-                title={piece.Name}
+                title={armourTooltip(piece)}
                 onClick={() => setActive(piece)}
               >
                 <div className="essence-armour-heading">
@@ -444,14 +453,12 @@ export function InventoryPanel({ data, maxBurden, onEdit }: { data: EssenceChara
   const [size, setSize] = useState('1')
   const [burden, setBurden] = useState('1')
   const carried = items.reduce((total, item) => total + item.Burden, 0)
-  const worn = data.Armour.reduce((total, piece) => total + piece.Burden, 0)
-  const currentBurden = carried + worn
   const slotCount = backpackSlotCount(items.length)
 
   return (
     <section className="essence-panel backpack-panel">
       <h2>Inventory</h2>
-      <p className="essence-note">Current burden {currentBurden} / {maxBurden} · inventory {carried} · armour {worn}</p>
+      <p className="essence-note">Current burden {carried} / {maxBurden}</p>
       <div className="backpack-grid">
         {Array.from({ length: slotCount }, (_, slot) => {
           const item = items[slot]
