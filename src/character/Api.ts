@@ -22,7 +22,7 @@ export async function api<T>(path: string, method = 'GET', body?: unknown): Prom
   return result as T
 }
 
-export type ResourceKind = 'campaigns' | 'items' | 'techniques' | 'development'
+export type ResourceKind = 'campaigns' | 'items' | 'techniques' | 'development' | 'systems'
 type Resource = { Id: string; OwnerId: string; Data: Record<string, unknown>; Version: number }
 const resources = new Map<ResourceKind, Resource[]>()
 const pending = new Map<string, Promise<unknown>>()
@@ -30,7 +30,7 @@ const pending = new Map<string, Promise<unknown>>()
 export function clearResources() { resources.clear(); pending.clear() }
 
 export async function loadResources(role: string) {
-  const kinds: ResourceKind[] = role === 'dm' ? ['campaigns', 'items', 'techniques', 'development'] : ['items', 'development']
+  const kinds: ResourceKind[] = role === 'dm' ? ['campaigns', 'items', 'techniques', 'development', 'systems'] : ['items', 'development']
   await Promise.all(kinds.map(async (kind) => resources.set(kind, await api<Resource[]>(`/resources/${kind}`))))
 }
 

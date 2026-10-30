@@ -12,7 +12,14 @@ const password = z.string().min(12).max(256)
 const accountInput = z.object({ Username: username, Password: password, Role: z.enum(['player', 'dm']) }).strict()
 const loginInput = z.object({ username: z.string().min(1).max(64), password: z.string().min(1).max(256) }).strict()
 const accountUpdate = z.object({ Username: username.optional(), Password: password.optional(), PreferredSkin: z.enum(['basalt', 'tideglass', 'wildwood', 'moonstone', 'matrix', 'sao', 'lcars']).optional(), CurrentPassword: z.string().max(256).optional() }).strict()
-const resourceKinds = new Set(['campaigns', 'items', 'techniques', 'development'])
+const resourceKinds = new Set(['campaigns', 'items', 'techniques', 'development', 'systems'])
+const systemData = z.object({
+  Id: z.string().min(1).max(100),
+  Name: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(2000),
+  CampaignNames: z.array(z.string().trim().min(1).max(100)).min(1).max(50),
+  Ruleset: z.enum(['private', 'essence']),
+}).strict()
 const clean = (document) => { if (!document) return null; const { _id, ...value } = document; return value }
 const fail = (status, message) => Object.assign(new Error(message), { status })
 
@@ -132,6 +139,10 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
       else updated = { ...clean(current), Data: resolveCopies(conflict.Base?.Data ?? null, conflict.Local.Data, current.Data, input.choices) }
     } catch { throw fail(400, 'Choose a copy for every differing field.') }
     safeData(updated)
+    if (conflict.Kind === 'systems') {
+      updated.Data = systemData.parse(updated.Data)
+      if (updated.Data.Id !== current.Id) throw fail(400, 'System ID must match its record.')
+    }
     if (conflict.Kind === 'characters' && (typeof updated.Name !== 'string' || !updated.Name.trim())) throw fail(400, 'Character name is required.')
     updated.Version = (current.Version ?? 0) + 1
     updated.UpdatedAt = new Date().toISOString()
@@ -245,6 +256,11 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     if (!resourceKinds.has(kind)) throw fail(404, 'Resource not found.')
     safeData(req.body)
     const input = z.object({ data: z.record(z.string(), z.unknown()), version: z.number().int().min(0), base: z.record(z.string(), z.unknown()).optional() }).parse(req.body)
+    if (kind === 'systems') {
+      input.data = systemData.parse(input.data)
+      if (['default', 'frontier', 'essence'].includes(id)) throw fail(400, 'Built-in system IDs are reserved.')
+      if (input.data.Id !== id) throw fail(400, 'System ID must match its record.')
+    }
     const collection = db.collection(kind)
     const record = { Id: id, OwnerId: req.user.Id, Data: input.data, Version: input.version + 1, UpdatedAt: new Date().toISOString() }
     const current = await collection.findOne({ Id: id, OwnerId: req.user.Id })

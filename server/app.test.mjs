@@ -44,12 +44,18 @@ test('Atlas account, session, character, and owned-resource CRUD', { skip: proce
     const otherLogin = await call('/auth/login', 'POST', { username: outsider.data.Username, password: 'other-password-1234' })
     assert.equal((await call(`/characters/${created.data.Id}`, 'GET', undefined, otherLogin.cookie)).status, 404)
     assert.equal((await call('/resources/campaigns/test', 'PUT', { data: { Name: 'Test campaign', NPCs: [{ Name: 'NPC' }] }, version: 0 }, playerCookie)).status, 403)
-    for (const kind of ['campaigns', 'items', 'techniques', 'development']) {
-      const saved = await call(`/resources/${kind}/test`, 'PUT', { data: { Name: 'Test entity' }, version: 0 }, dmCookie)
+    assert.equal((await call('/resources/systems', 'GET', undefined, playerCookie)).status, 403)
+    assert.equal((await call('/resources/systems/test', 'PUT', { data: {}, version: 0 }, playerCookie)).status, 403)
+    assert.equal((await call('/resources/systems/test', 'PUT', { data: { Name: '' }, version: 0 }, dmCookie)).status, 400)
+    for (const kind of ['campaigns', 'items', 'techniques', 'development', 'systems']) {
+      const data = kind === 'systems'
+        ? { Id: 'test', Name: 'Test entity', description: 'Custom system', CampaignNames: ['Test campaign'], Ruleset: 'essence' }
+        : { Name: 'Test entity' }
+      const saved = await call(`/resources/${kind}/test`, 'PUT', { data, version: 0 }, dmCookie)
       assert.equal(saved.status, 200)
       assert.equal((await call(`/resources/${kind}`, 'GET', undefined, dmCookie)).data.length, 1)
       assert.equal((await call(`/resources/${kind}`, 'GET', undefined, otherLogin.cookie)).data.length, 0)
-      assert.equal((await call(`/resources/${kind}/test`, 'PUT', { data: { Name: 'Updated entity' }, version: 1 }, dmCookie)).status, 200)
+      assert.equal((await call(`/resources/${kind}/test`, 'PUT', { data: { ...data, Name: 'Updated entity' }, version: 1 }, dmCookie)).status, 200)
       assert.equal((await call(`/resources/${kind}/test`, 'DELETE', { version: 2 }, dmCookie)).status, 200)
     }
     assert.equal((await call(`/characters/${created.data.Id}/trash`, 'POST', {}, dmCookie)).status, 200)
