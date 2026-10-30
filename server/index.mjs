@@ -10,6 +10,11 @@ try {
     key: process.env.ENCRYPTION_KEY,
     origin: process.env.APP_ORIGIN || 'http://localhost:5173',
     secureCookies: process.env.NODE_ENV === 'production',
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri: process.env.GOOGLE_REDIRECT_URI || `${process.env.APP_ORIGIN || 'http://localhost:5173'}/api/auth/google/callback`,
+    },
   })
   await initializeDatabase(connection.database)
   await bootstrap(connection.database)

@@ -18,5 +18,5 @@ export function canAccessCharacter(record, user) {
 }
 
 export function publicUser(user) {
-  return { Id: user.Id, Username: user.Username, Role: user.Role, PreferredSkin: user.PreferredSkin ?? 'basalt' }
+  return { Id: user.Id, Username: user.Username, Role: user.Role, PreferredSkin: user.PreferredSkin ?? 'basalt', Email: user.Email, GoogleLinked: Boolean(user.GoogleSub) }
 }

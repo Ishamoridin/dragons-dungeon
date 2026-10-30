@@ -6,13 +6,14 @@ import { z } from 'zod'
 import { canAccessCharacter, hashPassword, publicUser, sessionDigest, verifyPassword } from './security.mjs'
 import { recordConflict, saveRevision, undoLatest } from './character-history.mjs'
 import { resolveCopies } from '../src/character/RevisionMerge.mjs'
+import { mountGoogleAuth } from './google-auth.mjs'
 
 const username = z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/)
 const password = z.string().min(12).max(256)
 const accountInput = z.object({ Username: username, Password: password, Role: z.enum(['player', 'dm']) }).strict()
 const loginInput = z.object({ username: z.string().min(1).max(64), password: z.string().min(1).max(256) }).strict()
-const registrationInput = z.object({ email: z.string().trim().toLowerCase().email().max(254), username, password }).strict()
-const accountUpdate = z.object({ Username: username.optional(), Password: password.optional(), PreferredSkin: z.enum(['basalt', 'tideglass', 'wildwood', 'moonstone', 'matrix', 'sao', 'lcars']).optional(), CurrentPassword: z.string().max(256).optional() }).strict()
+const registrationInput = z.object({ email: z.string().trim().toLowerCase().email().max(254), username, password, role: z.enum(['player', 'dm']).default('player') }).strict()
+const accountUpdate = z.object({ Username: username.optional(), Password: password.optional(), PreferredSkin: z.enum(['basalt', 'tideglass', 'wildwood', 'moonstone', 'matrix', 'sao', 'startrek']).optional(), CurrentPassword: z.string().max(256).optional() }).strict()
 const resourceKinds = new Set(['campaigns', 'items', 'techniques', 'development', 'systems'])
 const systemData = z.object({
   Id: z.string().min(1).max(100),
@@ -38,6 +39,9 @@ export async function initializeDatabase(db) {
   await Promise.all([
     db.collection('users').createIndex({ UsernameKey: 1 }, { unique: true }),
     db.collection('users').createIndex({ Email: 1 }, { unique: true, partialFilterExpression: { Email: { $type: 'string' } } }),
+    db.collection('users').createIndex({ GoogleSub: 1 }, { unique: true, partialFilterExpression: { GoogleSub: { $type: 'string' } } }),
+    db.collection('oauthStates').createIndex({ Digest: 1 }, { unique: true }),
+    db.collection('oauthStates').createIndex({ ExpiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection('users').createIndex({ Id: 1 }, { unique: true }),
     db.collection('sessions').createIndex({ Digest: 1 }, { unique: true }),
     db.collection('sessions').createIndex({ ExpiresAt: 1 }, { expireAfterSeconds: 0 }),
@@ -49,7 +53,7 @@ export async function initializeDatabase(db) {
   ])
 }
 
-export function createApp(db, { key, origin = 'http://localhost:5173', secureCookies = false } = {}) {
+export function createApp(db, { key, origin = 'http://localhost:5173', secureCookies = false, google, googleProvider } = {}) {
   if (!key || Buffer.byteLength(key) < 32) throw new Error('ENCRYPTION_KEY must contain at least 32 bytes for session protection.')
   const app = express()
   app.disable('x-powered-by')
@@ -73,10 +77,13 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     const raw = req.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1)
     return raw ? sessionDigest(raw, key) : null
   }
-  const authenticate = async (req, res, next) => {
+  const findCurrentUser = async (req) => {
     const Digest = digestFor(req)
     const session = Digest && await sessions.findOne({ Digest, ExpiresAt: { $gt: new Date() } })
-    const user = session && await users.findOne({ Id: session.UserId })
+    return session && await users.findOne({ Id: session.UserId })
+  }
+  const authenticate = async (req, res, next) => {
+    const user = await findCurrentUser(req)
     if (!user) return next(fail(401, 'Please sign in.'))
     req.user = user
     next()
@@ -87,12 +94,21 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     if (!record || !canAccessCharacter(record, req.user)) throw fail(404, 'Character not found.')
     return record
   }
+  const issueSession = async (req, res, user) => {
+    const oldDigest = digestFor(req)
+    if (oldDigest) await sessions.deleteOne({ Digest: oldDigest })
+    const token = randomBytes(32).toString('base64url')
+    const ExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    await sessions.insertOne({ Digest: sessionDigest(token, key), UserId: user.Id, ExpiresAt })
+    res.cookie(cookieName, token, { ...cookieOptions, expires: ExpiresAt })
+  }
+  mountGoogleAuth(app, db, { key, origin, secureCookies, google, providerOverride: googleProvider, issueSession, findCurrentUser })
 
   app.post('/api/auth/register', rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many registration attempts. Please try again later.' } }), async (req, res) => {
     const input = registrationInput.parse(req.body)
     const user = {
       Id: randomUUID(), Username: input.username, UsernameKey: input.username.toLowerCase(),
-      Email: input.email, EmailVerified: false, Role: 'player',
+      Email: input.email, EmailVerified: false, Role: input.role,
       PasswordHash: await hashPassword(input.password), CreatedAt: new Date().toISOString(),
     }
     await users.insertOne(user)
@@ -103,12 +119,8 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     const user = await users.findOne({ UsernameKey: input.username.trim().toLowerCase() })
     const valid = await verifyPassword(user?.PasswordHash ?? dummyHash, input.password)
     if (!user || !valid) throw fail(401, 'Invalid username or password.')
-    const oldDigest = digestFor(req)
-    if (oldDigest) await sessions.deleteOne({ Digest: oldDigest })
-    const token = randomBytes(32).toString('base64url')
-    const ExpiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000)
-    await sessions.insertOne({ Digest: sessionDigest(token, key), UserId: user.Id, ExpiresAt })
-    res.cookie(cookieName, token, { ...cookieOptions, expires: ExpiresAt }).json(publicUser(user))
+    await issueSession(req, res, user)
+    res.json(publicUser(user))
   })
   app.post('/api/auth/logout', async (req, res) => {
     const Digest = digestFor(req)
@@ -117,6 +129,11 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   })
   app.use('/api', authenticate)
   app.get('/api/auth/me', (req, res) => res.json(publicUser(req.user)))
+  app.post('/api/auth/role', async (req, res) => {
+    const { role } = z.object({ role: z.enum(['player', 'dm']) }).strict().parse(req.body)
+    await users.updateOne({ Id: req.user.Id }, { $set: { Role: role } })
+    res.json(publicUser({ ...req.user, Role: role }))
+  })
   app.get('/api/history/latest', async (req, res) => {
     const entry = await db.collection('changeHistory').findOne({ ActorId: req.user.Id, Undone: false }, { sort: { CreatedAt: -1, _id: -1 } })
     if (!entry) return res.json({ available: false })

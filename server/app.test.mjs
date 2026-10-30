@@ -21,6 +21,7 @@ test('Atlas account, session, character, and owned-resource CRUD', { skip: proce
       return { status: response.status, data: await response.json(), cookie: response.headers.get('set-cookie')?.split(';')[0] }
     }
     assert.equal((await call('/characters')).status, 401)
+    assert.equal((await call('/auth/providers')).data.google, false)
     const registration = await call('/auth/register', 'POST', { email: ' NewPlayer@Example.com ', username: 'newplayer', password: 'a-strong-password-1234' })
     assert.equal(registration.status, 201)
     assert.equal(registration.data.Role, 'player')
@@ -36,6 +37,13 @@ test('Atlas account, session, character, and owned-resource CRUD', { skip: proce
     const registeredLogin = await call('/auth/login', 'POST', { username: 'newplayer', password: 'a-strong-password-1234' })
     assert.equal(registeredLogin.status, 200)
     assert.equal((await call('/accounts', 'GET', undefined, registeredLogin.cookie)).status, 403)
+    const registeredDM = await call('/auth/register', 'POST', { email: 'newdm@example.com', username: 'newdm', password: 'a-strong-password-1234', role: 'dm' })
+    assert.equal(registeredDM.status, 201)
+    assert.equal(registeredDM.data.Role, 'dm')
+    assert.equal((await call('/auth/role', 'POST', { role: 'dm' }, registeredLogin.cookie)).data.Role, 'dm')
+    assert.equal((await call('/characters', 'GET', undefined, registeredLogin.cookie)).data.length, 0)
+    assert.equal((await call('/auth/role', 'POST', { role: 'admin' }, registeredLogin.cookie)).status, 400)
+    assert.equal((await call('/auth/role', 'POST', { role: 'player' }, registeredLogin.cookie)).data.Role, 'player')
     assert.equal((await call('/auth/login', 'POST', { username: 'testdm', password: 'bad-password' })).status, 401)
     const login = await call('/auth/login', 'POST', { username: 'testdm', password: 'test-password-1234' })
     assert.equal(login.status, 200)
