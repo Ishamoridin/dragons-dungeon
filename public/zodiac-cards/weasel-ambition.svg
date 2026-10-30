@@ -1,0 +1,233 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="288" height="250" viewBox="0 0 288 250" role="img" aria-label="Weasel card">
+  <defs>
+    <linearGradient id="paper" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f0e2da"/>
+      <stop offset="0.6" stop-color="#dcc3b8"/>
+      <stop offset="1" stop-color="#c3a094"/>
+    </linearGradient>
+    <radialGradient id="sky" cx="0.78" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="#ffb34d"/>
+      <stop offset="0.22" stop-color="#ff5a2a"/>
+      <stop offset="0.5" stop-color="#b3151b"/>
+      <stop offset="0.8" stop-color="#4a0810"/>
+      <stop offset="1" stop-color="#14040a"/>
+    </radialGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff6d0"/>
+      <stop offset="0.3" stop-color="#ffc766"/>
+      <stop offset="0.65" stop-color="#ff5a2a" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#ff3b30" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rock" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#4a1a16"/>
+      <stop offset="0.35" stop-color="#241010"/>
+      <stop offset="1" stop-color="#0c0507"/>
+    </linearGradient>
+    <linearGradient id="ridge" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#6a1418"/>
+      <stop offset="1" stop-color="#1c060b"/>
+    </linearGradient>
+    <linearGradient id="fur" x1="0" x2="1" y1="0" y2="0.6">
+      <stop offset="0" stop-color="#3a140e"/>
+      <stop offset="0.45" stop-color="#8e3a1c"/>
+      <stop offset="1" stop-color="#d0642b"/>
+    </linearGradient>
+    <linearGradient id="furDark" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#2a0d0a"/>
+      <stop offset="1" stop-color="#6e2a16"/>
+    </linearGradient>
+    <linearGradient id="belly" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#b9917a"/>
+      <stop offset="0.6" stop-color="#f4dcc0"/>
+      <stop offset="1" stop-color="#ffc58f"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0.6"/>
+      <stop offset="0.55" stop-color="#000" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="banner" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#2a0508"/>
+      <stop offset="0.5" stop-color="#5c0f14"/>
+      <stop offset="1" stop-color="#2a0508"/>
+    </linearGradient>
+
+    <filter id="fur" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.95 0.16" numOctaves="3" seed="11" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 0 1" result="gray"/>
+      <feComponentTransfer in="gray" result="tex">
+        <feFuncR type="linear" slope="1.15" intercept="0.3"/>
+        <feFuncG type="linear" slope="1.15" intercept="0.3"/>
+        <feFuncB type="linear" slope="1.15" intercept="0.3"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" in2="tex" mode="multiply" result="b"/>
+      <feComposite in="b" in2="SourceAlpha" operator="in"/>
+    </filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.6"/></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="rim" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="0.7"/></filter>
+    <clipPath id="card"><rect x="3" y="3" width="282" height="244" rx="12"/></clipPath>
+    <clipPath id="scene"><rect x="12" y="62" width="130" height="176" rx="8"/></clipPath>
+  </defs>
+
+  <rect x="3" y="3" width="282" height="244" rx="12" fill="url(#paper)"/>
+  <g clip-path="url(#card)">
+    <rect x="3" y="3" width="282" height="244" fill="#ff3b30" opacity="0.06"/>
+
+    <!-- scene panel -->
+    <g clip-path="url(#scene)">
+      <rect x="12" y="62" width="130" height="176" fill="url(#sky)"/>
+      <circle cx="112" cy="94" r="46" fill="url(#sun)" filter="url(#glow)"/>
+      <circle cx="112" cy="94" r="17" fill="#fff0c0" opacity="0.9" filter="url(#soft)"/>
+
+      <path d="M12 190l14-18 10 10 14-26 12 16 12-12 14 20 10-8 14 18 12-14 12 20v34H12z" fill="url(#ridge)" opacity="0.85" filter="url(#soft)"/>
+      <path d="M12 206l22-12 14 8 20-16 16 12 24-14 18 12 16-4v52H12z" fill="#1a060a" opacity="0.9"/>
+
+      <g fill="#ffb066">
+        <circle cx="30" cy="150" r="1.4" opacity="0.9"/><circle cx="44" cy="120" r="1" opacity="0.7"/>
+        <circle cx="22" cy="104" r="1.2" opacity="0.8"/><circle cx="56" cy="88" r="0.9" opacity="0.6"/>
+        <circle cx="132" cy="150" r="1.3" opacity="0.8"/><circle cx="124" cy="124" r="1" opacity="0.7"/>
+        <circle cx="136" cy="100" r="1.4" opacity="0.85"/><circle cx="76" cy="74" r="1" opacity="0.6"/>
+        <circle cx="38" cy="176" r="1.1" opacity="0.8"/><circle cx="64" cy="140" r="0.8" opacity="0.5"/>
+        <circle cx="128" cy="76" r="1.1" opacity="0.7"/><circle cx="18" cy="130" r="0.9" opacity="0.6"/>
+      </g>
+      <g fill="#ffd9a0" filter="url(#soft)">
+        <circle cx="50" cy="160" r="2.2" opacity="0.5"/><circle cx="118" cy="140" r="2.6" opacity="0.5"/>
+        <circle cx="28" cy="96" r="2" opacity="0.4"/>
+      </g>
+
+      <!-- foreground ledge and steps -->
+      <path d="M12 238v-26l26-4 30 4 30-6 14-8v-10h24v-12h12v62z" fill="url(#rock)"/>
+      <path d="M12 212l26-4 30 4 30-6" fill="none" stroke="#ff6a3d" stroke-opacity="0.75" stroke-width="1.2" filter="url(#rim)"/>
+      <path d="M98 206l14-8h0M112 196h24M136 184h6" fill="none" stroke="#ff8a50" stroke-opacity="0.7" stroke-width="1.1" filter="url(#rim)"/>
+      <path d="M44 214v10M76 214v14M104 208v14" stroke="#000" stroke-opacity="0.4"/>
+
+      <ellipse cx="78" cy="214" rx="38" ry="4.5" fill="#000" opacity="0.55" filter="url(#soft)"/>
+
+      <!-- weasel -->
+      <g transform="translate(6 12) scale(0.93)">
+        <!-- tail -->
+        <path d="M62 204C30 202 18 172 32 150c6-10 4-22-4-32" fill="none" stroke="#1d0a08" stroke-width="11" stroke-linecap="round"/>
+        <g filter="url(#fur)">
+          <path d="M62 204C30 202 18 172 32 150c6-10 4-22-4-32" fill="none" stroke="url(#fur)" stroke-width="9" stroke-linecap="round"/>
+        </g>
+        <path d="M30 128c-2-4-4-8-3-12" fill="none" stroke="#0a0405" stroke-width="9" stroke-linecap="round"/>
+        <path d="M34 150c-12 14-8 40 12 48" fill="none" stroke="#ff7a45" stroke-opacity="0.55" stroke-width="1.2" filter="url(#rim)"/>
+
+        <!-- hind legs -->
+        <g filter="url(#fur)">
+          <path d="M60 190c-8 8-10 20-4 24l24-1c4-6 0-14-6-18z" fill="url(#furDark)"/>
+          <path d="M92 192c6 6 12 14 12 22l-16 0c-4-8-6-16-4-22z" fill="url(#fur)"/>
+        </g>
+        <ellipse cx="62" cy="214" rx="14" ry="4" fill="#1d0a08"/>
+        <ellipse cx="98" cy="214" rx="12" ry="3.6" fill="#241010"/>
+
+        <!-- body -->
+        <g filter="url(#fur)">
+          <path d="M60 214C46 188 50 150 64 124c8-14 12-26 18-34l18 2c6 12 6 26 4 40-2 24 6 54 4 82z" fill="url(#fur)"/>
+        </g>
+        <path d="M60 214C46 188 50 150 64 124c8-14 12-26 18-34l18 2c6 12 6 26 4 40-2 24 6 54 4 82z" fill="url(#shade)"/>
+        <g filter="url(#fur)">
+          <path d="M90 98c10 12 10 32 8 48-2 22 2 46 0 66l-10 2c4-24 0-54 2-74 2-14 0-30-2-40z" fill="url(#belly)"/>
+        </g>
+        <path d="M70 130c-2 22 0 48 6 70M80 112c-2 16-2 34 0 52" fill="none" stroke="#1a0706" stroke-opacity="0.35" stroke-width="1"/>
+
+        <!-- neck + head -->
+        <g filter="url(#fur)">
+          <path d="M78 94C72 80 78 66 94 64c12-2 24 6 32 10 4 2 4 6 0 8-8 4-14 8-20 14-8 8-20 8-28-2z" fill="url(#fur)"/>
+        </g>
+        <path d="M78 94C72 80 78 66 94 64c12-2 24 6 32 10 4 2 4 6 0 8-8 4-14 8-20 14-8 8-20 8-28-2z" fill="url(#shade)" opacity="0.7"/>
+        <g filter="url(#fur)">
+          <path d="M108 88c6-2 14-4 18-6-2 8-10 14-20 18-4-2-4-8 2-12z" fill="url(#belly)"/>
+        </g>
+        <!-- ear -->
+        <circle cx="87" cy="68" r="7" fill="#2a0d0a"/>
+        <circle cx="87" cy="68" r="4.4" fill="#c47a6a" opacity="0.8"/>
+        <!-- eye -->
+        <ellipse cx="105" cy="75" rx="4.2" ry="3.6" fill="#0a0405"/>
+        <ellipse cx="105" cy="75" rx="3" ry="2.6" fill="#7a1a10"/>
+        <circle cx="105" cy="75" r="1.7" fill="#050203"/>
+        <circle cx="106.4" cy="73.8" r="0.9" fill="#fff"/>
+        <path d="M100 72c3-3 8-3 11-1" fill="none" stroke="#1a0706" stroke-width="1.2" stroke-linecap="round"/>
+        <!-- nose and whiskers -->
+        <ellipse cx="127" cy="78" rx="2.8" ry="2.2" fill="#140809"/>
+        <ellipse cx="126.4" cy="77.2" rx="1" ry="0.6" fill="#fff" opacity="0.8"/>
+        <path d="M118 82l18-5M118 84l20 3M116 86l16 9" fill="none" stroke="#fbe9d8" stroke-opacity="0.85" stroke-width="0.7" stroke-linecap="round"/>
+        <path d="M110 88c4 1 9 0 13-3" fill="none" stroke="#2a0d0a" stroke-opacity="0.6" stroke-width="1" stroke-linecap="round"/>
+
+        <!-- raised forelimbs -->
+        <path d="M96 122C108 112 120 104 130 96" fill="none" stroke="#1d0a08" stroke-width="10" stroke-linecap="round"/>
+        <g filter="url(#fur)">
+          <path d="M96 122C108 112 120 104 130 96" fill="none" stroke="url(#fur)" stroke-width="8" stroke-linecap="round"/>
+        </g>
+        <path d="M70 124C60 114 56 102 56 92" fill="none" stroke="#1d0a08" stroke-width="9" stroke-linecap="round"/>
+        <g filter="url(#fur)">
+          <path d="M70 124C60 114 56 102 56 92" fill="none" stroke="url(#furDark)" stroke-width="7" stroke-linecap="round"/>
+        </g>
+        <g fill="#f4dcc0">
+          <ellipse cx="132" cy="94" rx="4.6" ry="3.4" transform="rotate(-40 132 94)"/>
+          <ellipse cx="56" cy="89" rx="3.8" ry="3" transform="rotate(-80 56 89)"/>
+        </g>
+        <g stroke="#1a0706" stroke-width="0.7" stroke-linecap="round">
+          <path d="M134 90l4-2M135 93l4 0M134 96l3 2"/>
+          <path d="M54 86l-2-3M56 85l0-4M58 86l2-3"/>
+        </g>
+
+        <!-- rim light from the sun -->
+        <g fill="none" stroke="#ffb070" stroke-linecap="round" filter="url(#rim)">
+          <path d="M80 76C86 66 100 62 112 68c6 3 10 5 15 8" stroke-opacity="0.9" stroke-width="1.4"/>
+          <path d="M100 92c6 12 6 28 4 40-2 22 6 52 4 80" stroke-opacity="0.65" stroke-width="1.2"/>
+          <path d="M98 118C110 108 122 100 131 91" stroke-opacity="0.8" stroke-width="1.2"/>
+        </g>
+      </g>
+
+      <!-- sun flare across the scene -->
+      <rect x="12" y="62" width="130" height="176" fill="url(#sun)" opacity="0.18"/>
+      <rect x="12" y="62" width="130" height="176" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="4"/>
+    </g>
+    <rect x="12" y="62" width="130" height="176" rx="8" fill="none" stroke="#ff3b30" stroke-opacity="0.85" stroke-width="1.4"/>
+    <rect x="9.5" y="59.5" width="135" height="181" rx="10" fill="none" stroke="#2b0a0d" stroke-opacity="0.6"/>
+
+    <!-- title -->
+    <text x="152" y="38" text-anchor="middle" fill="#2b0a0d" font-family="Georgia, 'Times New Roman', serif" font-size="21" letter-spacing="1">WEASEL</text>
+    <text x="152" y="55" text-anchor="middle" fill="#6a1a1c" font-family="Georgia, 'Times New Roman', serif" font-size="11.5">Essence: Ambition</text>
+
+    <!-- sigil -->
+    <g transform="translate(257 34)">
+      <circle r="24" fill="#2b0a0d"/>
+      <circle r="20.5" fill="none" stroke="#ff3b30" stroke-width="1.6"/>
+      <circle r="17" fill="none" stroke="#ffb3a0" stroke-opacity="0.4" stroke-width="0.8"/>
+      <path d="M-9 12l6-6 4 4 7-8 5 5 5-9" fill="none" stroke="#ff6a4d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M-9 14h22" stroke="#ff6a4d" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M12-8l1-5 5 1" fill="none" stroke="#ffd28a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- passive -->
+    <rect x="146" y="72" width="136" height="17" rx="3" fill="url(#banner)" stroke="#ff3b30" stroke-opacity="0.7"/>
+    <text x="214" y="84" text-anchor="middle" fill="#ffe6dc" font-family="Georgia, 'Times New Roman', serif" font-size="10" font-weight="700" letter-spacing="1">PASSIVE (NO COST)</text>
+    <g fill="#2b0a0d" font-family="Georgia, 'Times New Roman', serif" font-size="10.5">
+      <text x="214" y="104" text-anchor="middle">Allies within 25 ft roll +1</text>
+      <text x="214" y="117" text-anchor="middle">when this Zodiac pays 100</text>
+      <text x="214" y="130" text-anchor="middle">Willpower. Stacks endlessly.</text>
+    </g>
+
+    <!-- active -->
+    <rect x="146" y="148" width="136" height="17" rx="3" fill="url(#banner)" stroke="#ff3b30" stroke-opacity="0.7"/>
+    <text x="214" y="160" text-anchor="middle" fill="#ffe6dc" font-family="Georgia, 'Times New Roman', serif" font-size="10" font-weight="700" letter-spacing="1">ACTIVE (5/SESSION)</text>
+    <text x="214" y="177" text-anchor="middle" fill="#6a1a1c" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="7.5" letter-spacing="0.6">200 WILLPOWER • UNDO A ROLL</text>
+    <g fill="#2b0a0d" font-family="Georgia, 'Times New Roman', serif" font-size="10.5">
+      <text x="214" y="197" text-anchor="middle">Undo any roll, by anyone,</text>
+      <text x="214" y="210" text-anchor="middle">within 5 ft of this Zodiac.</text>
+    </g>
+  </g>
+
+  <rect x="3" y="3" width="282" height="244" rx="12" fill="none" stroke="#2b0a0d" stroke-width="3"/>
+  <rect x="8" y="8" width="272" height="234" rx="9" fill="none" stroke="#e02a24" stroke-opacity="0.7"/>
+  <rect x="11" y="11" width="266" height="228" rx="7" fill="none" stroke="#2b0a0d" stroke-opacity="0.4" stroke-width="0.8"/>
+  <g fill="none" stroke="#e02a24" stroke-opacity="0.9" stroke-width="1.2" stroke-linecap="round">
+    <path d="M14 30c0-10 6-16 16-16"/>
+    <path d="M274 30c0-10-6-16-16-16"/>
+    <path d="M14 220c0 10 6 16 16 16"/>
+    <path d="M274 220c0 10-6 16-16 16"/>
+  </g>
+</svg>

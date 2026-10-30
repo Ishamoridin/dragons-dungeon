@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="288" height="250" viewBox="0 0 288 250" role="img" aria-label="Sovereign of Doom card">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#081013"/>
+      <stop offset="0.55" stop-color="#182127"/>
+      <stop offset="1" stop-color="#6b7280"/>
+    </linearGradient>
+    <radialGradient id="mist" cx="30%" cy="20%" r="80%">
+      <stop offset="0" stop-color="#b6c0c9" stop-opacity="0.35"/>
+      <stop offset="0.7" stop-color="#b6c0c9" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="7" stdDeviation="11" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#bg)"/>
+  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#mist)"/>
+  <rect x="10" y="10" width="268" height="230" rx="12" fill="none" stroke="#e9f2f8" stroke-opacity="0.22"/>
+  <rect x="14" y="14" width="260" height="222" rx="10" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+
+  <g filter="url(#shadow)" fill="#f3f6f8" fill-opacity="0.8">
+    <path d="M144 86c-26 0-46 18-46 42 0 26 18 42 46 42s46-16 46-42c0-24-20-42-46-42zm-18 50c-6 0-10-6-10-14 0-8 4-14 10-14s10 6 10 14c0 8-4 14-10 14zm36 0c-6 0-10-6-10-14 0-8 4-14 10-14s10 6 10 14c0 8-4 14-10 14z"/>
+    <path d="M120 166c6 8 14 12 24 12s18-4 24-12" fill="none" stroke="#0a1114" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <path d="M108 104c-10 6-16 18-16 30" fill="none" stroke="#f3f6f8" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+    <path d="M180 104c10 6 16 18 16 30" fill="none" stroke="#f3f6f8" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <text x="144" y="44" text-anchor="middle" fill="#fff" font-family="Georgia, 'Times New Roman', serif" font-size="26" letter-spacing="2.2">SOVEREIGN</text>
+  <text x="144" y="66" text-anchor="middle" fill="#dbe6ef" font-family="Georgia, 'Times New Roman', serif" font-size="14">Domain · Doom</text>
+
+  <g>
+    <rect x="40" y="184" width="208" height="40" rx="10" fill="#05090b" fill-opacity="0.55" stroke="#dbe6ef" stroke-opacity="0.14"/>
+    <text x="144" y="206" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" letter-spacing="1.2">CLICK TO VIEW POWER</text>
+  </g>
+</svg>
+

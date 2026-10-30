@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="288" height="250" viewBox="0 0 288 250" role="img" aria-label="Sovereign of Air card">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#061217"/>
+      <stop offset="0.55" stop-color="#06333a"/>
+      <stop offset="1" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="30%" cy="25%" r="80%">
+      <stop offset="0" stop-color="#bffaf4" stop-opacity="0.45"/>
+      <stop offset="0.65" stop-color="#bffaf4" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="7" stdDeviation="11" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#bg)"/>
+  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#glow)"/>
+  <rect x="10" y="10" width="268" height="230" rx="12" fill="none" stroke="#d7fffb" stroke-opacity="0.25"/>
+  <rect x="14" y="14" width="260" height="222" rx="10" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+
+  <g filter="url(#shadow)" fill="none" stroke="#e9fffd" stroke-opacity="0.85" stroke-linecap="round">
+    <path d="M92 138c16-16 38-20 62-10 14 6 26 6 42 0" stroke-width="6"/>
+    <path d="M88 118c22-26 52-34 90-18 20 8 38 8 56 0" stroke-width="5" stroke-opacity="0.55"/>
+    <path d="M96 160c10-8 22-10 36-4 10 4 20 4 30 0 12-4 20-4 30 2" stroke-width="4" stroke-opacity="0.45"/>
+    <path d="M190 96c10-14 18-20 30-22" stroke-width="3" stroke-opacity="0.5"/>
+  </g>
+
+  <text x="144" y="44" text-anchor="middle" fill="#fff" font-family="Georgia, 'Times New Roman', serif" font-size="26" letter-spacing="2.2">SOVEREIGN</text>
+  <text x="144" y="66" text-anchor="middle" fill="#d7fffb" font-family="Georgia, 'Times New Roman', serif" font-size="14">Domain · Air</text>
+
+  <g>
+    <rect x="40" y="184" width="208" height="40" rx="10" fill="#021014" fill-opacity="0.55" stroke="#d7fffb" stroke-opacity="0.14"/>
+    <text x="144" y="206" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" letter-spacing="1.2">CLICK TO VIEW POWER</text>
+  </g>
+</svg>
+

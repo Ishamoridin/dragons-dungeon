@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="288" height="250" viewBox="0 0 288 250" role="img" aria-label="Weasel card">
+  <defs>
+    <linearGradient id="paper" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#e9e3ee"/>
+      <stop offset="0.6" stop-color="#d3cadb"/>
+      <stop offset="1" stop-color="#b9aec6"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="50%" cy="45%" r="75%">
+      <stop offset="0.55" stop-color="#2a1a35" stop-opacity="0"/>
+      <stop offset="1" stop-color="#2a1a35" stop-opacity="0.35"/>
+    </radialGradient>
+    <radialGradient id="aura" cx="38%" cy="55%" r="55%">
+      <stop offset="0" stop-color="#ff4ad8" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ff4ad8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fur" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#4a3a52"/>
+      <stop offset="0.5" stop-color="#2a1f33"/>
+      <stop offset="1" stop-color="#120c18"/>
+    </linearGradient>
+    <linearGradient id="belly" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#e9d7e8"/>
+      <stop offset="1" stop-color="#a995ad"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#3a2d44"/>
+      <stop offset="1" stop-color="#150f1b"/>
+    </linearGradient>
+    <linearGradient id="banner" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#22172b"/>
+      <stop offset="0.5" stop-color="#3a2347"/>
+      <stop offset="1" stop-color="#22172b"/>
+    </linearGradient>
+    <clipPath id="card"><rect x="3" y="3" width="282" height="244" rx="12"/></clipPath>
+  </defs>
+
+  <rect x="3" y="3" width="282" height="244" rx="12" fill="url(#paper)"/>
+  <g clip-path="url(#card)">
+    <rect x="3" y="3" width="282" height="244" fill="url(#aura)"/>
+    <rect x="3" y="3" width="282" height="244" fill="url(#vignette)"/>
+
+    <path d="M3 214h132l10 12v21H3z" fill="url(#ground)"/>
+    <path d="M3 226h126" stroke="#8c6f98" stroke-opacity="0.45"/>
+    <path d="M3 238h118" stroke="#8c6f98" stroke-opacity="0.3"/>
+    <path d="M44 214v12M92 226v12M20 226v12" stroke="#8c6f98" stroke-opacity="0.35"/>
+
+    <g fill="none" stroke="#e03bc4" stroke-linecap="round">
+      <path d="M26 200c-10-30-4-62 14-90 8-12 6-26-2-36" stroke-width="2.2" stroke-opacity="0.75"/>
+      <path d="M34 214c-16-36-8-76 12-108" stroke-width="1.4" stroke-opacity="0.55"/>
+      <path d="M118 120c14-14 10-30-2-44" stroke-width="2" stroke-opacity="0.7"/>
+      <path d="M124 150c12-6 18-18 12-30-4-8-2-16 4-22" stroke-width="1.4" stroke-opacity="0.55"/>
+      <path d="M20 160c-8-10-6-22 2-30" stroke-width="1.2" stroke-opacity="0.5"/>
+    </g>
+
+    <path d="M94 212c34 8 52-10 46-34-4-16-16-22-14-36" fill="none" stroke="#120c18" stroke-width="10" stroke-linecap="round"/>
+    <path d="M94 212c34 8 52-10 46-34-4-16-16-22-14-36" fill="none" stroke="#4a3a52" stroke-width="3" stroke-linecap="round" stroke-opacity="0.8"/>
+    <path d="M126 142c-2-6 0-10 4-14" fill="none" stroke="#e8d2f2" stroke-width="5" stroke-linecap="round" stroke-opacity="0.9"/>
+
+    <path d="M52 196c-10 8-12 20-2 22l44 1c10 0 14-8 6-14-8-6-20-10-30-12z" fill="#150f1b"/>
+
+    <path d="M56 100c-16 26-20 70-6 106 6 14 30 18 48 8 14-10 12-44 2-76-4-12-8-26-12-40z" fill="url(#fur)"/>
+    <path d="M84 108c8 22 14 54 8 88-6 10-18 14-28 10 14-6 20-50 12-92z" fill="url(#belly)" opacity="0.9"/>
+    <path d="M66 112c-4 20-4 44 0 70M74 108c-2 18-2 40 2 60" fill="none" stroke="#0a060f" stroke-opacity="0.45" stroke-width="1.2"/>
+    <path d="M58 130c-8 4-12 12-10 22M62 160c-8 4-10 14-8 22" fill="none" stroke="#5c4866" stroke-width="1.4" stroke-linecap="round"/>
+
+    <path d="M86 126c14 4 22 14 24 28-6 2-12 0-14-6-4-10-12-14-18-14z" fill="#1c1424"/>
+    <path d="M108 150c4 2 6 6 5 10-4 1-8-1-10-5z" fill="#e8d2f2" opacity="0.85"/>
+    <path d="M58 132c-8 6-10 20-4 30 4 2 8 0 8-4-2-8 2-16 6-20z" fill="#1c1424"/>
+
+    <path d="M48 90c-2-18 12-32 30-32 12 0 22 8 36 22-14 8-22 18-34 20-16 2-30-2-32-10z" fill="url(#fur)"/>
+    <path d="M114 80c-12 10-22 18-34 22l-4 6c12 0 24-8 38-24z" fill="url(#belly)" opacity="0.9"/>
+    <path d="M52 78l-2-14c-1-6 4-10 9-8l7 8z" fill="#1c1424"/>
+    <path d="M56 74l-1-8c0-3 2-4 4-3l4 4z" fill="#e03bc4" opacity="0.75"/>
+    <circle cx="90" cy="76" r="3" fill="#ff9be9"/>
+    <circle cx="90.8" cy="75.3" r="1" fill="#fff"/>
+    <circle cx="114" cy="80" r="3" fill="#e03bc4"/>
+    <path d="M100 84c4 1 8 0 12-2" fill="none" stroke="#f3dff5" stroke-width="1" stroke-linecap="round"/>
+    <path d="M110 82l16-4M110 84l18 2M108 86l14 8" fill="none" stroke="#f3dff5" stroke-opacity="0.8" stroke-width="0.8" stroke-linecap="round"/>
+    <path d="M64 66c8-6 20-6 28 0M60 72c10-6 24-6 34 0" fill="none" stroke="#6a5575" stroke-width="1" stroke-linecap="round"/>
+
+    <text x="152" y="38" text-anchor="middle" fill="#1d1226" font-family="Georgia, 'Times New Roman', serif" font-size="21" letter-spacing="1">WEASEL</text>
+    <text x="152" y="55" text-anchor="middle" fill="#43304f" font-family="Georgia, 'Times New Roman', serif" font-size="11.5">Essence: Ambition</text>
+
+    <g transform="translate(257 34)">
+      <circle r="24" fill="#1d1226"/>
+      <circle r="20.5" fill="none" stroke="#ff4ad8" stroke-width="1.6"/>
+      <circle r="17" fill="none" stroke="#f3c7ff" stroke-opacity="0.4" stroke-width="0.8"/>
+      <path d="M0 0c3 0 4-3 2-5-3-3-8-1-8 4 0 7 8 10 13 5 6-6 2-17-7-17-12 0-18 14-10 24" fill="none" stroke="#ff7de6" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="-9" cy="12" r="2" fill="#ff7de6"/>
+    </g>
+
+    <rect x="146" y="72" width="136" height="17" rx="3" fill="url(#banner)" stroke="#ff4ad8" stroke-opacity="0.6"/>
+    <text x="214" y="84" text-anchor="middle" fill="#f6e6fb" font-family="Georgia, 'Times New Roman', serif" font-size="10" font-weight="700" letter-spacing="1">PASSIVE (NO COST)</text>
+    <g fill="#1d1226" font-family="Georgia, 'Times New Roman', serif" font-size="10.5">
+      <text x="214" y="104" text-anchor="middle">Allies within 25 ft roll +1</text>
+      <text x="214" y="117" text-anchor="middle">when this Zodiac pays 100</text>
+      <text x="214" y="130" text-anchor="middle">Willpower. Stacks endlessly.</text>
+    </g>
+
+    <rect x="146" y="148" width="136" height="17" rx="3" fill="url(#banner)" stroke="#ff4ad8" stroke-opacity="0.6"/>
+    <text x="214" y="160" text-anchor="middle" fill="#f6e6fb" font-family="Georgia, 'Times New Roman', serif" font-size="10" font-weight="700" letter-spacing="1">ACTIVE (5/SESSION)</text>
+    <text x="214" y="177" text-anchor="middle" fill="#43304f" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="7.5" letter-spacing="0.6">200 WILLPOWER • UNDO A ROLL</text>
+    <g fill="#1d1226" font-family="Georgia, 'Times New Roman', serif" font-size="10.5">
+      <text x="214" y="197" text-anchor="middle">Undo any roll, by anyone,</text>
+      <text x="214" y="210" text-anchor="middle">within 5 ft of this Zodiac.</text>
+    </g>
+  </g>
+
+  <rect x="3" y="3" width="282" height="244" rx="12" fill="none" stroke="#1d1226" stroke-width="3"/>
+  <rect x="8" y="8" width="272" height="234" rx="9" fill="none" stroke="#ff4ad8" stroke-opacity="0.55"/>
+  <rect x="11" y="11" width="266" height="228" rx="7" fill="none" stroke="#1d1226" stroke-opacity="0.4" stroke-width="0.8"/>
+  <g fill="none" stroke="#ff4ad8" stroke-opacity="0.8" stroke-width="1.2" stroke-linecap="round">
+    <path d="M14 30c0-10 6-16 16-16"/>
+    <path d="M274 30c0-10-6-16-16-16"/>
+    <path d="M14 220c0 10 6 16 16 16"/>
+    <path d="M274 220c0 10-6 16-16 16"/>
+  </g>
+</svg>

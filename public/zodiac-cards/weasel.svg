@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="288" height="250" viewBox="0 0 288 250" role="img" aria-label="Weasel card">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#1b0a24"/>
+      <stop offset="0.55" stop-color="#3b0f4a"/>
+      <stop offset="1" stop-color="#b0188a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="30%" cy="20%" r="80%">
+      <stop offset="0" stop-color="#ff6bdc" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#ff6bdc" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#bg)"/>
+  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#glow)"/>
+
+  <rect x="10" y="10" width="268" height="230" rx="12" fill="none" stroke="#f7d0ff" stroke-opacity="0.35"/>
+  <rect x="14" y="14" width="260" height="222" rx="10" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.18">
+    <path d="M22 44c18-14 40-20 62-18" />
+    <path d="M266 44c-18-14-40-20-62-18" />
+    <path d="M22 208c18 14 40 20 62 18" />
+    <path d="M266 208c-18 14-40 20-62 18" />
+  </g>
+
+  <g filter="url(#softShadow)">
+    <path d="M152 176c40-10 56-46 34-66-14-13-34-16-48-6-10 8-8 22 4 28 8 4 18 2 24-5-2 14-16 20-26 20-18 0-30-14-28-30 3-24 32-38 58-26 34 16 34 62-8 84-20 10-42 12-64 8 18 16 50 22 84 13z" fill="#ffd1ff" fill-opacity="0.85"/>
+    <circle cx="142" cy="112" r="22" fill="#fff0ff" fill-opacity="0.5"/>
+    <path d="M128 118c10 2 20 2 30 0" stroke="#140914" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="135" cy="108" r="4" fill="#140914" fill-opacity="0.6"/>
+    <circle cx="153" cy="108" r="4" fill="#140914" fill-opacity="0.6"/>
+  </g>
+
+  <text x="144" y="48" text-anchor="middle" fill="#fff" font-family="Georgia, 'Times New Roman', serif" font-size="30" letter-spacing="3">WEASEL</text>
+  <text x="144" y="70" text-anchor="middle" fill="#f3c7ff" font-family="Georgia, 'Times New Roman', serif" font-size="14">Essence · Ambition</text>
+
+  <g>
+    <rect x="44" y="182" width="200" height="40" rx="10" fill="#0b0611" fill-opacity="0.55" stroke="#ffd1ff" stroke-opacity="0.18"/>
+    <text x="144" y="206" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" letter-spacing="1.2">CLICK TO VIEW BLESSING</text>
+  </g>
+</svg>
+
