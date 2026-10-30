@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Dragon's Dungeon Roll20 Bridge",
+  "version": "1.0.0",
+  "description": "Submit Dragon's Dungeon d20 rolls to open Roll20 editor tabs.",
+  "host_permissions": ["https://app.roll20.net/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    { "matches": ["http://localhost/*", "http://127.0.0.1/*"], "js": ["app.js"], "run_at": "document_idle" },
+    { "matches": ["https://app.roll20.net/editor*"], "js": ["roll20.js"], "run_at": "document_idle" }
+  ]
+}
