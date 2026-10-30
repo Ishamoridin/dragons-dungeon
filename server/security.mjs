@@ -14,9 +14,10 @@ export async function verifyPassword(hash, password) {
 export const sessionDigest = (token, key) => createHmac('sha256', key).update(token).digest('hex')
 
 export function canAccessCharacter(record, user) {
+  if (user.SecondaryOwner) return true
   return user.Role === 'dm' ? record.DMId === user.Id : record.OwnerId === user.Id
 }
 
 export function publicUser(user) {
-  return { Id: user.Id, Username: user.Username, Role: user.Role, PreferredSkin: user.PreferredSkin ?? 'basalt', Email: user.Email, GoogleLinked: Boolean(user.GoogleSub) }
+  return { Id: user.Id, Username: user.Username, Role: user.Role, PreferredSkin: user.PreferredSkin ?? 'basalt', Email: user.Email, GoogleLinked: Boolean(user.GoogleSub), SecondaryOwner: Boolean(user.SecondaryOwner) }
 }

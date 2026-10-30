@@ -61,9 +61,9 @@ export async function undoLatest(db, actor) {
       const scope = history.Kind === 'characters' ? { Id: history.TargetId } : { Id: history.TargetId, OwnerId: snapshot.OwnerId }
       const collection = db.collection(history.Kind)
       const current = await collection.findOne(scope, { session })
-      const accessible = history.Kind === 'characters'
+      const accessible = actor.SecondaryOwner || (history.Kind === 'characters'
         ? (actor.Role === 'dm' ? snapshot.DMId === actor.Id : snapshot.OwnerId === actor.Id)
-        : snapshot.OwnerId === actor.Id && actor.Role === 'dm'
+        : snapshot.OwnerId === actor.Id && actor.Role === 'dm')
       if (!accessible) throw Object.assign(new Error('You no longer have permission to undo this change.'), { status: 403 })
       if (history.After ? !current || (current.Version ?? 0) !== history.After.Version : current) {
         throw Object.assign(new Error('A newer change exists. Undo would overwrite it.'), { status: 409 })

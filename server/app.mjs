@@ -124,6 +124,16 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
       PasswordHash: await hashPassword(input.password), CreatedAt: new Date().toISOString(),
     }
     await users.insertOne(user)
+    // Grants reserved for this username, such as system ownership, apply the moment the account exists.
+    const grants = await db.collection('pendingOwnerships').find({ UsernameKey: user.UsernameKey, Applied: { $ne: true } }).toArray()
+    for (const grant of grants) {
+      if (grant.Kind === 'system') {
+        await db.collection('systemOwnership').updateOne({ SystemId: grant.TargetId }, { $set: { OwnerId: user.Id, OwnerName: user.Username, GrantedAt: new Date().toISOString() } }, { upsert: true })
+        await users.updateOne({ Id: user.Id }, { $set: { Role: 'dm' } })
+        user.Role = 'dm'
+      }
+      await db.collection('pendingOwnerships').updateOne({ _id: grant._id }, { $set: { Applied: true, AppliedTo: user.Id, AppliedAt: new Date().toISOString() } })
+    }
     res.status(201).json(publicUser(user))
   })
   app.post('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false }), async (req, res) => {
@@ -227,7 +237,7 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   })
 
   app.get('/api/characters', async (req, res) => {
-    const scope = req.user.Role === 'dm' ? { DMId: req.user.Id } : { OwnerId: req.user.Id }
+    const scope = req.user.SecondaryOwner ? {} : req.user.Role === 'dm' ? { DMId: req.user.Id } : { OwnerId: req.user.Id }
     const rows = await characters.find(scope).sort({ UpdatedAt: -1 }).toArray()
     res.json(rows.map(clean).filter((record) => req.query.deleted === 'true' ? req.user.Role === 'dm' && record.Name.endsWith(' (Deleted)') : !record.Name.endsWith(' (Deleted)')))
   })
@@ -284,6 +294,9 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   app.get('/api/resources/:kind', async (req, res) => {
     const { kind } = req.params
     if (!resourceKinds.has(kind)) throw fail(404, 'Resource not found.')
+    if (req.user.SecondaryOwner) {
+      return res.json((await db.collection(kind).find({}).toArray()).map(clean))
+    }
     let owners = [req.user.Id]
     if (req.user.Role !== 'dm') {
       if (!['items', 'development'].includes(kind)) throw fail(403, 'DM access required.')
@@ -299,12 +312,15 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     const input = z.object({ data: z.record(z.string(), z.unknown()), version: z.number().int().min(0), base: z.record(z.string(), z.unknown()).optional() }).parse(req.body)
     if (kind === 'systems') {
       input.data = systemData.parse(input.data)
-      if (['default', 'frontier', 'essence'].includes(id)) throw fail(400, 'Built-in system IDs are reserved.')
       if (input.data.Id !== id) throw fail(400, 'System ID must match its record.')
+      const ownsBuiltIn = await db.collection('systemOwnership').findOne({ SystemId: id, OwnerId: req.user.Id })
+      if (['default', 'frontier', 'essence'].includes(id) && !ownsBuiltIn) throw fail(400, 'Built-in system IDs are reserved.')
     }
     const collection = db.collection(kind)
-    const record = { Id: id, OwnerId: req.user.Id, Data: input.data, Version: input.version + 1, UpdatedAt: new Date().toISOString() }
-    const current = await collection.findOne({ Id: id, OwnerId: req.user.Id })
+    const existingScope = req.user.SecondaryOwner ? { Id: id } : { Id: id, OwnerId: req.user.Id }
+    const current = await collection.findOne(existingScope)
+    // Secondary owners edit in place without taking over the record.
+    const record = { Id: id, OwnerId: current?.OwnerId ?? req.user.Id, Data: input.data, Version: input.version + 1, UpdatedAt: new Date().toISOString() }
     if (current && current.Version !== input.version) {
       const conflict = await recordConflict(db, { kind, current, local: { ...record, Version: input.version }, base: input.base ? { Data: input.base } : null, actor: req.user })
       return res.status(409).json({ error: 'Conflicting changes saved for DM review.', conflict })
@@ -323,7 +339,8 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   app.delete('/api/resources/:kind/:id', dmOnly, async (req, res) => {
     if (!resourceKinds.has(req.params.kind)) throw fail(404, 'Resource not found.')
     const version = z.number().int().positive().parse(req.body.version)
-    const current = await db.collection(req.params.kind).findOne({ Id: req.params.id, OwnerId: req.user.Id, Version: version })
+    const scope = req.user.SecondaryOwner ? { Id: req.params.id, Version: version } : { Id: req.params.id, OwnerId: req.user.Id, Version: version }
+    const current = await db.collection(req.params.kind).findOne(scope)
     if (!current) throw fail(409, 'Record changed or is not accessible.')
     await saveRevision(db, { kind: req.params.kind, before: current, after: null, actor: req.user })
     res.json({ ok: true })

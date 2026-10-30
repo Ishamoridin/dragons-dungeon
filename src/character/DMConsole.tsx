@@ -60,6 +60,10 @@ type DMConsoleProps = {
 const CAMPAIGN_PAGES = ['Players', 'Factions', 'NPCs', 'Techniques', 'Items', 'Events', 'Timeline'] as const
 type CampaignPage = (typeof CAMPAIGN_PAGES)[number]
 
+// Saved records override built-ins with the same Id, e.g. a reassigned Essence system.
+const mergeSystems = (saved: StatSystem[]): StatSystem[] =>
+  [...new Map([...STAT_SYSTEMS, ...saved].map((system) => [system.Id, system])).values()]
+
 type TechniqueSource =
   | { kind: 'character'; characterId: string; index: number; label: string }
   | { kind: 'npc'; npc: Person; index: number; label: string }
@@ -1253,7 +1257,7 @@ function FactionModal({
 export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserChange }: DMConsoleProps) {
   const [characters, setCharacters] = useState<CharacterSheetRecord[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [systems, setSystems] = useState<StatSystem[]>(() => [...STAT_SYSTEMS, ...resourceList<StatSystem>('systems')])
+  const [systems, setSystems] = useState<StatSystem[]>(() => mergeSystems(resourceList<StatSystem>('systems')))
   const [newSystemOpen, setNewSystemOpen] = useState(false)
   const [selectedSystemId, setSelectedSystemId] = useState(DEFAULT_STAT_SYSTEM_ID)
   const [selectedCampaignName, setSelectedCampaignName] = useState('')
@@ -1279,7 +1283,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
     try {
       const rows = await refreshCharacterSheets(user)
       setCharacters(rows)
-      const availableSystems = [...STAT_SYSTEMS, ...resourceList<StatSystem>('systems')]
+      const availableSystems = mergeSystems(resourceList<StatSystem>('systems'))
       setSystems(availableSystems)
       setSelectedSystemId((selected) => availableSystems.some((system) => !system.Hidden && system.Id === selected) ? selected : DEFAULT_STAT_SYSTEM_ID)
       // Campaigns a stat system defines stay listed even when every character in them has been deleted.
