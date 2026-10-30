@@ -43,6 +43,14 @@ Saved characters have numeric versions. Undo restores the last database-saved ch
 
 The DM character modal can add or remove tracked Essence quantities. It also provides current/max HP, Reiryoku, and Willpower fields with per-pool Apply controls. These values are saved separately as temporary overrides, leaving attributes and permanent bonuses unchanged. Reset temporary values clears the overrides and restores derived maxima with full current pools. These saves participate in version history and Undo.
 
+## Wound Results and Burden
+
+Burden counts carried inventory only; equipped armour and other equipped items do not contribute. Each inventory entry retains its recorded burden total.
+
+The Wound result field previews and applies explicit stat modifiers such as `Strength -2; Dodge -1; maximum HP -100`, `reduce Strength by 2`, or `maximum health -25%`. Attribute and skill changes flow into derived stats, summary bars, and combat rolls, but do not change purchased values or development points. Removing the injury reverses its modifiers. Explicit temporary resource maxima remain authoritative.
+
+Use `Weaponry` for its combat modifier and `Weaponry skill` for its skill value. Qualify ambiguous skills, such as `mental politics skill`. Conditional rules, unsupported prose, and ambiguous damage such as `lose 50 HP` are flagged for manual review rather than guessed. Duration text is informational: effects remain active until the injury is removed. Equipment tooltips include the item name, slot, armour adjustment, combat modifiers, and burden.
+
 ## Technique Descriptions
 
 Technique editing has separate Flavour, Passive Effect, and Active Effect fields. Saving keeps those sections individually and combines the non-empty sections into the main description, with effect headings. Existing descriptions open in Flavour without attempting to reinterpret or discard legacy text.

@@ -1,3 +1,43 @@
+.wound-result-effects {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--skin-border, #555);
+  font-size: 0.8rem;
+}
+
+.wound-result-effects ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.wound-result-effects li {
+  overflow-wrap: anywhere;
+}
+
+.essence-record-form > .wound-result-effects {
+  grid-column: 1 / -1;
+}
+
+.wound-result-effects li b {
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wound-manual-review {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-left: 3px solid #d5a94d;
+  background: rgba(213, 169, 77, 0.08);
+}
+
+.wound-effective-value {
+  font-variant-numeric: tabular-nums;
+}
 .settings-menu {
   position: relative;
 }

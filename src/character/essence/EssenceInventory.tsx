@@ -1,5 +1,7 @@
 import { useId, useState, type ReactNode } from 'react'
 import type { EssenceArmourPiece, EssenceCharacterData } from './EssenceTypes'
+import { ESSENCE_WOUND_TARGETS } from './EssenceSystem'
+import { interpretWoundResult } from './WoundEffects'
 import { listItemCatalog, type ArmourCatalogEntry } from './EssenceItemCatalog'
 
 // Body locations from the workbook's long-term injury table.
@@ -328,6 +330,20 @@ export function ArmourPanel({ data, onEdit }: { data: EssenceCharacterData; onEd
   )
 }
 
+function WoundResultEffects({ text, preview = false }: { text: string; preview?: boolean }) {
+  const interpretation = interpretWoundResult(text, ESSENCE_WOUND_TARGETS)
+  if (!interpretation.Modifiers.length && !interpretation.Unapplied.length) return null
+  return (
+    <div className="wound-result-effects" aria-live={preview ? 'polite' : undefined}>
+      {interpretation.Modifiers.length > 0 && <>
+        <strong>{preview ? 'Would apply' : 'Applied effects'}</strong>
+        <ul>{interpretation.Modifiers.map((modifier, index) => <li key={`${modifier.Target}-${index}`}><span>{modifier.Name}</span><b>{modifier.Operation === 'add' ? signed(modifier.Value) : `x${fmt(modifier.Value)}`}</b></li>)}</ul>
+      </>}
+      {interpretation.Unapplied.length > 0 && <div className="wound-manual-review"><strong>Manual review</strong><ul>{interpretation.Unapplied.map((part, index) => <li key={index}>{part}</li>)}</ul></div>}
+    </div>
+  )
+}
+
 export function InjuriesPanel({ data, onEdit }: { data: EssenceCharacterData; onEdit?: Edit }) {
   const injuries = data.Injuries ?? []
   const statuses = data.Statuses ?? []
@@ -380,6 +396,7 @@ export function InjuriesPanel({ data, onEdit }: { data: EssenceCharacterData; on
           <strong>{injury.Location}: {injury.Name}</strong>
           <small>{injury.Duration || 'No duration set'}</small>
           {injury.Result && <p>{injury.Result}</p>}
+          <WoundResultEffects text={injury.Result} />
           {onEdit && <button type="button" onClick={() => onEdit((draft) => { draft.Injuries = (draft.Injuries ?? []).filter((_, i) => i !== index) })}>Remove</button>}
         </div>
       ))}
@@ -387,13 +404,14 @@ export function InjuriesPanel({ data, onEdit }: { data: EssenceCharacterData; on
         <div className="essence-record-form">
           <label className="essence-field">
             <span className="essence-field-label">Injury location</span>
-            <select value={location} onChange={(event) => setLocation(event.currentTarget.value)}>
+            <select aria-label="Injury location" value={location} onChange={(event) => setLocation(event.currentTarget.value)}>
               {INJURY_LOCATIONS.map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
           <LabeledField label="Injury name" value={name} set={setName} />
           <LabeledField label="Duration" value={duration} set={setDuration} />
           <LabeledField label="Wound result" value={result} set={setResult} />
+          <WoundResultEffects text={result} preview />
           <button
             type="button"
             disabled={!name.trim()}

@@ -1,4 +1,5 @@
 import type { EssenceCharacterData, EssenceRace, EssenceResero, EssenceZodiac } from './EssenceTypes'
+import { applyWoundModifiers, interpretWoundResult, type WoundTarget } from './WoundEffects'
 
 export const ESSENCE_SYSTEM_ID = 'essence'
 
@@ -91,6 +92,30 @@ export const ESSENCE_SKILLS: EssenceSkillDefinition[] = [
 ]
 
 export const RACES: EssenceRace[] = ['Human', 'Soul', 'Hollow', 'Native', 'Half-Construct']
+
+export const ESSENCE_WOUND_TARGETS: WoundTarget[] = [
+  ...ESSENCE_ATTRIBUTES.map((attribute) => ({ Id: `attribute:${attribute.Id}`, Name: attribute.Name, Aliases: [attribute.Id], Minimum: 0, Maximum: 1000 })),
+  ...ESSENCE_SKILLS.map((skill) => ({
+    Id: `skill:${skill.Id}`,
+    Name: `${skill.Name} skill (${skill.Group === 'spiritual' ? 'Spiritual' : skill.Group === 'mental' ? 'Mental' : 'Physical'})`,
+    Aliases: [`${skill.Group} ${skill.Name} skill`, `${skill.Name} skill`, ...(['ranged', 'weaponry', 'brawl'].includes(skill.Id) ? [] : [skill.Name])],
+    Minimum: 0,
+  })),
+  { Id: 'maxHP', Name: 'Maximum HP', Aliases: ['max HP', 'maximum health', 'max health', 'HP maximum', 'health maximum'], Minimum: 0 },
+  { Id: 'maxReiryoku', Name: 'Maximum Reiryoku', Aliases: ['max Reiryoku', 'max Rei', 'maximum Rei'], Minimum: 0 },
+  { Id: 'maxWillpower', Name: 'Maximum Willpower', Aliases: ['max Willpower', 'maximum Will', 'max Will'], Minimum: 0 },
+  { Id: 'armour', Name: 'Armour', Aliases: ['armor'], Minimum: 0 },
+  { Id: 'dodge', Name: 'Dodge' },
+  { Id: 'defense', Name: 'Defense', Aliases: ['defence'] },
+  { Id: 'initiative', Name: 'Initiative', Aliases: ['init'] },
+  { Id: 'ranged', Name: 'Ranged', Aliases: ['ranged modifier', 'ranged to hit'] },
+  { Id: 'weaponry', Name: 'Weaponry', Aliases: ['weaponry modifier', 'weaponry to hit'] },
+  { Id: 'brawl', Name: 'Brawl', Aliases: ['brawl modifier', 'brawl to hit'] },
+  { Id: 'reiatsuModifier', Name: 'Reiatsu modifier', Aliases: ['reiatsu-mod'] },
+  { Id: 'reishiModifier', Name: 'Reishi modifier', Aliases: ['reishi-mod'] },
+  { Id: 'maxBurden', Name: 'Maximum burden', Aliases: ['max burden', 'burden capacity'], Minimum: 0 },
+]
+const woundTargets = new Map(ESSENCE_WOUND_TARGETS.map((target) => [target.Id, target]))
 export const SPIRIT_WEAPON_CATEGORIES = [
   'Spirit Blade', 'Reishi Weapon', 'Spirit Body', 'Reishi Companion', 'Spirit Aura', 'Reiatsu Casting', 'Reishi Armour', 'Spirit Curse',
 ] as const
@@ -179,6 +204,8 @@ export type ReseroStage = EssenceResero['Stage']
 export const RESERO_ORDER: ReseroStage[] = ['Partial', 'First', 'True']
 
 export type EssenceDerived = {
+  attributes: Record<string, number>
+  skills: Record<string, number>
   trueHP: number
   maxHP: number
   trueReiryoku: number
@@ -234,12 +261,16 @@ export function skillCap(data: EssenceCharacterData, skill: EssenceSkillDefiniti
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
 
 export function computeEssenceStats(data: EssenceCharacterData, reseroStage: ReseroStage | null = null): EssenceDerived {
+  const woundModifiers = (data.Injuries ?? []).flatMap((injury) => interpretWoundResult(injury.Result, ESSENCE_WOUND_TARGETS).Modifiers)
+  const adjusted = (id: string, value: number) => applyWoundModifiers(woundTargets.get(id) ?? { Id: id, Name: id }, value, woundModifiers)
+  const attributes = Object.fromEntries(Object.entries(data.Attributes).map(([id, value]) => [id, adjusted(`attribute:${id}`, value)]))
+  const skills = Object.fromEntries(Object.entries(data.Skills).map(([id, value]) => [id, adjusted(`skill:${id}`, value)]))
   const maximum = (key: 'hp' | 'reiryoku' | 'willpower', derived: number) => {
     const temporary = data.TemporaryResources?.[key]?.Max
     return temporary !== undefined && Number.isFinite(temporary) ? Math.max(0, temporary) : derived
   }
-  const a = (id: string) => data.Attributes[id] ?? 0
-  const s = (id: string) => data.Skills[id] ?? 0
+  const a = (id: string) => attributes[id] ?? 0
+  const s = (id: string) => skills[id] ?? 0
   const race = RACE_BONUSES[data.Race]
   const bonus = data.SheetBonuses
   const wear = data.Wearables
@@ -268,23 +299,25 @@ export function computeEssenceStats(data: EssenceCharacterData, reseroStage: Res
   const reseroArmour = Math.max(0, ...appliedResero.map((stage) => stage.BonusArmour))
 
   return {
+    attributes,
+    skills,
     trueHP,
-    maxHP: maximum('hp', trueHP + bonus.hp + reseroHP),
+    maxHP: maximum('hp', adjusted('maxHP', trueHP + bonus.hp + reseroHP)),
     trueReiryoku,
-    maxReiryoku: maximum('reiryoku', trueReiryoku + bonus.reiryoku + reseroReiryoku),
+    maxReiryoku: maximum('reiryoku', adjusted('maxReiryoku', trueReiryoku + bonus.reiryoku + reseroReiryoku)),
     trueWillpower,
-    maxWillpower: maximum('willpower', trueWillpower + bonus.willpower),
-    armour: race.armour + armourSum('ArmourValue') + armourSum('ArmourMod') + wear.mask + bonus.armour + potentialTier * 25 + reseroArmour,
+    maxWillpower: maximum('willpower', adjusted('maxWillpower', trueWillpower + bonus.willpower)),
+    armour: adjusted('armour', race.armour + armourSum('ArmourValue') + armourSum('ArmourMod') + wear.mask + bonus.armour + potentialTier * 25 + reseroArmour),
     // The sheet's dodge formula reads Weaponry where this sits, not Athletics.
-    dodge: (a('wisdom') + a('agility') + s('weaponry') + a('composure')) / 4 + race.dodge + armourSum('DodgeMod'),
-    defense: (a('strength') + a('constitution') + a('reiatsuRelease') + a('agility')) / 4 + race.defense + armourSum('DefenseMod'),
-    initiative: (a('resolve') + a('composure') + a('agility') + a('wisdom')) / 3 + race.initiative + bonus.initiative,
-    ranged: (s('ranged') + a('agility') + a('reiatsuRelease')) / 2,
-    weaponry: (s('weaponry') + a('strength') + a('agility')) / 2,
-    brawl: (s('brawl') + a('strength') + a('reiatsuRelease')) / 2 + race.brawl,
-    reiatsuModifier: a('presence') / 2 + a('reishiManipulation') / 2 + a('reiatsuRelease') / 4 + a('reiryokuControl') / 4,
-    reishiModifier: a('presence') / 4 + a('resolve') / 4 + a('reishiManipulation') / 2 + a('reiryokuControl') / 2,
-    maxBurden: a('strength') + a('agility') + a('reiatsuRelease') + a('resolve') + wear.pouch,
+    dodge: adjusted('dodge', (a('wisdom') + a('agility') + s('weaponry') + a('composure')) / 4 + race.dodge + armourSum('DodgeMod')),
+    defense: adjusted('defense', (a('strength') + a('constitution') + a('reiatsuRelease') + a('agility')) / 4 + race.defense + armourSum('DefenseMod')),
+    initiative: adjusted('initiative', (a('resolve') + a('composure') + a('agility') + a('wisdom')) / 3 + race.initiative + bonus.initiative),
+    ranged: adjusted('ranged', (s('ranged') + a('agility') + a('reiatsuRelease')) / 2),
+    weaponry: adjusted('weaponry', (s('weaponry') + a('strength') + a('agility')) / 2),
+    brawl: adjusted('brawl', (s('brawl') + a('strength') + a('reiatsuRelease')) / 2 + race.brawl),
+    reiatsuModifier: adjusted('reiatsuModifier', a('presence') / 2 + a('reishiManipulation') / 2 + a('reiatsuRelease') / 4 + a('reiryokuControl') / 4),
+    reishiModifier: adjusted('reishiModifier', a('presence') / 4 + a('resolve') / 4 + a('reishiManipulation') / 2 + a('reiryokuControl') / 2),
+    maxBurden: adjusted('maxBurden', a('strength') + a('agility') + a('reiatsuRelease') + a('resolve') + wear.pouch),
     points: {
       attributesInvested,
       skillsInvested,

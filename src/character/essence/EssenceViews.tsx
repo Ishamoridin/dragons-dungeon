@@ -235,8 +235,8 @@ export function EssenceMiniSheet({ data, name, onEdit }: { data: EssenceCharacte
         {resourceError && <small role="alert">{resourceError}</small>}
       </div> : <Bars stats={stats} current={current} />}
       <div className="essence-distributions">
-        <GroupDistribution label="Attributes" definitions={ESSENCE_ATTRIBUTES} values={data.Attributes} />
-        <GroupDistribution label="Skills" definitions={ESSENCE_SKILLS} values={data.Skills} />
+        <GroupDistribution label="Attributes" definitions={ESSENCE_ATTRIBUTES} values={stats.attributes} />
+        <GroupDistribution label="Skills" definitions={ESSENCE_SKILLS} values={stats.skills} />
       </div>
       <section className="essence-mini-combat" aria-label="Combat statistics">
         <h3>Combat</h3>
@@ -653,6 +653,7 @@ export function EssenceSheetBody({
               <article className="essence-attribute" key={attribute.Id} title={attribute.Description}>
                 <div><strong>{attribute.Name}</strong><small>{attribute.Tag.toUpperCase()}</small></div>
                 <span className="score-value"><Stepper value={data.Attributes[attribute.Id]} label={attribute.Name} onOpen={open?.('Attributes', attribute.Id, attribute.Name)} showDecrease={isDm} canIncrease={canSpend} increaseHint={noPointsHint} /></span>
+                {stats.attributes[attribute.Id] !== data.Attributes[attribute.Id] && <small className="wound-effective-value">Effective {fmt(stats.attributes[attribute.Id])}</small>}
               </article>
             ))}
           </div>
@@ -664,7 +665,7 @@ export function EssenceSheetBody({
                   <strong>{skill.Name}</strong>
                   <small>{skill.Governors.map(tagName).join(' / ')}</small>
                   <span><Stepper value={data.Skills[skill.Id]} label={skill.Name} onOpen={open?.('Skills', skill.Id, skill.Name)} showDecrease={isDm} canIncrease={canSpend} increaseHint={noPointsHint} /> / {cap}</span>
-                  <small />
+                  <small>{stats.skills[skill.Id] !== data.Skills[skill.Id] ? `Effective ${fmt(stats.skills[skill.Id])}` : ''}</small>
                 </div>
               )
             })}
