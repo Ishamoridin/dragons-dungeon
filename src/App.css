@@ -211,6 +211,24 @@
   overflow-wrap: anywhere;
   line-height: 1.4;
 }
+
+.essence-zodiac-panel {
+  grid-column: 1 / -1;
+}
+
+.essence-zodiac-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  gap: 8px 28px;
+  align-items: start;
+}
+
+.essence-zodiac-columns > div {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  align-content: start;
+}
 .settings-menu {
   position: relative;
 }

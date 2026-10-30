@@ -780,12 +780,18 @@ export function EssenceSheetBody({
 
       {tab === 'essence' && (
         <>
-      <section className="essence-panel">
+      <section className="essence-panel essence-zodiac-panel">
         <h2>Zodiac of {data.Zodiac.Essence} <span className="essence-sub">{data.Zodiac.Name}</span></h2>
-        <h3>Passive</h3>
-        {toParagraphs(data.Zodiac.Passive).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-        <h3>Active</h3>
-        {toParagraphs(data.Zodiac.Active).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+        <div className="essence-zodiac-columns">
+          <div>
+            <h3>Passive</h3>
+            {toParagraphs(data.Zodiac.Passive).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+          </div>
+          <div>
+            <h3>Active</h3>
+            {toParagraphs(data.Zodiac.Active).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+          </div>
+        </div>
       </section>
 
       <EssenceTree holdings={data.Essences} techniques={data.Techniques} role={role} onChange={onEssenceChange} />
