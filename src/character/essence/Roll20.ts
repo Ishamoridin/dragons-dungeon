@@ -40,6 +40,27 @@ export function maxRoll(text: string): number | null {
 // Typed into chat as-is.
 export const toChatCommand = (roll: Roll) => `/roll ${roll.formula}`
 
+export function attemptRoll20(command: string): Promise<{ sent: number; reason: string }> {
+  return new Promise((resolve) => {
+    const requestId = crypto.randomUUID()
+    const finish = (sent: number, reason: string) => {
+      window.removeEventListener('message', receive)
+      window.clearTimeout(timer)
+      resolve({ sent, reason })
+    }
+    const receive = (event: MessageEvent) => {
+      if (event.source !== window || event.origin !== window.location.origin) return
+      const data = event.data
+      if (data?.type !== 'dragons-dungeon:roll20-result' || data.requestId !== requestId) return
+      if (!Number.isInteger(data.sent) || data.sent < 0 || typeof data.reason !== 'string') return
+      finish(data.sent, data.reason.slice(0, 200))
+    }
+    const timer = window.setTimeout(() => finish(0, 'Roll20 bridge unavailable; paste the copied roll into chat.'), 1500)
+    window.addEventListener('message', receive)
+    window.postMessage({ type: 'dragons-dungeon:roll20', requestId, command }, window.location.origin)
+  })
+}
+
 // Pasted into a macro; the template shows the character's roll under a titled card.
 export const toMacro = (roll: Roll) =>
   `&{template:default} {{name=${clean(roll.name)}}} {{${clean(roll.label)}=[[${roll.formula}]]}}`

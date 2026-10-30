@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { resourceList, saveResource } from './Api'
 import NewSystemModal from './NewSystemModal'
+import EssenceAdjustmentModal from './essence/EssenceAdjustmentModal'
 import type { CampaignAction, CampaignEventType, NPCFactionGroup } from './Campaign'
 import type Person from './Person'
 import { PlayerClass } from './PlayerClass'
@@ -349,9 +350,9 @@ const getResources = (record: CharacterSheetRecord) => [
 
 const formatValue = (value: number): string => value.toFixed(1).replace(/\.0$/, '')
 
-function MiniSheet({ record }: { record: CharacterSheetRecord }) {
+function MiniSheet({ record, onEssenceEdit }: { record: CharacterSheetRecord; onEssenceEdit?: (mutate: (draft: EssenceCharacterData) => void) => Promise<void> }) {
   if (record.Essence) {
-    return <EssenceMiniSheet data={record.Essence} name={displayName(record)} />
+    return <EssenceMiniSheet data={record.Essence} name={displayName(record)} onEdit={onEssenceEdit} />
   }
 
   const topSkills = flattenSkills(record.Skills)
@@ -557,6 +558,7 @@ function CharacterActionModal({
   const [scheduleSkillNames, setScheduleSkillNames] = useState<string[]>(allSkills[0] ? [allSkills[0].Name] : [])
   const [selectedActions, setSelectedActions] = useState<CampaignAction['type'][]>(initialTemplate.suggestedActions)
   const [scheduleError, setScheduleError] = useState('')
+  const [essenceAdjustmentOpen, setEssenceAdjustmentOpen] = useState(false)
 
   const toggleAction = (type: CampaignAction['type']) => {
     setSelectedActions((current) =>
@@ -605,15 +607,19 @@ function CharacterActionModal({
             </div>
             <button type="button" className="modal-toggle" onClick={onClose}>Close</button>
           </header>
-          <MiniSheet record={record} />
+          <MiniSheet record={record} onEssenceEdit={onApplyEssence} />
           <div className="dm-action-grid">
-            <EssenceActions data={record.Essence} onChange={onApplyEssence} />
+            <div className="essence-summary-actions">
+              <EssenceActions data={record.Essence} onChange={onApplyEssence} />
+              <button type="button" className="dm-secondary-action" onClick={() => setEssenceAdjustmentOpen(true)}>Add or Remove Essence</button>
+            </div>
             <section className="dm-action-block">
               <h3>Player sheet</h3>
               <button type="button" className="dm-secondary-action" onClick={onOpenSheet}>Open Player sheet</button>
               <DeleteCharacterControl name={displayName(record)} onDelete={onDelete} />
             </section>
           </div>
+          {essenceAdjustmentOpen && <EssenceAdjustmentModal data={record.Essence} onClose={() => setEssenceAdjustmentOpen(false)} onSave={(change) => onApplyEssence((draft) => applyEssenceChange(draft, change, { name: record.DMName, role: 'dm' }))} />}
         </section>
       </div>
     )

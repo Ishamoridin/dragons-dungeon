@@ -219,6 +219,14 @@ export type EssenceDerived = {
 
 const tagToAttributeId = Object.fromEntries(ESSENCE_ATTRIBUTES.map((attribute) => [attribute.Tag, attribute.Id])) as Record<AttributeTag, string>
 
+export function currentEssenceResources(data: EssenceCharacterData, stats: EssenceDerived): Record<'hp' | 'reiryoku' | 'willpower', number> {
+  const value = (key: 'hp' | 'reiryoku' | 'willpower', maximum: number) => {
+    const saved = data.TemporaryResources?.[key]?.Current
+    return saved !== undefined && Number.isFinite(saved) ? Math.max(0, Math.min(maximum, saved)) : maximum
+  }
+  return { hp: value('hp', stats.maxHP), reiryoku: value('reiryoku', stats.maxReiryoku), willpower: value('willpower', stats.maxWillpower) }
+}
+
 export function skillCap(data: EssenceCharacterData, skill: EssenceSkillDefinition): number {
   return Math.max(...skill.Governors.map((tag) => data.Attributes[tagToAttributeId[tag]] ?? 0))
 }
@@ -226,6 +234,10 @@ export function skillCap(data: EssenceCharacterData, skill: EssenceSkillDefiniti
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
 
 export function computeEssenceStats(data: EssenceCharacterData, reseroStage: ReseroStage | null = null): EssenceDerived {
+  const maximum = (key: 'hp' | 'reiryoku' | 'willpower', derived: number) => {
+    const temporary = data.TemporaryResources?.[key]?.Max
+    return temporary !== undefined && Number.isFinite(temporary) ? Math.max(0, temporary) : derived
+  }
   const a = (id: string) => data.Attributes[id] ?? 0
   const s = (id: string) => data.Skills[id] ?? 0
   const race = RACE_BONUSES[data.Race]
@@ -257,11 +269,11 @@ export function computeEssenceStats(data: EssenceCharacterData, reseroStage: Res
 
   return {
     trueHP,
-    maxHP: trueHP + bonus.hp + reseroHP,
+    maxHP: maximum('hp', trueHP + bonus.hp + reseroHP),
     trueReiryoku,
-    maxReiryoku: trueReiryoku + bonus.reiryoku + reseroReiryoku,
+    maxReiryoku: maximum('reiryoku', trueReiryoku + bonus.reiryoku + reseroReiryoku),
     trueWillpower,
-    maxWillpower: trueWillpower + bonus.willpower,
+    maxWillpower: maximum('willpower', trueWillpower + bonus.willpower),
     armour: race.armour + armourSum('ArmourValue') + armourSum('ArmourMod') + wear.mask + bonus.armour + potentialTier * 25 + reseroArmour,
     // The sheet's dodge formula reads Weaponry where this sits, not Athletics.
     dodge: (a('wisdom') + a('agility') + s('weaponry') + a('composure')) / 4 + race.dodge + armourSum('DodgeMod'),

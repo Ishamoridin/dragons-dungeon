@@ -131,6 +131,7 @@ export type EssenceCharacterData = {
   Armour: EssenceArmourPiece[]
   Wearables: { mask: number; badge: number; talisman: number; pouch: number; charm: number }
   SheetBonuses: { hp: number; reiryoku: number; willpower: number; armour: number; initiative: number }
+  TemporaryResources?: Partial<Record<'hp' | 'reiryoku' | 'willpower', { Current?: number; Max?: number }>>
   Essences: EssenceHolding[]
   Mastery: number
   PotentialStored: number

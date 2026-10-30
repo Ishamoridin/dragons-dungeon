@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { RotateCcw, Save } from 'lucide-react'
 import {
   ATTRIBUTE_GROUPS,
   ESSENCE_ATTRIBUTES,
   ESSENCE_RULES,
   ESSENCE_SKILLS,
   computeEssenceStats,
+  currentEssenceResources,
   skillCap,
   spiritWeaponLabel,
   toParagraphs,
@@ -121,7 +123,7 @@ function Bars({
                   </span>
                 </span>
               ) : (
-                <strong>{bar.max}</strong>
+                <strong>{value === bar.max ? fmt(bar.max) : `${fmt(value)} / ${fmt(bar.max)}`}</strong>
               )}
             </div>
             <div className="resource-track" role="progressbar" aria-label={bar.name} aria-valuemin={0} aria-valuemax={bar.max} aria-valuenow={value}>
@@ -158,23 +160,80 @@ function GroupDistribution({ label, definitions, values }: {
   )
 }
 
-export function EssenceMiniSheet({ data, name }: { data: EssenceCharacterData; name: string }) {
+function TemporaryResourceRow({ label, color, current, maximum, disabled, onSave }: {
+  label: string
+  color: string
+  current: number
+  maximum: number
+  disabled: boolean
+  onSave: (current: number, maximum: number) => Promise<void>
+}) {
+  const [currentText, setCurrentText] = useState(String(current))
+  const [maxText, setMaxText] = useState(String(maximum))
+  const [error, setError] = useState('')
+  useEffect(() => { setCurrentText(String(current)); setMaxText(String(maximum)) }, [current, maximum])
+  const dirty = currentText !== String(current) || maxText !== String(maximum)
+  return (
+    <form className={`resource-row ${color} temporary-resource-row`} onSubmit={(event) => {
+      event.preventDefault()
+      const nextMax = Number(maxText)
+      const nextCurrent = Number(currentText)
+      if (!currentText.trim() || !maxText.trim() || !Number.isFinite(nextMax) || !Number.isFinite(nextCurrent) || nextMax < 0 || nextCurrent < 0) { setError('Enter non-negative values.'); return }
+      setError('')
+      void onSave(Math.min(nextCurrent, nextMax), nextMax).catch((failure) => setError(failure instanceof Error ? failure.message : 'Unable to save temporary values.'))
+    }}>
+      <div className="resource-label"><span>{label}</span></div>
+      <div className="temporary-resource-inputs">
+        <input type="number" required min={0} step={1} aria-label={`Current ${label}`} value={currentText} disabled={disabled} onChange={(event) => setCurrentText(event.currentTarget.value)} />
+        <span aria-hidden="true">/</span>
+        <input type="number" required min={0} step={1} aria-label={`Max ${label}`} value={maxText} disabled={disabled} onChange={(event) => setMaxText(event.currentTarget.value)} />
+        <button type="submit" disabled={disabled || !dirty} title={`Apply temporary ${label} values`} aria-label={`Apply temporary ${label} values`}><Save size={15} /></button>
+      </div>
+      <div className="resource-track" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={maximum} aria-valuenow={current}>
+        <span className="resource-fill" style={{ width: `${maximum > 0 ? current / maximum * 100 : 0}%` }} />
+      </div>
+      {error && <small role="alert">{error}</small>}
+    </form>
+  )
+}
+
+export function EssenceMiniSheet({ data, name, onEdit }: { data: EssenceCharacterData; name: string; onEdit?: (mutate: (draft: EssenceCharacterData) => void) => Promise<void> }) {
   const stats = computeEssenceStats(data)
+  const current = currentEssenceResources(data, stats)
+  const [resourceBusy, setResourceBusy] = useState(false)
+  const [resourceError, setResourceError] = useState('')
+  const editResources = async (mutate: (draft: EssenceCharacterData) => void) => {
+    setResourceBusy(true)
+    try { await onEdit?.(mutate) } finally { setResourceBusy(false) }
+  }
   const derived = [
     ['Defense', stats.defense],
     ['Dodge', stats.dodge],
     ['Armour', stats.armour],
-    ['Initiative', stats.initiative],
     ['Ranged', stats.ranged],
     ['Weaponry', stats.weaponry],
     ['Brawl', stats.brawl],
-    ['Reiatsu modifier', stats.reiatsuModifier],
-    ['Reishi modifier', stats.reishiModifier],
+    ['Initiative', stats.initiative],
+    ['Reiatsu-Mod', stats.reiatsuModifier],
+    ['Reishi-Mod', stats.reishiModifier],
   ] as const
 
   return (
     <section className="mini-sheet essence-mini-sheet" aria-label={`${name} summary`}>
-      <Bars stats={stats} />
+      {onEdit ? <div className="mini-sheet-resources">
+        {([
+          { key: 'hp', label: 'HP', maximum: stats.maxHP, color: 'health' },
+          { key: 'reiryoku', label: 'Reiryoku', maximum: stats.maxReiryoku, color: 'mana' },
+          { key: 'willpower', label: 'Willpower', maximum: stats.maxWillpower, color: 'stamina' },
+        ] as const).map((pool) => <TemporaryResourceRow key={pool.key} label={pool.label} color={pool.color} current={current[pool.key]} maximum={pool.maximum} disabled={resourceBusy} onSave={(value, maximum) => editResources((draft) => {
+          draft.TemporaryResources = { ...draft.TemporaryResources, [pool.key]: { Current: value, Max: maximum } }
+        })} />)}
+        {data.TemporaryResources && <button type="button" className="temporary-resource-reset" disabled={resourceBusy} onClick={() => {
+          setResourceError('')
+          void editResources((draft) => { delete draft.TemporaryResources }).catch((failure) => setResourceError(failure instanceof Error ? failure.message : 'Reset failed.'))
+        }}><RotateCcw size={14} />Reset temporary values</button>}
+        {resourceError && <small role="alert">{resourceError}</small>}
+      </div> : <Bars stats={stats} current={current} />}
       <div className="essence-distributions">
         <GroupDistribution label="Attributes" definitions={ESSENCE_ATTRIBUTES} values={data.Attributes} />
         <GroupDistribution label="Skills" definitions={ESSENCE_SKILLS} values={data.Skills} />
@@ -182,7 +241,11 @@ export function EssenceMiniSheet({ data, name }: { data: EssenceCharacterData; n
       <section className="essence-mini-combat" aria-label="Combat statistics">
         <h3>Combat</h3>
         <div className="mini-sheet-attributes">
-          {derived.map(([label, value]) => <div key={label}><span>{label}</span><strong>{fmt(value)}</strong></div>)}
+          {derived.map(([label, value]) => label === 'Initiative'
+            ? <div key={label}><span>{label}</span><strong>{fmt(value)}</strong></div>
+            : <RollButton key={label} roll={d20Roll(name, label, value)} className="essence-combat-roll" attemptRoll>
+                <span>{label}</span><strong>{fmt(value)}</strong>
+              </RollButton>)}
         </div>
       </section>
     </section>
@@ -467,9 +530,10 @@ export function EssenceSheetBody({
   const open = onChange
     ? (kind: StepKind, id: string, name: string) => (direction: 1 | -1) => setPending({ kind, id, name, direction })
     : undefined
-  const [current, setCurrent] = useState<CurrentValues>({})
+  const [localCurrent, setCurrent] = useState<CurrentValues>({})
   const [reseroStage, setReseroStage] = useState<ReseroStage | null>(null)
   const stats = computeEssenceStats(data, reseroStage)
+  const current = { ...currentEssenceResources(data, stats), ...localCurrent }
   const { points } = stats
   const isDm = role === 'dm'
   // Players raise attributes and skills only by spending points the DM has issued.
