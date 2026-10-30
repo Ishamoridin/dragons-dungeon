@@ -10,6 +10,8 @@ try {
     key: process.env.ENCRYPTION_KEY,
     origin: process.env.APP_ORIGIN || 'http://localhost:5173',
     secureCookies: process.env.NODE_ENV === 'production',
+    crossSiteCookies: process.env.CROSS_SITE_COOKIES === 'true',
+    staticDir: process.env.SERVE_STATIC_DIR || undefined,
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,

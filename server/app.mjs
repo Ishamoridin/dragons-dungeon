@@ -53,7 +53,7 @@ export async function initializeDatabase(db) {
   ])
 }
 
-export function createApp(db, { key, origin = 'http://localhost:5173', secureCookies = false, google, googleProvider } = {}) {
+export function createApp(db, { key, origin = 'http://localhost:5173', secureCookies = false, crossSiteCookies = false, staticDir, google, googleProvider } = {}) {
   if (!key || Buffer.byteLength(key) < 32) throw new Error('ENCRYPTION_KEY must contain at least 32 bytes for session protection.')
   const app = express()
   app.disable('x-powered-by')
@@ -61,8 +61,19 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   app.use(express.json({ limit: '2mb' }))
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store')
+    const requestOrigin = req.get('origin')
+    if (requestOrigin === origin) {
+      res.set('Access-Control-Allow-Origin', origin)
+      res.set('Access-Control-Allow-Credentials', 'true')
+      res.set('Vary', 'Origin')
+      if (req.method === 'OPTIONS') {
+        res.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE')
+        res.set('Access-Control-Allow-Headers', 'Content-Type')
+        res.set('Access-Control-Max-Age', '600')
+        return res.sendStatus(204)
+      }
+    }
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-      const requestOrigin = req.get('origin')
       const allowed = new Set([origin, `${secureCookies ? 'https' : 'http'}://${req.get('host')}`])
       if (!requestOrigin || !allowed.has(requestOrigin)) return next(fail(403, 'Request origin is not allowed.'))
     }
@@ -72,7 +83,8 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   const sessions = db.collection('sessions')
   const characters = db.collection('characters')
   const cookieName = secureCookies ? '__Host-dd_session' : 'dd_session'
-  const cookieOptions = { httpOnly: true, secure: secureCookies, sameSite: 'strict', path: '/' }
+  // Cross-site cookies require SameSite=None with Secure for an API hosted apart from the frontend.
+  const cookieOptions = { httpOnly: true, secure: secureCookies || crossSiteCookies, sameSite: crossSiteCookies ? 'none' : 'strict', path: '/' }
   const digestFor = (req) => {
     const raw = req.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1)
     return raw ? sessionDigest(raw, key) : null
@@ -317,6 +329,11 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     res.json({ ok: true })
   })
   app.use('/api', (req, res) => res.status(404).json({ error: 'Endpoint not found.' }))
+  if (staticDir) {
+    app.use(express.static(staticDir, { index: 'index.html' }))
+    // Single-page app fallback so deep links resolve when Express hosts the frontend.
+    app.get(/^\/(?!api(?:\/|$)).*/, (req, res) => res.sendFile('index.html', { root: staticDir }))
+  }
   app.use((error, req, res, next) => {
     const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : error.status ?? 500
     res.status(status).json({ error: error instanceof z.ZodError ? 'Invalid or missing fields.' : error.code === 11000 ? 'Username or email is already in use.' : status >= 500 ? 'Unable to complete the request.' : error.message })

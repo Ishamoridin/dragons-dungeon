@@ -2,9 +2,48 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { connectDatabase } from './database.mjs'
 import { createApp, initializeDatabase } from './app.mjs'
 import { hashPassword } from './security.mjs'
+
+test('cross-origin frontends get CORS, cross-site cookies, and a served SPA', { skip: process.env.RUN_DB_INTEGRATION !== '1' }, async () => {
+  const { client } = await connectDatabase()
+  const db = client.db(`dd_cors_${randomUUID().replaceAll('-', '').slice(0, 24)}`)
+  const pagesOrigin = 'https://ishamoridin.github.io'
+  let server
+  try {
+    await initializeDatabase(db)
+    await db.collection('users').insertOne({ Id: 'dm-cors', Username: 'corsdm', UsernameKey: 'corsdm', Role: 'dm', PasswordHash: await hashPassword('test-password-1234') })
+    const staticDir = await mkdtemp(join(tmpdir(), 'dd-static-'))
+    await writeFile(join(staticDir, 'index.html'), '<!doctype html><title>Dragon\'s Dungeon SPA</title>')
+    server = createApp(db, { key: 'cors-test-key-with-at-least-32-bytes!!', origin: pagesOrigin, crossSiteCookies: true, staticDir }).listen(0, '127.0.0.1')
+    await once(server, 'listening')
+    const base = `http://127.0.0.1:${server.address().port}`
+    const preflight = await fetch(`${base}/api/auth/login`, { method: 'OPTIONS', headers: { Origin: pagesOrigin, 'Access-Control-Request-Method': 'POST' } })
+    assert.equal(preflight.status, 204)
+    assert.equal(preflight.headers.get('access-control-allow-origin'), pagesOrigin)
+    assert.equal(preflight.headers.get('access-control-allow-credentials'), 'true')
+    const foreign = await fetch(`${base}/api/auth/providers`, { headers: { Origin: 'https://evil.example' } })
+    assert.equal(foreign.headers.get('access-control-allow-origin'), null)
+    const login = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: pagesOrigin }, body: JSON.stringify({ username: 'corsdm', password: 'test-password-1234' }) })
+    assert.equal(login.status, 200)
+    const setCookie = login.headers.get('set-cookie')
+    assert.match(setCookie, /SameSite=None/i)
+    assert.match(setCookie, /Secure/i)
+    const spa = await fetch(`${base}/some/deep/route`)
+    assert.equal(spa.status, 200)
+    assert.match(await spa.text(), /Dragon's Dungeon SPA/)
+    const apiMiss = await fetch(`${base}/api/missing`, { headers: { Cookie: setCookie.split(';')[0] } })
+    assert.equal(apiMiss.status, 404)
+    assert.deepEqual(await apiMiss.json(), { error: 'Endpoint not found.' })
+  } finally {
+    if (server) { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)) }
+    try { await db.dropDatabase() } finally { await client.close() }
+  }
+})
 
 test('Atlas account, session, character, and owned-resource CRUD', { skip: process.env.RUN_DB_INTEGRATION !== '1' }, async () => {
   const { client } = await connectDatabase()

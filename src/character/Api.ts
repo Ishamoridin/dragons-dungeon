@@ -3,13 +3,16 @@ export class ApiError extends Error {
   constructor(message: string, status: number) { super(message); this.status = status }
 }
 
-export const staticHosting = import.meta.env?.PUBLIC_STATIC_HOST === 'true'
+// A remote API origin lets static hosts such as GitHub Pages use a separately deployed account service.
+export const apiOrigin = (import.meta.env?.PUBLIC_API_ORIGIN ?? '').trim().replace(/\/+$/, '')
+export const staticHosting = import.meta.env?.PUBLIC_STATIC_HOST === 'true' && !apiOrigin
+export const apiUrl = (path: string) => `${apiOrigin}/api${path}`
 
 export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   if (staticHosting) throw new ApiError('Account service unavailable on this static deployment.', 503)
-  const response = await fetch(`/api${path}`, {
+  const response = await fetch(apiUrl(path), {
     method,
-    credentials: 'same-origin',
+    credentials: apiOrigin ? 'include' : 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })

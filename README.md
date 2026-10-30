@@ -67,7 +67,13 @@ The Pages workflow builds the frontend for `/dragons-dungeon/`, runs the local t
 
 GitHub rejected Pages activation for this private repository on the current account plan. The repository remains private. After upgrading to a plan that supports private-repository Pages, enable Pages with GitHub Actions as its source and set the repository Actions variable `PAGES_ENABLED` to `true`. Until then, the build runs but the deployment job is skipped.
 
-GitHub Pages is static hosting and cannot run the Express API, MongoDB access, or Google OAuth callbacks. This deployment explicitly disables account actions rather than sending credentials to a nonexistent API. For a fully functional hosted app, separately deploy the API and configure a secure frontend/API integration, or serve this frontend from the API host. The Pages site may be publicly accessible even when its source repository is private; review Pages access settings before enabling deployment.
+GitHub Pages is static hosting and cannot run the Express API, MongoDB access, or Google OAuth callbacks itself. Without a configured API the deployment disables account actions rather than sending credentials to a nonexistent service. To make accounts work on the hosted site, deploy the API separately and connect the two:
+
+1. Deploy the Node API (`npm run dev:api` equivalent: `node --import tsx server/index.mjs`) to an HTTPS host such as Render, Railway, or Fly.io, with the MongoDB credentials, `ENCRYPTION_KEY`, `NODE_ENV=production`, `APP_ORIGIN=https://ishamoridin.github.io`, and `CROSS_SITE_COOKIES=true`.
+2. Set the repository Actions variable `API_ORIGIN` to the API's public origin (for example `https://dragons-dungeon-api.example.com`). The next Pages deploy builds the frontend against it with CORS and `SameSite=None` session cookies.
+3. Alternatively skip Pages for the app itself: set `SERVE_STATIC_DIR=dist` on the API host and it serves the built frontend and API from one origin, with no cross-site configuration needed.
+
+The Pages site may be publicly accessible even when its source repository is private; review Pages access settings before enabling deployment.
 
 The intended URL after activation is `https://ishamoridin.github.io/dragons-dungeon/`. Locally, `PUBLIC_BASE_PATH` defaults to `./` and `PUBLIC_STATIC_HOST` is false.
 

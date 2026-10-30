@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link2, LogIn } from 'lucide-react'
-import { api } from './Api'
+import { api, apiUrl } from './Api'
 import type { UserRole } from './User'
 
 export default function GoogleSignInButton({ role, link = false, disabled = false }: { role?: UserRole; link?: boolean; disabled?: boolean }) {
@@ -15,6 +15,6 @@ export default function GoogleSignInButton({ role, link = false, disabled = fals
     const query = new URLSearchParams()
     if (role) query.set('role', role)
     if (link) query.set('link', '1')
-    window.location.assign(`/api/auth/google/start?${query}`)
+    window.location.assign(apiUrl(`/auth/google/start?${query}`))
   }}>{link ? <Link2 size={17} /> : <LogIn size={17} />}{label}</button>
 }

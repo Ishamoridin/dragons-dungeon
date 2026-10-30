@@ -27,6 +27,7 @@ jobs:
         env:
           PUBLIC_BASE_PATH: /dragons-dungeon/
           PUBLIC_STATIC_HOST: 'true'
+          PUBLIC_API_ORIGIN: ${{ vars.API_ORIGIN }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
