@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { EssenceTechnique } from './EssenceTypes'
+import { composeTechniqueDescription, techniqueDescriptionParts } from './TechniqueLibrary'
 
 const ACTION_SUGGESTIONS = ['Major Action', 'Minor', 'Full Turn', 'Reaction', 'Passive', 'Passive Active', 'Not Applicable']
 
@@ -32,7 +33,9 @@ export default function TechniqueModal({
   const [action, setAction] = useState(technique.Action)
   const [range, setRange] = useState(technique.Range)
   const [damage, setDamage] = useState(technique.Damage)
-  const [details, setDetails] = useState(technique.Details)
+  const [flavour, setFlavour] = useState(() => techniqueDescriptionParts(technique).Flavour)
+  const [passiveEffect, setPassiveEffect] = useState(() => techniqueDescriptionParts(technique).PassiveEffect)
+  const [activeEffect, setActiveEffect] = useState(() => techniqueDescriptionParts(technique).ActiveEffect)
   const [error, setError] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
@@ -51,7 +54,10 @@ export default function TechniqueModal({
       Action: action,
       Range: range,
       Damage: damage,
-      Details: details,
+      Flavour: flavour.trim(),
+      PassiveEffect: passiveEffect.trim(),
+      ActiveEffect: activeEffect.trim(),
+      Details: composeTechniqueDescription({ Flavour: flavour, PassiveEffect: passiveEffect, ActiveEffect: activeEffect }),
     })
   }
 
@@ -94,15 +100,14 @@ export default function TechniqueModal({
         <datalist id="technique-action-types">
           {ACTION_SUGGESTIONS.map((suggestion) => <option key={suggestion} value={suggestion} />)}
         </datalist>
-        <label className="dm-field-label">Details
-          <textarea
-            rows={10}
-            value={details}
-            onChange={(event) => {
-              const next = event.currentTarget.value
-              setDetails(next)
-            }}
-          />
+        <label className="dm-field-label">Flavour
+          <textarea aria-label="Flavour" rows={3} value={flavour} onChange={(event) => setFlavour(event.currentTarget.value)} />
+        </label>
+        <label className="dm-field-label">Passive Effect
+          <textarea aria-label="Passive Effect" rows={4} value={passiveEffect} onChange={(event) => setPassiveEffect(event.currentTarget.value)} />
+        </label>
+        <label className="dm-field-label">Active Effect
+          <textarea aria-label="Active Effect" rows={4} value={activeEffect} onChange={(event) => setActiveEffect(event.currentTarget.value)} />
         </label>
 
         {error && <p className="schedule-error" role="alert">{error}</p>}

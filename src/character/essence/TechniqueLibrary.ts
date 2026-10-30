@@ -3,6 +3,24 @@ import type { EssenceTechnique } from './EssenceTypes'
 // Origin names the character a technique was kept from when that character was deleted; OriginId lets a restore remove the copies.
 export type LibraryTechnique = EssenceTechnique & { Id: string; Origin?: string; OriginId?: string }
 
+export type TechniqueDescriptionParts = { Flavour: string; PassiveEffect: string; ActiveEffect: string }
+
+export function techniqueDescriptionParts(technique: EssenceTechnique): TechniqueDescriptionParts {
+  const structured = [technique.Flavour, technique.PassiveEffect, technique.ActiveEffect].some((value) => value !== undefined)
+  return {
+    Flavour: technique.Flavour ?? (structured ? '' : technique.Details),
+    PassiveEffect: technique.PassiveEffect ?? '',
+    ActiveEffect: technique.ActiveEffect ?? '',
+  }
+}
+
+export function composeTechniqueDescription(parts: TechniqueDescriptionParts): string {
+  const flavour = parts.Flavour.trim()
+  const passive = parts.PassiveEffect.trim()
+  const active = parts.ActiveEffect.trim()
+  return [flavour, passive ? `Passive Effect:\n${passive}` : '', active ? `Active Effect:\n${active}` : ''].filter(Boolean).join('\n\n')
+}
+
 // In-memory, per DM, like the rest of the mock database.
 const library = new Map<string, LibraryTechnique[]>()
 

@@ -10,6 +10,9 @@ export type EssenceTechnique = {
   Range: string
   Damage: string
   Details: string
+  Flavour?: string
+  PassiveEffect?: string
+  ActiveEffect?: string
 }
 
 export type EssenceSpell = {
