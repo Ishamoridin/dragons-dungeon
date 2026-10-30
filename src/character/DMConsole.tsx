@@ -1145,13 +1145,14 @@ function FactionModal({
                         onClick={() => openZodiacBlessing(card)}
                       >
                         {artSrc && (
-                          <img
-                            className="faction-roster-card-art"
-                            src={artSrc}
-                            alt=""
-                            aria-hidden="true"
-                            loading="lazy"
-                          />
+                          <span className={`zodiac-token zodiac-token-${normalizeFactionCardKey(card.title)}`}>
+                            <img
+                              src={artSrc}
+                              alt=""
+                              aria-hidden="true"
+                              loading="lazy"
+                            />
+                          </span>
                         )}
                         <div className="faction-roster-card-overlay">
                           <div className="faction-roster-card-head">
@@ -1212,8 +1213,12 @@ function FactionModal({
             <div className="zodiac-power-body">
               <aside className="zodiac-power-side">
                 {selectedBlessing.artSrc && (
-                  <div className="zodiac-power-art">
-                    <img src={selectedBlessing.artSrc} alt="" aria-hidden="true" />
+                  <div className={`zodiac-power-art${selectedBlessing.artSrc.includes('/sovereign-') ? '' : ' zodiac-power-token'}`}>
+                    {selectedBlessing.artSrc.includes('/sovereign-')
+                      ? <img src={selectedBlessing.artSrc} alt="" aria-hidden="true" />
+                      : <span className={`zodiac-token zodiac-token-${selectedBlessing.artSrc.split('/').pop()?.split('.')[0].replace('-ambition', '')}`}>
+                          <img src={selectedBlessing.artSrc} alt="" aria-hidden="true" />
+                        </span>}
                   </div>
                 )}
                 <section className="zodiac-power-block">

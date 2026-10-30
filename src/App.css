@@ -2779,6 +2779,79 @@ h1 {
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
+.zodiac-card.has-art {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  aspect-ratio: auto;
+  padding: 16px 12px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.zodiac-card.has-art::after {
+  display: none;
+}
+
+.zodiac-token {
+  position: relative;
+  display: block;
+  flex: none;
+  width: min(100%, 180px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 2px solid var(--faction-accent, #aaa);
+  border-radius: 50%;
+  background: #17151b;
+}
+
+.zodiac-token img {
+  position: absolute;
+  width: 276.9231%;
+  max-width: none;
+  height: auto;
+  left: -19.2308%;
+  top: -48.0769%;
+}
+
+.zodiac-token-koi img,
+.zodiac-power-token .zodiac-token.zodiac-token-koi img {
+  width: 225%;
+  left: -3.125%;
+  top: -54.6875%;
+}
+
+.zodiac-token-weasel img,
+.zodiac-power-token .zodiac-token.zodiac-token-weasel img {
+  width: 240%;
+  left: -18.3333%;
+  top: -53.3333%;
+}
+
+.zodiac-card .faction-roster-card-overlay {
+  position: static;
+  width: 100%;
+  padding: 0;
+  background: none;
+  text-align: center;
+}
+
+.zodiac-card .faction-roster-card-head {
+  justify-content: center;
+}
+
+.zodiac-card .faction-roster-card-sigil {
+  display: none;
+}
+
+.zodiac-card:hover .zodiac-token,
+.zodiac-card:focus-visible .zodiac-token {
+  box-shadow: 0 0 0 3px var(--faction-accent, #aaa);
+}
+
 .essence-evil { --faction-accent: #9b6bff; }
 .essence-doom { --faction-accent: #6a6f7a; }
 .essence-air { --faction-accent: #3ccbd1; }
@@ -2823,6 +2896,18 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
   display: block;
+}
+
+.zodiac-power-token {
+  display: grid;
+  justify-items: center;
+}
+
+.zodiac-power-token .zodiac-token img {
+  width: 276.9231%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .zodiac-power-details {
