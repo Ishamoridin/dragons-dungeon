@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { resourceList, saveResource } from './Api'
 import NewSystemModal from './NewSystemModal'
+import SettingsMenu from './SettingsMenu'
 import EssenceAdjustmentModal from './essence/EssenceAdjustmentModal'
 import type { CampaignAction, CampaignEventType, NPCFactionGroup } from './Campaign'
 import type Person from './Person'
@@ -53,6 +54,7 @@ type DMConsoleProps = {
   onSignOut: () => void
   skin: PageSkin
   onSkinChange: (skin: PageSkin) => void
+  onUserChange: (user: User) => Promise<void>
 }
 
 const CAMPAIGN_PAGES = ['Players', 'Factions', 'NPCs', 'Techniques', 'Items', 'Events', 'Timeline'] as const
@@ -221,26 +223,26 @@ const normalizeFactionCardKey = (value: string): string =>
   value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
 
 const ZODIAC_CARD_ART: Record<string, string> = {
-  rat: '/zodiac-cards/rat.png',
-  ox: '/zodiac-cards/ox.png',
-  tiger: '/zodiac-cards/tiger.png',
-  rabbit: '/zodiac-cards/rabbit.png',
-  dragon: '/zodiac-cards/dragon.png',
-  snake: '/zodiac-cards/snake.png',
-  horse: '/zodiac-cards/horse.png',
-  goat: '/zodiac-cards/goat.png',
-  monkey: '/zodiac-cards/monkey.png',
-  rooster: '/zodiac-cards/rooster.png',
-  dog: '/zodiac-cards/dog.png',
-  koi: '/zodiac-cards/koi.png',
-  weasel: '/zodiac-cards/weasel-ambition.svg',
+  rat: `${import.meta.env.BASE_URL}zodiac-cards/rat.png`,
+  ox: `${import.meta.env.BASE_URL}zodiac-cards/ox.png`,
+  tiger: `${import.meta.env.BASE_URL}zodiac-cards/tiger.png`,
+  rabbit: `${import.meta.env.BASE_URL}zodiac-cards/rabbit.png`,
+  dragon: `${import.meta.env.BASE_URL}zodiac-cards/dragon.png`,
+  snake: `${import.meta.env.BASE_URL}zodiac-cards/snake.png`,
+  horse: `${import.meta.env.BASE_URL}zodiac-cards/horse.png`,
+  goat: `${import.meta.env.BASE_URL}zodiac-cards/goat.png`,
+  monkey: `${import.meta.env.BASE_URL}zodiac-cards/monkey.png`,
+  rooster: `${import.meta.env.BASE_URL}zodiac-cards/rooster.png`,
+  dog: `${import.meta.env.BASE_URL}zodiac-cards/dog.png`,
+  koi: `${import.meta.env.BASE_URL}zodiac-cards/koi.png`,
+  weasel: `${import.meta.env.BASE_URL}zodiac-cards/weasel-ambition.svg`,
 }
 
 const SOVEREIGN_CARD_ART: Record<string, string> = {
-  evil: '/zodiac-cards/sovereign-evil.svg',
-  doom: '/zodiac-cards/sovereign-doom.svg',
-  air: '/zodiac-cards/sovereign-air.svg',
-  earth: '/zodiac-cards/sovereign-earth.svg',
+  evil: `${import.meta.env.BASE_URL}zodiac-cards/sovereign-evil.svg`,
+  doom: `${import.meta.env.BASE_URL}zodiac-cards/sovereign-doom.svg`,
+  air: `${import.meta.env.BASE_URL}zodiac-cards/sovereign-air.svg`,
+  earth: `${import.meta.env.BASE_URL}zodiac-cards/sovereign-earth.svg`,
 }
 
 const SOVEREIGN_POWERS: Record<string, { passive: string; active: string }> = {
@@ -1248,7 +1250,7 @@ function FactionModal({
   )
 }
 
-export default function DMConsole({ user, onSignOut, skin, onSkinChange }: DMConsoleProps) {
+export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserChange }: DMConsoleProps) {
   const [characters, setCharacters] = useState<CharacterSheetRecord[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [systems, setSystems] = useState<StatSystem[]>(() => [...STAT_SYSTEMS, ...resourceList<StatSystem>('systems')])
@@ -1536,10 +1538,9 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange }: DMCon
             </select>
           </label>
           <button type="button" className="new-system-button" onClick={() => setNewSystemOpen(true)}><Plus size={16} aria-hidden="true" />New System</button>
-          <PageSkinSelector value={skin} onChange={onSkinChange} />
           <span className="database-status" role="status" aria-live="polite">{status}</span>
           <span className="signed-in-user">{user.Username} · DM</span>
-          <button type="button" className="sign-out-button" onClick={onSignOut}>Sign out</button>
+          <SettingsMenu user={user} pageSkin={skin} onSkinChange={onSkinChange} onLogout={onSignOut} onUserChange={onUserChange} />
         </div>
       </header>
 

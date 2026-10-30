@@ -7,11 +7,12 @@ import { refreshCharacterSheets, updateCharacterSheet, displayName, type Charact
 import { applyEssenceChange, applySheetChange, logDevelopmentRequest, type DevelopmentRequest, type EssenceChange, type SheetChange } from './character/essence/EssenceChanges'
 import { EssenceSheetBody } from './character/essence/EssenceViews'
 import { spiritWeaponLabel } from './character/essence/EssenceSystem'
-import { authenticateUser, DEMO_DM, signOut } from './character/MockAuth'
+import { authenticateUser, DEMO_DM, restoreSession, signOut } from './character/MockAuth'
 import LoginScreen from './character/LoginScreen'
 import { DM, type User } from './character/User'
 import DMConsole from './character/DMConsole'
-import PageSkinSelector from './character/PageSkinSelector'
+import SettingsMenu from './character/SettingsMenu'
+import { api } from './character/Api'
 import { DEFAULT_PAGE_SKIN, type PageSkin } from './character/PageSkin'
 import { savePreferredSkin } from './character/UserPreferences'
 
@@ -154,61 +155,8 @@ const buildAttributes = (
     }
   })
 
-function SettingsMenu({
-  pageSkin,
-  onSkinChange,
-  onLogout,
-}: {
-  pageSkin: PageSkin
-  onSkinChange: (skin: PageSkin) => void
-  onLogout: () => void
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleOutsideClick)
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
-  }, [isOpen])
-
-  return (
-    <div className="settings-menu" ref={menuRef}>
-      <button
-        type="button"
-        className="settings-menu-trigger"
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-        aria-label="Settings"
-        onClick={() => setIsOpen((open) => !open)}
-      >
-        <svg viewBox="0 0 24 24" className="settings-menu-icon" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M19.43 12.98c.04-.32.07-.65.07-.98s-.03-.66-.07-.98l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.3 7.3 0 0 0-1.69-.98l-.38-2.65A.49.49 0 0 0 14 1h-4a.49.49 0 0 0-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98L.86 14.63a.5.5 0 0 0-.12.64l2 3.46c.14.24.42.33.6.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.05.26.26.42.49.42h4c.23 0 .44-.16.49-.42l.38-2.65c.61-.25 1.17-.58 1.69-.98l2.49 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5"
-          />
-        </svg>
-      </button>
-      {isOpen && (
-        <div className="settings-menu-panel" role="menu">
-          <PageSkinSelector value={pageSkin} onChange={onSkinChange} />
-          <button type="button" className="sign-out-button" onClick={onLogout}>
-            Sign out
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
 function App() {
+  const [restoring, setRestoring] = useState(true)
   const [pageSkin, setPageSkin] = useState<PageSkin>(DEFAULT_PAGE_SKIN)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [character, setCharacter] = useState<Person | null>(null)
@@ -273,12 +221,7 @@ function App() {
     }
   }, [currentUser])
 
-  const handleLogin = async (username: string, password: string): Promise<boolean> => {
-    const authenticatedUser = await authenticateUser(username, password)
-    if (!authenticatedUser) {
-      return false
-    }
-
+  const activateUser = async (authenticatedUser: User): Promise<void> => {
     setPageSkin(authenticatedUser.PreferredSkin)
     setCurrentUser(authenticatedUser)
     const assignedDM = authenticatedUser.Role === 'dm'
@@ -302,6 +245,20 @@ function App() {
       setDatabaseRefreshStatus('Refresh failed')
     }
 
+  }
+
+  useEffect(() => {
+    let active = true
+    void restoreSession().then(async (user) => { if (active && user) await activateUser(user) })
+      .catch(() => { if (active) setDatabaseRefreshStatus('Unable to restore session.') })
+      .finally(() => { if (active) setRestoring(false) })
+    return () => { active = false }
+  }, [])
+
+  const handleLogin = async (username: string, password: string): Promise<boolean> => {
+    const user = await authenticateUser(username, password)
+    if (!user) return false
+    await activateUser(user)
     return true
   }
 
@@ -310,6 +267,7 @@ function App() {
     if (currentUser) {
       currentUser.PreferredSkin = skin
       savePreferredSkin(currentUser.Id, skin)
+      void api(`/accounts/${currentUser.Id}`, 'PATCH', { PreferredSkin: skin }).catch(() => setDatabaseRefreshStatus('Unable to save page skin.'))
     }
   }
 
@@ -328,12 +286,14 @@ function App() {
     lastRefreshAt.current = 0
   }
 
+  if (restoring) return <main className="login-shell"><section className="login-panel"><p role="status">Restoring session...</p></section></main>
+
   if (!currentUser || !character) {
     return <LoginScreen onLogin={handleLogin} />
   }
 
   if (currentUser.Role === 'dm') {
-    return <DMConsole user={currentUser} onSignOut={handleLogout} skin={pageSkin} onSkinChange={handleSkinChange} />
+    return <DMConsole user={currentUser} onSignOut={handleLogout} skin={pageSkin} onSkinChange={handleSkinChange} onUserChange={activateUser} />
   }
 
   // State updates first so rapid clicks build on each other; the save follows.
@@ -419,7 +379,7 @@ function App() {
             {sheetPicker}
             <div className="summary-pill"><span>{viewedEssence.Essence.Race}</span><span>{spiritWeaponLabel(viewedEssence.Essence)}</span></div>
             <span className="signed-in-user">{currentUser.Username} · {currentUser.Role.toUpperCase()}</span>
-            <SettingsMenu pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} />
+            <SettingsMenu user={currentUser} pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} onUserChange={activateUser} />
           </div>
         </header>
         <EssenceSheetBody data={viewedEssence.Essence} role="player" onChange={(change) => void editEssence(viewedEssence.Id, change)} onEssenceChange={(change) => void changeEssence(viewedEssence.Id, change)} development={{ campaignName: viewedEssence.CampaignName, onRequest: (request) => void requestDevelopment(viewedEssence.Id, request) }} />
@@ -492,7 +452,7 @@ function App() {
             <span>{character.PlayerClass.Name}</span>
           </div>
           <span className="signed-in-user">{currentUser.Username} · {currentUser.Role.toUpperCase()}</span>
-          <SettingsMenu pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} />
+          <SettingsMenu user={currentUser} pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} onUserChange={activateUser} />
           <label className="dev-mode-toggle">
             <input
               type="checkbox"

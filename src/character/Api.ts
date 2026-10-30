@@ -3,7 +3,10 @@ export class ApiError extends Error {
   constructor(message: string, status: number) { super(message); this.status = status }
 }
 
+export const staticHosting = import.meta.env?.PUBLIC_STATIC_HOST === 'true'
+
 export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  if (staticHosting) throw new ApiError('Account service unavailable on this static deployment.', 503)
   const response = await fetch(`/api${path}`, {
     method,
     credentials: 'same-origin',
@@ -17,7 +20,7 @@ export async function api<T>(path: string, method = 'GET', body?: unknown): Prom
     if (!path.startsWith('/auth/')) window.dispatchEvent(new CustomEvent('api-error', { detail: error.message }))
     throw error
   }
-  if (path === '/auth/login' || path === '/auth/logout') window.dispatchEvent(new Event('session-changed'))
+  if (['/auth/login', '/auth/logout', '/auth/role'].includes(path)) window.dispatchEvent(new Event('session-changed'))
   if (method !== 'GET' && /\/(characters|resources|conflicts|history)\b/.test(path)) window.dispatchEvent(new Event('data-saved'))
   return result as T
 }

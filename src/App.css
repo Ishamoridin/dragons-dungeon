@@ -1,3 +1,124 @@
+.settings-menu {
+  position: relative;
+}
+
+.settings-menu-trigger {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--skin-border, #555);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.settings-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 90;
+  display: grid;
+  gap: 16px;
+  box-sizing: border-box;
+  width: min(290px, calc(100vw - 32px));
+  padding: 16px;
+  color: var(--skin-text, #eee);
+  background: #19171f;
+  border: 1px solid var(--skin-border, #555);
+  border-radius: 6px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+.settings-menu-panel .page-skin-control {
+  align-items: stretch;
+  min-width: 0;
+}
+
+.settings-menu-panel .page-skin-control select {
+  max-width: 100%;
+}
+
+.settings-menu-panel [role="alert"],
+.settings-google-status {
+  margin: 0;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.account-mode,
+.registration-form .account-mode,
+.settings-menu-panel .account-mode {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.account-mode legend {
+  padding: 0;
+  margin-bottom: 8px;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+.account-mode-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.account-mode .account-mode-options label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--skin-border, #555);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.account-mode .account-mode-options input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--skin-accent, #8967ff);
+}
+
+.account-mode-options label:has(input:checked) {
+  border-color: var(--skin-accent, #8967ff);
+  background: rgba(128, 128, 128, 0.12);
+}
+
+.google-sign-in {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--skin-border, #555);
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.login-panel > .google-sign-in {
+  margin-top: 14px;
+}
+
+.google-sign-in:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
 .dm-character-modal.register-modal {
   width: min(460px, calc(100vw - 24px));
   max-height: calc(100dvh - 32px);

@@ -6,6 +6,8 @@ export class User {
   public readonly Username: string
   public readonly Role: UserRole
   public PreferredSkin: PageSkin
+  public Email?: string
+  public GoogleLinked = false
 
   constructor(id: string, username: string, role: UserRole, preferredSkin: PageSkin = DEFAULT_PAGE_SKIN) {
     this.Id = id
