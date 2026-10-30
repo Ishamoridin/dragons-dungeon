@@ -6,6 +6,7 @@ import {
   ESSENCE_SKILLS,
   computeEssenceStats,
   skillCap,
+  spiritWeaponLabel,
   toParagraphs,
   damageLabel,
   type EssenceDerived,
@@ -133,28 +134,57 @@ function Bars({
   )
 }
 
+function GroupDistribution({ label, definitions, values }: {
+  label: string
+  definitions: { Id: string; Group: string }[]
+  values: Record<string, number>
+}) {
+  const groups = ATTRIBUTE_GROUPS.map((group) => ({
+    ...group,
+    total: definitions.filter((definition) => definition.Group === group.Id)
+      .reduce((sum, definition) => sum + Math.max(0, values[definition.Id] ?? 0), 0),
+  }))
+  const total = groups.reduce((sum, group) => sum + group.total, 0)
+  return (
+    <section className="essence-distribution" aria-label={`${label} distribution`}>
+      <div className="essence-distribution-heading"><h3>{label}</h3><span>{fmt(total)}</span></div>
+      <div className="essence-distribution-track" role="img" aria-label={`${label}: ${groups.map((group) => `${group.Label} ${fmt(group.total)}`).join(', ')}`}>
+        {groups.map((group) => <span key={group.Id} className={`essence-group-${group.Id}`} style={{ width: `${total ? group.total / total * 100 : 0}%` }} title={`${group.Label}: ${fmt(group.total)} (${total ? (group.total / total * 100).toFixed(1) : 0}%)`} />)}
+      </div>
+      <div className="essence-distribution-legend">
+        {groups.map((group) => <div key={group.Id}><span className={`essence-group-swatch essence-group-${group.Id}`} aria-hidden="true" /><span>{group.Label}</span><strong>{fmt(group.total)}</strong></div>)}
+      </div>
+    </section>
+  )
+}
+
 export function EssenceMiniSheet({ data, name }: { data: EssenceCharacterData; name: string }) {
   const stats = computeEssenceStats(data)
   const derived = [
-    ['Armour', stats.armour],
-    ['Dodge', stats.dodge],
     ['Defense', stats.defense],
-    ['Init', stats.initiative],
+    ['Dodge', stats.dodge],
+    ['Armour', stats.armour],
+    ['Initiative', stats.initiative],
+    ['Ranged', stats.ranged],
+    ['Weaponry', stats.weaponry],
+    ['Brawl', stats.brawl],
+    ['Reiatsu modifier', stats.reiatsuModifier],
+    ['Reishi modifier', stats.reishiModifier],
   ] as const
 
   return (
-    <section className="mini-sheet" aria-label={`${name} summary`}>
+    <section className="mini-sheet essence-mini-sheet" aria-label={`${name} summary`}>
       <Bars stats={stats} />
-      <div className="mini-sheet-attributes">
-        {derived.map(([label, value]) => <div key={label}><span>{label}</span><strong>{fmt(value)}</strong></div>)}
+      <div className="essence-distributions">
+        <GroupDistribution label="Attributes" definitions={ESSENCE_ATTRIBUTES} values={data.Attributes} />
+        <GroupDistribution label="Skills" definitions={ESSENCE_SKILLS} values={data.Skills} />
       </div>
-      <div className="mini-sheet-attributes">
-        {ATTRIBUTE_GROUPS.map((group) => {
-          const ids = ESSENCE_ATTRIBUTES.filter((attribute) => attribute.Group === group.Id)
-          const total = ids.reduce((sum, attribute) => sum + (data.Attributes[attribute.Id] ?? 0), 0)
-          return <div key={group.Id}><span>{group.Label}</span><strong>{total}</strong></div>
-        })}
-      </div>
+      <section className="essence-mini-combat" aria-label="Combat statistics">
+        <h3>Combat</h3>
+        <div className="mini-sheet-attributes">
+          {derived.map(([label, value]) => <div key={label}><span>{label}</span><strong>{fmt(value)}</strong></div>)}
+        </div>
+      </section>
     </section>
   )
 }
@@ -514,7 +544,7 @@ export function EssenceSheetBody({
               <span>Concept <strong>{data.Concept}</strong></span>
               <span>Age <strong>{data.Age}</strong></span>
               <span>Race <strong>{data.Race}</strong></span>
-              <span>Spirit weapon <strong>{data.SpiritWeaponCategory}</strong></span>
+              <span>Spirit weapons <strong>{spiritWeaponLabel(data)}</strong></span>
               <span>Zodiac <strong>{data.Zodiac.Name} · {data.Zodiac.Essence}</strong></span>
             </div>
           </section>

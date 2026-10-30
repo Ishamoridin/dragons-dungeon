@@ -6,6 +6,7 @@ import { SKILLS, type Skill } from './character/Skills'
 import { refreshCharacterSheets, updateCharacterSheet, displayName, type CharacterSheetRecord } from './character/CharacterSheetDatabase'
 import { applyEssenceChange, applySheetChange, logDevelopmentRequest, type DevelopmentRequest, type EssenceChange, type SheetChange } from './character/essence/EssenceChanges'
 import { EssenceSheetBody } from './character/essence/EssenceViews'
+import { spiritWeaponLabel } from './character/essence/EssenceSystem'
 import { authenticateUser, DEMO_DM, signOut } from './character/MockAuth'
 import LoginScreen from './character/LoginScreen'
 import { DM, type User } from './character/User'
@@ -416,7 +417,7 @@ function App() {
           </div>
           <div className="topbar-actions">
             {sheetPicker}
-            <div className="summary-pill"><span>{viewedEssence.Essence.Race}</span><span>{viewedEssence.Essence.SpiritWeaponCategory}</span></div>
+            <div className="summary-pill"><span>{viewedEssence.Essence.Race}</span><span>{spiritWeaponLabel(viewedEssence.Essence)}</span></div>
             <span className="signed-in-user">{currentUser.Username} · {currentUser.Role.toUpperCase()}</span>
             <SettingsMenu pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} />
           </div>

@@ -2,6 +2,11 @@ import type { EssenceCharacterData, EssenceRace, EssenceResero, EssenceZodiac } 
 
 export const ESSENCE_SYSTEM_ID = 'essence'
 
+export function spiritWeaponLabel(data: EssenceCharacterData): string {
+  const categories = [...new Set(data.SpiritWeapons.map((weapon) => weapon.Category).filter(Boolean))]
+  return categories.length ? categories.join(' · ') : data.SpiritWeaponCategory
+}
+
 export type AttributeGroupId = 'mental' | 'physical' | 'spiritual'
 
 // Spiritual and Social are synonyms in this system, so either name resolves to the same group.

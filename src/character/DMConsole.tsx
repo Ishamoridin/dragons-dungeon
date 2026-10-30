@@ -21,7 +21,7 @@ import PageSkinSelector from './PageSkinSelector'
 import type { PageSkin } from './PageSkin'
 import { DEFAULT_STAT_SYSTEM_ID, STAT_SYSTEMS } from './StatSystems'
 import { EssenceActions, EssenceMiniSheet, EssenceSheetBody } from './essence/EssenceViews'
-import { computeEssenceStats, damageLabel, ESSENCE_ZODIACS, RESERO_ORDER, toParagraphs, ZODIAC_ACTIVE_COST } from './essence/EssenceSystem'
+import { computeEssenceStats, damageLabel, ESSENCE_ZODIACS, RESERO_ORDER, spiritWeaponLabel, toParagraphs, ZODIAC_ACTIVE_COST } from './essence/EssenceSystem'
 import type { EssenceCharacterData, EssenceTechnique } from './essence/EssenceTypes'
 import TechniqueModal from './essence/TechniqueModal'
 import ArmourCatalogModal from './essence/ArmourCatalogModal'
@@ -278,7 +278,7 @@ const describeEssenceFactionEntry = (data: EssenceCharacterData): string => {
     .map(([category, names]) => names.length > 0 ? `${category} (${names.join(', ')})` : category)
     .join(' · ')
 
-  const identity = `${data.Race} · ${data.SpiritWeaponCategory}`
+  const identity = `${data.Race} · ${spiritWeaponLabel(data)}`
   const weapons = weaponSummary ? ` · Weapons: ${weaponSummary}` : ''
   return `${identity} · Resero: ${highestResero}${weapons}`
 }
@@ -422,7 +422,7 @@ function PlayerSheetView({
           </div>
           <div className="topbar-actions">
             <PageSkinSelector value={skin} onChange={onSkinChange} />
-            <div className="summary-pill"><span>{record.Essence.Race}</span><span>{record.Essence.SpiritWeaponCategory}</span></div>
+            <div className="summary-pill"><span>{record.Essence.Race}</span><span>{spiritWeaponLabel(record.Essence)}</span></div>
             <button type="button" className="sign-out-button" onClick={onBack}>Back to campaign desk</button>
           </div>
         </header>
@@ -596,7 +596,7 @@ function CharacterActionModal({
         <section className="dm-character-modal" role="dialog" aria-modal="true" aria-labelledby="character-modal-title" onClick={(event) => event.stopPropagation()}>
           <header className="dm-modal-header">
             <div>
-              <p className="eyebrow">{record.CampaignName} · Essence · {record.Essence.Race} · {record.Essence.SpiritWeaponCategory}</p>
+              <p className="eyebrow">{record.CampaignName} · Essence · {record.Essence.Race} · {spiritWeaponLabel(record.Essence)}</p>
               <h2 id="character-modal-title">{displayName(record)}</h2>
               <div className="character-tags">{record.Tags.map((tag) => <span className="skill-chip flag-chip" key={tag}>{tag}</span>)}</div>
             </div>
@@ -1583,7 +1583,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange }: DMCon
                       </div>
                       <span className="dm-character-class">
                         {record.Essence
-                          ? `${record.Essence.SpiritWeaponCategory} · ${computeEssenceStats(record.Essence).maxHP} HP`
+                          ? `${spiritWeaponLabel(record.Essence)} · ${computeEssenceStats(record.Essence).maxHP} HP`
                           : `${record.PlayerClass.Name} · ${record.XP} XP`}
                       </span>
                       <div className="character-tags">
