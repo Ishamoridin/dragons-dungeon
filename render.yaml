@@ -7,7 +7,7 @@ services:
     runtime: node
     plan: free
     buildCommand: npm ci
-    startCommand: node --import tsx server/index.mjs
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "node --import tsx server/index.mjs",
+    "start": "node --import tsx server/index.mjs",
     "test:server": "node --test server/*.test.mjs",
     "db:check": "node server/database.mjs",
     "test:db": "node --test server/database.test.mjs",
