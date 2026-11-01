@@ -20,9 +20,12 @@ try {
   })
   await initializeDatabase(connection.database)
   await bootstrap(connection.database)
-  const port = Number(process.env.API_PORT || 3001)
-  const server = app.listen(port, '127.0.0.1', () => console.log(`Dragon's Dungeon API: http://127.0.0.1:${port}`))
-  server.on('error', async () => { console.error('Unable to listen on API_PORT.'); await client.close(); process.exitCode = 1 })
+  // Hosting platforms (Render, Railway, Fly.io) inject PORT and route to the container's public interface,
+  // not loopback, so bind 0.0.0.0 rather than 127.0.0.1 or the app is unreachable once deployed.
+  const port = Number(process.env.PORT || process.env.API_PORT || 3001)
+  const host = '0.0.0.0'
+  const server = app.listen(port, host, () => console.log(`Dragon's Dungeon API: http://${host}:${port}`))
+  server.on('error', async () => { console.error('Unable to listen on the configured port.'); await client.close(); process.exitCode = 1 })
   const close = () => server.close(async () => { await client.close(); process.exit(0) })
   process.once('SIGINT', close)
   process.once('SIGTERM', close)

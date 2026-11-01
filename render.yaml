@@ -1,0 +1,40 @@
+# Render Blueprint for the Dragon's Dungeon API (the Express/MongoDB backend behind the GitHub Pages frontend).
+# In Render: New + > Blueprint > select this repository > Render reads this file automatically.
+# Fields marked "sync: false" are secrets/config Render will prompt you for instead of storing here.
+services:
+  - type: web
+    name: dragons-dungeon-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: node --import tsx server/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Must match the GitHub Pages origin exactly (no trailing slash) so CORS and cookies are accepted.
+      - key: APP_ORIGIN
+        value: https://ishamoridin.github.io
+      - key: CROSS_SITE_COOKIES
+        value: 'true'
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: dragons_dungeon
+      # Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: INITIAL_DM_USERNAME
+        sync: false
+      - key: INITIAL_DM_PASSWORD
+        sync: false
+      - key: INITIAL_PLAYER_USERNAME
+        sync: false
+      - key: INITIAL_PLAYER_PASSWORD
+        sync: false
+      # Leave these three blank/unset if you are not wiring up Google sign-in.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false

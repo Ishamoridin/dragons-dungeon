@@ -63,19 +63,17 @@ Direct submission to other browser tabs requires the optional [Roll20 Bridge](br
 
 ## GitHub Pages
 
-The Pages workflow builds the frontend for `/dragons-dungeon/`, runs the local test suite, and uploads only `dist`. It never uploads the local `.env`, MongoDB credentials, or the Node API.
-
-GitHub rejected Pages activation for this private repository on the current account plan. The repository remains private. After upgrading to a plan that supports private-repository Pages, enable Pages with GitHub Actions as its source and set the repository Actions variable `PAGES_ENABLED` to `true`. Until then, the build runs but the deployment job is skipped.
+The Pages workflow builds the frontend for `/dragons-dungeon/`, runs the local test suite, and uploads only `dist`. It never uploads the local `.env`, MongoDB credentials, or the Node API. Pages is enabled (`PAGES_ENABLED=true`) and deploys on every push to `main`, at `https://ishamoridin.github.io/dragons-dungeon/`.
 
 GitHub Pages is static hosting and cannot run the Express API, MongoDB access, or Google OAuth callbacks itself. Without a configured API the deployment disables account actions rather than sending credentials to a nonexistent service. To make accounts work on the hosted site, deploy the API separately and connect the two:
 
-1. Deploy the Node API (`npm run dev:api` equivalent: `node --import tsx server/index.mjs`) to an HTTPS host such as Render, Railway, or Fly.io, with the MongoDB credentials, `ENCRYPTION_KEY`, `NODE_ENV=production`, `APP_ORIGIN=https://ishamoridin.github.io`, and `CROSS_SITE_COOKIES=true`.
+1. Deploy the Node API (`npm run dev:api` equivalent: `node --import tsx server/index.mjs`) to an HTTPS host such as Render, Railway, or Fly.io, with the MongoDB credentials, `ENCRYPTION_KEY`, `NODE_ENV=production`, `APP_ORIGIN=https://ishamoridin.github.io`, and `CROSS_SITE_COOKIES=true`. The server binds `0.0.0.0` and reads `PORT` (falling back to `API_PORT`), matching what these platforms inject. A [`render.yaml`](render.yaml) blueprint is included for a guided Render setup (`New +` > `Blueprint`); other hosts need the same env vars entered by hand.
 2. Set the repository Actions variable `API_ORIGIN` to the API's public origin (for example `https://dragons-dungeon-api.example.com`). The next Pages deploy builds the frontend against it with CORS and `SameSite=None` session cookies.
 3. Alternatively skip Pages for the app itself: set `SERVE_STATIC_DIR=dist` on the API host and it serves the built frontend and API from one origin, with no cross-site configuration needed.
 
-The Pages site may be publicly accessible even when its source repository is private; review Pages access settings before enabling deployment.
+Until `API_ORIGIN` is set, the deployed frontend intentionally shows "Account service unavailable on this static deployment." on the sign-in screen rather than sending credentials nowhere — this is expected, not a bug.
 
-The intended URL after activation is `https://ishamoridin.github.io/dragons-dungeon/`. Locally, `PUBLIC_BASE_PATH` defaults to `./` and `PUBLIC_STATIC_HOST` is false.
+Locally, `PUBLIC_BASE_PATH` defaults to `./` and `PUBLIC_STATIC_HOST` is false.
 
 ## Current Scope
 

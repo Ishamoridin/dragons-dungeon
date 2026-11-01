@@ -57,6 +57,9 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   if (!key || Buffer.byteLength(key) < 32) throw new Error('ENCRYPTION_KEY must contain at least 32 bytes for session protection.')
   const app = express()
   app.disable('x-powered-by')
+  // Hosts such as Render, Railway, and Fly.io sit behind a reverse proxy; trusting the first hop lets
+  // express-rate-limit and secure-cookie detection read the real client IP/protocol from X-Forwarded-* headers.
+  app.set('trust proxy', 1)
   app.use(helmet())
   app.use(express.json({ limit: '2mb' }))
   app.use('/api', (req, res, next) => {
