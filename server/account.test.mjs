@@ -46,6 +46,28 @@ test('registration completes through an emailed link and the account dialog chan
     assert.ok(completed.cookie)
     assert.equal((await db.collection('users').findOne({ UsernameKey: 'newplayer' })).EmailVerified, true)
     assert.equal((await call('/auth/me', 'GET', undefined, completed.cookie)).status, 200)
+    // The session remembers the open screen across reloads on this device.
+    assert.equal((await call('/auth/me', 'GET', undefined, completed.cookie)).data.Screen, null)
+    assert.equal((await call('/auth/screen', 'PUT', { screen: { dmPage: 'Timeline', dmCampaign: 'Welcome to the Sprawl', sheetTab: 'essence', count: 2, flag: true } }, completed.cookie)).status, 200)
+    assert.deepEqual((await call('/auth/me', 'GET', undefined, completed.cookie)).data.Screen, { dmPage: 'Timeline', dmCampaign: 'Welcome to the Sprawl', sheetTab: 'essence', count: 2, flag: true })
+    assert.equal((await call('/auth/screen', 'PUT', { screen: { nested: { no: true } } }, completed.cookie)).status, 400)
+    assert.equal((await call('/auth/screen', 'PUT', { screen: {} })).status, 401)
+    // Session activity accumulates on the session's log and is closed by the sign-out that carries the last events.
+    assert.equal((await call('/auth/session/activity', 'POST', { events: [{ t: '2026-11-02T12:00:00Z', kind: 'screen', detail: 'dmPage=Timeline' }, { t: '2026-11-02T12:00:01Z', kind: 'api', detail: 'PUT /characters/x 200' }], reason: 'interval' }, completed.cookie)).data.stored, 2)
+    const beacon = await fetch(`${base}/auth/session/activity`, { method: 'POST', headers: { 'Content-Type': 'text/plain', Origin: 'http://localhost:5173', Cookie: completed.cookie }, body: JSON.stringify({ events: [{ t: '2026-11-02T12:00:02Z', kind: 'screen', detail: 'sheetTab=essence' }], reason: 'pagehide' }) })
+    assert.equal(beacon.status, 200)
+    const openLog = await db.collection('sessionLogs').findOne({ UserId: completed.data.Id })
+    assert.equal(openLog.Events.length, 3)
+    assert.equal(openLog.EndedAt, null)
+    assert.equal(openLog.LastFlushReason, 'pagehide')
+    assert.equal((await call('/auth/logout', 'POST', { events: [{ t: '2026-11-02T12:00:03Z', kind: 'logout' }], reason: 'logout' }, completed.cookie)).status, 200)
+    const closedLog = await db.collection('sessionLogs').findOne({ UserId: completed.data.Id })
+    assert.equal(closedLog.Events.length, 4)
+    assert.equal(closedLog.EndReason, 'logout')
+    assert.ok(closedLog.EndedAt instanceof Date)
+    assert.equal((await call('/auth/me', 'GET', undefined, completed.cookie)).status, 401)
+    // Sign back in for the rest of the checks.
+    completed.cookie = (await call('/auth/login', 'POST', { username: 'newplayer', password: 'a-long-password-1234' })).cookie
     // The link is single use.
     assert.equal((await call('/auth/register/complete', 'POST', { token: link[1] })).status, 410)
     // A second registration for a taken name is refused up front.

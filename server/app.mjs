@@ -56,6 +56,9 @@ export async function initializeDatabase(db) {
     db.collection('registrations').createIndex({ ExpiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection('emailChanges').createIndex({ UserId: 1 }, { unique: true }),
     db.collection('emailChanges').createIndex({ ExpiresAt: 1 }, { expireAfterSeconds: 0 }),
+    // One activity log per session, kept after the session ends.
+    db.collection('sessionLogs').createIndex({ SessionDigest: 1 }, { unique: true }),
+    db.collection('sessionLogs').createIndex({ UserId: 1, StartedAt: -1 }),
     ...[...resourceKinds].map((kind) => db.collection(kind).createIndex({ OwnerId: 1, Id: 1 }, { unique: true })),
   ])
 }
@@ -126,12 +129,26 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   }
   const issueSession = async (req, res, user) => {
     const oldDigest = digestFor(req)
-    if (oldDigest) await sessions.deleteOne({ Digest: oldDigest })
+    if (oldDigest) { await sessions.deleteOne({ Digest: oldDigest }); await endSessionLog({ SessionDigest: oldDigest }, 'replaced') }
     const token = randomBytes(32).toString('base64url')
     const ExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    await sessions.insertOne({ Digest: sessionDigest(token, key), UserId: user.Id, ExpiresAt })
+    const Digest = sessionDigest(token, key)
+    await sessions.insertOne({ Digest, UserId: user.Id, ExpiresAt })
+    // Every session keeps an activity log; the client appends to it and it is finalised when the session ends.
+    await sessionLogs.insertOne({ SessionDigest: Digest, UserId: user.Id, Username: user.Username, Role: user.Role, StartedAt: new Date(), LastSeenAt: new Date(), EndedAt: null, EndReason: null, Events: [] })
     res.cookie(cookieName, token, { ...cookieOptions, expires: ExpiresAt })
   }
+  const sessionLogs = db.collection('sessionLogs')
+  const activityEvent = z.object({ t: z.string().max(40), kind: z.string().min(1).max(40), detail: z.string().max(300).optional() }).strict()
+  const activityBatch = z.object({ events: z.array(activityEvent).max(200).default([]), reason: z.string().max(40).optional() })
+  async function appendActivity(digest, events, reason) {
+    if (!digest) return
+    const now = new Date()
+    const update = { $set: { LastSeenAt: now, ...(reason ? { LastFlushReason: reason } : {}) } }
+    if (events.length) update.$push = { Events: { $each: events.map((event) => ({ ...event, at: now })), $slice: -5000 } }
+    await sessionLogs.updateOne({ SessionDigest: digest }, update)
+  }
+  const endSessionLog = (filter, reason) => sessionLogs.updateMany({ ...filter, EndedAt: null }, { $set: { EndedAt: new Date(), EndReason: reason } })
   mountGoogleAuth(app, db, { key, origin, secureCookies, google, providerOverride: googleProvider, issueSession, findCurrentUser })
 
   app.post('/api/auth/register', rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many registration attempts. Please try again later.' } }), async (req, res) => {
@@ -192,11 +209,34 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   })
   app.post('/api/auth/logout', async (req, res) => {
     const Digest = digestFor(req)
-    if (Digest) await sessions.deleteOne({ Digest })
+    if (Digest) {
+      // Any last activity the client drained travels with the sign-out, then the log is closed.
+      const { events } = activityBatch.parse(req.body && typeof req.body === 'object' ? req.body : {})
+      await appendActivity(Digest, events, 'logout')
+      await endSessionLog({ SessionDigest: Digest }, 'logout')
+      await sessions.deleteOne({ Digest })
+    }
     res.clearCookie(cookieName, cookieOptions).json({ ok: true })
   })
   app.use('/api', authenticate)
-  app.get('/api/auth/me', (req, res) => res.json(publicUser(req.user)))
+  // Activity batches: JSON from fetch, or text/plain from navigator.sendBeacon on tab close (which cannot preflight).
+  app.post('/api/auth/session/activity', express.text({ type: 'text/plain', limit: '256kb' }), async (req, res) => {
+    const raw = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body
+    const { events, reason } = activityBatch.parse(raw)
+    await appendActivity(digestFor(req), events, reason)
+    res.json({ ok: true, stored: events.length })
+  })
+  app.get('/api/auth/me', async (req, res) => {
+    // The session remembers which screen was open so a reload (or the next visit on this device) lands back on it.
+    const session = await sessions.findOne({ Digest: digestFor(req) }, { projection: { Screen: 1 } })
+    res.json({ ...publicUser(req.user), Screen: session?.Screen ?? null })
+  })
+  const screenState = z.record(z.string().min(1).max(40), z.union([z.string().max(200), z.number().finite(), z.boolean(), z.null()])).refine((value) => Object.keys(value).length <= 24, 'Too many screen fields.')
+  app.put('/api/auth/screen', async (req, res) => {
+    const { screen } = z.object({ screen: screenState }).strict().parse(req.body)
+    await sessions.updateOne({ Digest: digestFor(req) }, { $set: { Screen: screen } })
+    res.json({ ok: true })
+  })
   // Changing the email address: a code goes to the new address and the change only lands once it is entered.
   app.post('/api/account/email/request', rateLimit({ windowMs: 60 * 60 * 1000, limit: 6, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many email change requests. Please try again later.' } }), async (req, res) => {
     const input = z.object({ email: z.string().trim().toLowerCase().email().max(254), currentPassword: z.string().min(1).max(256) }).strict().parse(req.body)
@@ -295,7 +335,7 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     if (input.Password) updates.PasswordHash = await hashPassword(input.Password)
     if (input.PreferredSkin) updates.PreferredSkin = input.PreferredSkin
     await users.updateOne({ Id: target.Id }, { $set: updates })
-    if (input.Password) await sessions.deleteMany({ UserId: target.Id })
+    if (input.Password) { await sessions.deleteMany({ UserId: target.Id }); await endSessionLog({ UserId: target.Id }, 'password-changed') }
     res.json(publicUser({ ...target, ...updates }))
   })
   app.delete('/api/accounts/:id', async (req, res) => {
