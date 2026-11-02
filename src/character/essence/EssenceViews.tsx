@@ -542,7 +542,7 @@ export function EssenceSheetBody({
   const noPointsHint = 'No Universal Skill Points available'
   const derived: [string, number, boolean][] = [
     ['Armour', stats.armour, false], ['Dodge', stats.dodge, true], ['Defense', stats.defense, true], ['Initiative', stats.initiative, false],
-    ['Ranged', stats.ranged, true], ['Weaponry', stats.weaponry, true], ['Brawl', stats.brawl, true],
+    ['Ranged mod', stats.ranged, true], ['Weaponry mod', stats.weaponry, true], ['Brawl mod', stats.brawl, true],
     ['Reiatsu modifier', stats.reiatsuModifier, true], ['Reishi modifier', stats.reishiModifier, true], ['Max burden', stats.maxBurden, false],
   ]
   const spiritWeaponUses = data.Development.Metaphysical.spiritWeapon ?? 0
