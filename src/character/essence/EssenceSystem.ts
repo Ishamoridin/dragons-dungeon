@@ -375,3 +375,26 @@ export const ESSENCE_RULES: { Title: string; Body: string }[] = [
   { Title: 'Resero', Body: 'Partial, First, and True Resero unlock as Spirit Weapon uses and total attribute plus skill points reach each stage threshold. Each stage can align one essence (up to 50,000) to add damage and a trait.' },
   { Title: 'Zodiac', Body: 'A Zodiac mark generates 1 unit of its essence every 10 minutes (1,008 per week). Once per session the Active blessing can be invoked for 50 Willpower and a Major Action.' },
 ]
+
+// A fresh Essence block for characters created in the app (for example NPC sheets), with every tally at zero.
+export function blankEssenceCharacter(overrides: Partial<EssenceCharacterData> = {}): EssenceCharacterData {
+  const zeros = (ids: string[]) => Object.fromEntries(ids.map((id) => [id, 0]))
+  return {
+    PlayerName: '', Concept: '', Age: 0, Race: 'Human', SpiritWeaponCategory: '',
+    Attributes: zeros(ESSENCE_ATTRIBUTES.map((attribute) => attribute.Id)),
+    Skills: zeros(ESSENCE_SKILLS.map((skill) => skill.Id)),
+    Development: {
+      Metaphysical: zeros(['reiatsuManipulation', 'spiritWeapon', 'reishiManipulation', 'kido', 'hado', 'essenceHarvesting', 'essenceCasting', 'essenceCultivation']),
+      AttributeUses: zeros(ESSENCE_ATTRIBUTES.map((attribute) => attribute.Id)),
+      SkillUses: zeros(ESSENCE_SKILLS.map((skill) => skill.Id)),
+      Stats: zeros(['reducedToZeroHP', 'tookOverTenPercent', 'tookNoDamage', 'dodged', 'defended']),
+    },
+    DMIssuedPoints: 0,
+    Zodiac: { Name: '', Essence: '', Passive: '', Active: '' },
+    Armour: [],
+    Wearables: { mask: 0, badge: 0, talisman: 0, pouch: 0, charm: 0 },
+    SheetBonuses: { hp: 0, reiryoku: 0, willpower: 0, armour: 0, initiative: 0 },
+    Essences: [], Mastery: 0, PotentialStored: 0, SpiritWeapons: [], Resero: [], Techniques: [], Spells: [], Notes: [],
+    ...overrides,
+  }
+}
