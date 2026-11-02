@@ -1,3 +1,7 @@
+// Session activity logging lives in ScreenState, which also calls back into api(); the cycle is safe because
+// neither module uses the other at load time.
+import { recordActivity } from './ScreenState'
+
 export class ApiError extends Error {
   public readonly status: number
   constructor(message: string, status: number) { super(message); this.status = status }
@@ -17,6 +21,10 @@ export async function api<T>(path: string, method = 'GET', body?: unknown): Prom
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
   const result = await response.json().catch(() => ({ error: 'Server unavailable.' }))
+  // Every write (and any failure) becomes a session activity entry; the tracker's own traffic is left out.
+  if ((method !== 'GET' || !response.ok) && !path.startsWith('/auth/screen') && !path.startsWith('/auth/session/activity') && path !== '/auth/logout') {
+    recordActivity('api', `${method} ${path} ${response.status}`)
+  }
   if (!response.ok) {
     const error = new ApiError(result.error ?? 'Request failed.', response.status)
     if (result.conflict) window.dispatchEvent(new CustomEvent('api-conflict', { detail: result.conflict }))

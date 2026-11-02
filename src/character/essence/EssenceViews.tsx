@@ -462,7 +462,7 @@ function DevelopmentDialog({
   )
 }
 
-type TabId = Exclude<ArtKind, 'combat'>
+export type TabId = Exclude<ArtKind, 'combat'>
 
 // Tabs render as icons so every section fits on one row; the name stays as the tooltip and accessible label.
 const TABS: { id: TabId; label: string; Icon: LucideIcon }[] = [
@@ -518,6 +518,8 @@ export function EssenceSheetBody({
   onEssenceChange,
   portrait,
   onPortraitChange,
+  initialTab,
+  onTabChange,
 }: {
   data: EssenceCharacterData
   role?: SheetRole
@@ -531,8 +533,12 @@ export function EssenceSheetBody({
   // Portrait lives on the character record rather than the Essence block; the sheet shows and (optionally) edits it.
   portrait?: Portrait | null
   onPortraitChange?: (portrait: Portrait | null) => void
+  // The open tab can be restored from the remembered screen and reported back when it changes.
+  initialTab?: TabId
+  onTabChange?: (tab: TabId) => void
 }) {
-  const [tab, setTab] = useState<TabId>('basic')
+  const [tab, setTabState] = useState<TabId>(initialTab && TABS.some((item) => item.id === initialTab) ? initialTab : 'basic')
+  const setTab = (next: TabId) => { setTabState(next); onTabChange?.(next) }
   const [combatOpen, setCombatOpen] = useState(false)
   const [developmentOpen, setDevelopmentOpen] = useState(false)
   const [pending, setPending] = useState<PendingChange | null>(null)

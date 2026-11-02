@@ -1,22 +1,29 @@
 import { DM, Player, type User, type UserRole } from './User'
 import { api, ApiError, clearResources, loadResources } from './Api'
+import { clearScreenState, drainActivity, recordActivity, setScreenState, stopActivityTracking, type ScreenState } from './ScreenState'
 
 export const DEMO_PLAYER = new Player('player:player', 'player')
 export const DEMO_DM = new DM('dm:dm', 'dm')
 
-async function prepareUser(data: User): Promise<User> {
+type UserPayload = User & { Screen?: ScreenState | null }
+
+async function prepareUser(data: UserPayload): Promise<User> {
   await loadResources(data.Role)
   const user = data.Role === 'dm'
     ? new DM(data.Id, data.Username, data.PreferredSkin)
     : new Player(data.Id, data.Username, data.PreferredSkin)
   user.Email = data.Email
   user.GoogleLinked = data.GoogleLinked
+  // Only session-bearing responses (login, restore) carry the remembered screen; others leave it untouched.
+  if (data.Screen !== undefined) setScreenState(data.Screen)
   return user
 }
 
 export async function authenticateUser(username: string, password: string): Promise<User | null> {
   try {
-    return await prepareUser(await api<User>('/auth/login', 'POST', { username, password }))
+    const user = await prepareUser(await api<UserPayload>('/auth/login', 'POST', { username, password }))
+    recordActivity('login', user.Username)
+    return user
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) return null
     throw error
@@ -24,8 +31,11 @@ export async function authenticateUser(username: string, password: string): Prom
 }
 
 export async function restoreSession(): Promise<User | null> {
-  try { return await prepareUser(await api<User>('/auth/me')) }
-  catch (error) {
+  try {
+    const user = await prepareUser(await api<UserPayload>('/auth/me'))
+    recordActivity('resume', user.Username)
+    return user
+  } catch (error) {
     if (error instanceof ApiError && error.status === 401) return null
     throw error
   }
@@ -39,12 +49,18 @@ export async function requestRegistration(input: { email: string; username: stri
 }
 
 export async function completeRegistration(token: string): Promise<User> {
-  return prepareUser(await api<User>('/auth/register/complete', 'POST', { token }))
+  const user = await prepareUser(await api<UserPayload>('/auth/register/complete', 'POST', { token }))
+  recordActivity('register', user.Username)
+  return user
 }
 
 export async function signOut(): Promise<void> {
-  await api('/auth/logout', 'POST', {})
+  // The remaining activity travels with the sign-out, which closes the session's log on the server.
+  recordActivity('logout')
+  await api('/auth/logout', 'POST', { events: drainActivity(), reason: 'logout' })
   clearResources()
+  clearScreenState()
+  stopActivityTracking()
 }
 
 export async function switchRole(role: UserRole): Promise<User> {

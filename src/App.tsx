@@ -6,6 +6,8 @@ import { SKILLS, type Skill } from './character/Skills'
 import { refreshCharacterSheets, updateCharacterSheet, displayName, type CharacterSheetRecord } from './character/CharacterSheetDatabase'
 import { portraitShellClass, portraitStyle, type Portrait } from './character/Portrait'
 import { skinArtStyle } from './skins'
+import { getScreen, rememberScreen } from './character/ScreenState'
+import type { TabId } from './character/essence/EssenceViews'
 import { applyEssenceChange, applySheetChange, logDevelopmentRequest, type DevelopmentRequest, type EssenceChange, type SheetChange } from './character/essence/EssenceChanges'
 import { EssenceSheetBody } from './character/essence/EssenceViews'
 import { spiritWeaponLabel } from './character/essence/EssenceSystem'
@@ -240,7 +242,8 @@ function App() {
       setSavedSheetCount(sheets.length)
       const essence = sheets.filter((sheet) => sheet.Essence)
       setEssenceSheets(essence)
-      setViewedEssenceId(essence[0]?.Id ?? null)
+      const remembered = getScreen<string>('viewedEssenceId')
+      setViewedEssenceId(essence.some((sheet) => sheet.Id === remembered) ? remembered! : essence[0]?.Id ?? null)
       setDatabaseRefreshStatus(`Synced ${new Date().toLocaleTimeString()}`)
     } catch {
       setSavedSheetCount(0)
@@ -379,7 +382,7 @@ function App() {
       <select
         aria-label="Character sheet"
         value={viewedEssenceId ?? ''}
-        onChange={(event) => setViewedEssenceId(event.currentTarget.value || null)}
+        onChange={(event) => { const id = event.currentTarget.value || null; setViewedEssenceId(id); rememberScreen({ viewedEssenceId: id }) }}
       >
         {essenceSheets.map((sheet) => <option key={sheet.Id} value={sheet.Id}>{displayName(sheet)}</option>)}
         <option value="">Hero (default sheet)</option>
@@ -403,7 +406,7 @@ function App() {
             <SettingsMenu user={currentUser} pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} onUserChange={activateUser} />
           </div>
         </header>
-        <EssenceSheetBody data={viewedEssence.Essence} role="player" onChange={(change) => void editEssence(viewedEssence.Id, change)} onEssenceChange={(change) => void changeEssence(viewedEssence.Id, change)} development={{ campaignName: viewedEssence.CampaignName, onRequest: (request) => void requestDevelopment(viewedEssence.Id, request) }} portrait={viewedEssence.Portrait} onPortraitChange={(portrait) => void setPortrait(viewedEssence.Id, portrait)} />
+        <EssenceSheetBody data={viewedEssence.Essence} role="player" initialTab={getScreen<TabId>('sheetTab')} onTabChange={(sheetTab) => rememberScreen({ sheetTab })} onChange={(change) => void editEssence(viewedEssence.Id, change)} onEssenceChange={(change) => void changeEssence(viewedEssence.Id, change)} development={{ campaignName: viewedEssence.CampaignName, onRequest: (request) => void requestDevelopment(viewedEssence.Id, request) }} portrait={viewedEssence.Portrait} onPortraitChange={(portrait) => void setPortrait(viewedEssence.Id, portrait)} />
       </div>
     )
   }

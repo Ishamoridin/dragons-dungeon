@@ -6,6 +6,7 @@ import ImportSheetModal from './ImportSheetModal'
 import PortraitControl from './PortraitControl'
 import { portraitShellClass, portraitStyle, type Portrait } from './Portrait'
 import { skinArtStyle } from '../skins'
+import { getScreen, rememberScreen } from './ScreenState'
 import SettingsMenu from './SettingsMenu'
 import EssenceAdjustmentModal from './essence/EssenceAdjustmentModal'
 import type { CampaignAction, CampaignEventType, NPCFactionGroup } from './Campaign'
@@ -36,7 +37,7 @@ import type { User } from './User'
 import PageSkinSelector from './PageSkinSelector'
 import type { PageSkin } from './PageSkin'
 import { DEFAULT_STAT_SYSTEM_ID, STAT_SYSTEMS, type StatSystem } from './StatSystems'
-import { EssenceActions, EssenceMiniSheet, EssenceSheetBody } from './essence/EssenceViews'
+import { EssenceActions, EssenceMiniSheet, EssenceSheetBody, type TabId } from './essence/EssenceViews'
 import { computeEssenceStats, damageLabel, ESSENCE_ZODIACS, RESERO_ORDER, blankEssenceCharacter, spiritWeaponLabel, toParagraphs, ZODIAC_ACTIVE_COST } from './essence/EssenceSystem'
 import type { EssenceCharacterData, EssenceTechnique } from './essence/EssenceTypes'
 import TechniqueModal from './essence/TechniqueModal'
@@ -454,7 +455,7 @@ function PlayerSheetView({
             <button type="button" className="sign-out-button" onClick={onBack}>Back to campaign desk</button>
           </div>
         </header>
-        <EssenceSheetBody data={record.Essence} role="dm" onChange={onEssenceChange ? (change) => void onEssenceChange(change) : undefined} onEditData={onEssenceEdit ? (mutate) => void onEssenceEdit(mutate) : undefined} onEssenceChange={onEssenceAmount ? (change) => void onEssenceAmount(change) : undefined} portrait={record.Portrait} onPortraitChange={onPortraitChange ? (portrait) => void onPortraitChange(portrait) : undefined} />
+        <EssenceSheetBody data={record.Essence} role="dm" initialTab={getScreen<TabId>('dmSheetTab')} onTabChange={(dmSheetTab) => rememberScreen({ dmSheetTab })} onChange={onEssenceChange ? (change) => void onEssenceChange(change) : undefined} onEditData={onEssenceEdit ? (mutate) => void onEssenceEdit(mutate) : undefined} onEssenceChange={onEssenceAmount ? (change) => void onEssenceAmount(change) : undefined} portrait={record.Portrait} onPortraitChange={onPortraitChange ? (portrait) => void onPortraitChange(portrait) : undefined} />
       </div>
     )
   }
@@ -1311,11 +1312,12 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
   const [newSystemOpen, setNewSystemOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [transferTarget, setTransferTarget] = useState<CharacterSheetRecord | null>(null)
-  const [selectedSystemId, setSelectedSystemId] = useState(DEFAULT_STAT_SYSTEM_ID)
-  const [selectedCampaignName, setSelectedCampaignName] = useState('')
-  const [campaignPage, setCampaignPage] = useState<CampaignPage>('Players')
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null)
-  const [previewCharacterId, setPreviewCharacterId] = useState<string | null>(null)
+  // Start where this session left off; loadCharacters() drops any remembered value that no longer exists.
+  const [selectedSystemId, setSelectedSystemId] = useState(getScreen<string>('dmSystemId') ?? DEFAULT_STAT_SYSTEM_ID)
+  const [selectedCampaignName, setSelectedCampaignName] = useState(getScreen<string>('dmCampaign') ?? '')
+  const [campaignPage, setCampaignPage] = useState<CampaignPage>(() => { const page = getScreen<string>('dmPage'); return CAMPAIGN_PAGES.includes(page as CampaignPage) ? (page as CampaignPage) : 'Players' })
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(getScreen<string>('dmCharacterId') ?? null)
+  const [previewCharacterId, setPreviewCharacterId] = useState<string | null>(getScreen<string>('dmPreviewId') ?? null)
   const [eventTargetCharacterId, setEventTargetCharacterId] = useState('')
   const [selectedFactionName, setSelectedFactionName] = useState<string | null>(null)
   const [selectedNpc, setSelectedNpc] = useState<Person | null>(null)
@@ -1361,6 +1363,11 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
     window.addEventListener('data-restored', restored)
     return () => window.removeEventListener('data-restored', restored)
   }, [user.Id])
+
+  // Remember the open screen on the session so a reload returns to the same page, campaign, and character.
+  useEffect(() => {
+    rememberScreen({ dmSystemId: selectedSystemId, dmCampaign: selectedCampaignName, dmPage: campaignPage, dmCharacterId: selectedCharacterId, dmPreviewId: previewCharacterId })
+  }, [selectedSystemId, selectedCampaignName, campaignPage, selectedCharacterId, previewCharacterId])
 
   // Removing the tag brings the character back, so the techniques kept for them are dropped to avoid listing twice.
   const restoreCharacter = async (record: CharacterSheetRecord) => {
