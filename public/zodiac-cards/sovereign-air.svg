@@ -5,33 +5,82 @@
       <stop offset="0.55" stop-color="#06333a"/>
       <stop offset="1" stop-color="#2dd4bf"/>
     </linearGradient>
-    <radialGradient id="glow" cx="30%" cy="25%" r="80%">
+    <radialGradient id="glow" cx="50%" cy="58%" r="58%">
       <stop offset="0" stop-color="#bffaf4" stop-opacity="0.45"/>
-      <stop offset="0.65" stop-color="#bffaf4" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#5eead4" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#bffaf4" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="wind" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="feather" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#7fe7da"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#9ff5ea"/>
+    </linearGradient>
     <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="7" stdDeviation="11" flood-color="#000" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#021a1c" flood-opacity="0.6"/>
+    </filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4"/>
     </filter>
   </defs>
 
-  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#bg)"/>
-  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#glow)"/>
-  <rect x="10" y="10" width="268" height="230" rx="12" fill="none" stroke="#d7fffb" stroke-opacity="0.25"/>
-  <rect x="14" y="14" width="260" height="222" rx="10" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+  <rect x="3" y="3" width="282" height="244" rx="16" fill="url(#bg)"/>
+  <rect x="3" y="3" width="282" height="244" rx="16" fill="url(#glow)"/>
 
-  <g filter="url(#shadow)" fill="none" stroke="#e9fffd" stroke-opacity="0.85" stroke-linecap="round">
-    <path d="M92 138c16-16 38-20 62-10 14 6 26 6 42 0" stroke-width="6"/>
-    <path d="M88 118c22-26 52-34 90-18 20 8 38 8 56 0" stroke-width="5" stroke-opacity="0.55"/>
-    <path d="M96 160c10-8 22-10 36-4 10 4 20 4 30 0 12-4 20-4 30 2" stroke-width="4" stroke-opacity="0.45"/>
-    <path d="M190 96c10-14 18-20 30-22" stroke-width="3" stroke-opacity="0.5"/>
+  <!-- Ornate frame with swirl corners -->
+  <g fill="none" stroke="#dffbf7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="11" y="11" width="266" height="228" rx="13" stroke-opacity="0.45" stroke-width="1.6"/>
+    <rect x="17" y="17" width="254" height="216" rx="10" stroke-opacity="0.18"/>
+    <g stroke-opacity="0.75" stroke-width="1.4">
+      <path d="M11 40c0-16 13-29 29-29M277 40c0-16-13-29-29-29M11 210c0 16 13 29 29 29M277 210c0 16-13 29-29 29"/>
+      <path d="M22 36c6-10 16-12 22-6s2 14-6 12M266 36c-6-10-16-12-22-6s-2 14 6 12M22 214c6 10 16 12 22 6s2-14-6-12M266 214c-6 10-16 12-22 6s-2-14 6-12"/>
+    </g>
+    <path d="M144 11l5 6-5 6-5-6zM144 227l5 6-5 6-5-6zM11 125l6-5 6 5-6 5zM265 125l6-5 6 5-6 5z" fill="#9ff5ea" fill-opacity="0.9" stroke="none"/>
   </g>
 
-  <text x="144" y="44" text-anchor="middle" fill="#fff" font-family="Georgia, 'Times New Roman', serif" font-size="26" letter-spacing="2.2">SOVEREIGN</text>
-  <text x="144" y="66" text-anchor="middle" fill="#d7fffb" font-family="Georgia, 'Times New Roman', serif" font-size="14">Domain · Air</text>
-
-  <g>
-    <rect x="40" y="184" width="208" height="40" rx="10" fill="#021014" fill-opacity="0.55" stroke="#d7fffb" stroke-opacity="0.14"/>
-    <text x="144" y="206" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" letter-spacing="1.2">CLICK TO VIEW POWER</text>
+  <!-- Cloud rings -->
+  <g fill="none" stroke="#dffbf7">
+    <circle cx="144" cy="138" r="66" stroke-opacity="0.3" stroke-width="1.5" stroke-dasharray="14 8"/>
+    <circle cx="144" cy="138" r="76" stroke-opacity="0.14"/>
+    <circle cx="144" cy="138" r="46" stroke-opacity="0.2" stroke-dasharray="2 6"/>
   </g>
+
+  <!-- Wings, wind spirals, and the lightning crown -->
+  <g filter="url(#shadow)">
+    <!-- wings -->
+    <g fill="url(#feather)" fill-opacity="0.9" stroke="#0a4a4a" stroke-opacity="0.5" stroke-width="1">
+      <path d="M136 132c-20-30-50-44-80-40 14 6 22 14 28 26-12-2-24 0-34 6 14 2 24 8 32 18-10 2-18 8-24 16 16-4 30-2 44 6 10 6 22 6 34 0z"/>
+      <path d="M152 132c20-30 50-44 80-40-14 6-22 14-28 26 12-2 24 0 34 6-14 2-24 8-32 18 10 2 18 8 24 16-16-4-30-2-44 6-10 6-22 6-34 0z"/>
+    </g>
+    <g fill="none" stroke="#0a4a4a" stroke-opacity="0.35" stroke-width="1.2" stroke-linecap="round">
+      <path d="M128 136c-14-12-30-18-50-18M124 148c-14-4-28-4-42 0M156 136c14-12 30-18 50-18M160 148c14-4 28-4 42 0"/>
+    </g>
+    <!-- central spiral -->
+    <g fill="none" stroke-linecap="round">
+      <path d="M144 112c-18 0-30 12-30 28s12 28 28 28 24-10 24-22-9-18-18-18-14 6-14 12 5 10 10 10" stroke="#ffffff" stroke-width="5" stroke-opacity="0.95"/>
+      <path d="M144 112c-18 0-30 12-30 28s12 28 28 28 24-10 24-22-9-18-18-18-14 6-14 12 5 10 10 10" stroke="#0a4a4a" stroke-width="1.2" stroke-opacity="0.5"/>
+    </g>
+    <!-- wind streaks -->
+    <g fill="none" stroke="url(#wind)" stroke-width="3" stroke-linecap="round">
+      <path d="M48 176c40-14 80-14 120 0 24 8 48 8 72-2"/>
+      <path d="M60 190c36-10 70-10 104 2 20 6 40 6 62-2"/>
+      <path d="M70 203c30-8 60-8 92 2 18 4 34 4 52-2"/>
+    </g>
+    <!-- lightning crown -->
+    <g fill="url(#bolt)" stroke="#0a4a4a" stroke-width="1" stroke-linejoin="round">
+      <path d="M144 62l-8 22h10l-6 20 18-28h-10l8-14z"/>
+      <path d="M118 84l-5 14h6l-3 12 11-17h-6l4-9zM170 84l5 14h-6l3 12-11-17h6l-4-9z" fill-opacity="0.8"/>
+    </g>
+  </g>
+
+  <text x="144" y="38" text-anchor="middle" fill="#ffffff" font-family="Georgia, 'Times New Roman', serif" font-size="24" letter-spacing="3">SOVEREIGN</text>
+  <text x="144" y="56" text-anchor="middle" fill="#dffbf7" font-family="Georgia, 'Times New Roman', serif" font-size="12" letter-spacing="1.5">DOMAIN · AIR</text>
+  <text x="144" y="226" text-anchor="middle" fill="#bffaf4" fill-opacity="0.75" font-family="Georgia, 'Times New Roman', serif" font-size="9" letter-spacing="2">UNBOUND · UNSEEN · EVERYWHERE</text>
 </svg>
-

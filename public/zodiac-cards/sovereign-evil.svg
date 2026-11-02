@@ -5,32 +5,88 @@
       <stop offset="0.55" stop-color="#2a0a3f"/>
       <stop offset="1" stop-color="#7d2cff"/>
     </linearGradient>
-    <radialGradient id="glow" cx="70%" cy="20%" r="80%">
-      <stop offset="0" stop-color="#b58cff" stop-opacity="0.5"/>
-      <stop offset="0.65" stop-color="#b58cff" stop-opacity="0"/>
+    <radialGradient id="glow" cx="50%" cy="56%" r="58%">
+      <stop offset="0" stop-color="#e9d5ff" stop-opacity="0.42"/>
+      <stop offset="0.5" stop-color="#b58cff" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#b58cff" stop-opacity="0"/>
     </radialGradient>
+    <radialGradient id="iris" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#ffd166"/>
+      <stop offset="0.7" stop-color="#b3261e"/>
+      <stop offset="1" stop-color="#2a0a3f"/>
+    </radialGradient>
+    <linearGradient id="horn" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#f3e8ff"/>
+      <stop offset="1" stop-color="#5b21b6"/>
+    </linearGradient>
+    <linearGradient id="drip" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#b58cff" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#b58cff" stop-opacity="0"/>
+    </linearGradient>
     <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="7" stdDeviation="11" flood-color="#000" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5"/>
     </filter>
   </defs>
 
-  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#bg)"/>
-  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#glow)"/>
-  <rect x="10" y="10" width="268" height="230" rx="12" fill="none" stroke="#e6d8ff" stroke-opacity="0.28"/>
-  <rect x="14" y="14" width="260" height="222" rx="10" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+  <rect x="3" y="3" width="282" height="244" rx="16" fill="url(#bg)"/>
+  <rect x="3" y="3" width="282" height="244" rx="16" fill="url(#glow)"/>
 
+  <!-- Ornate frame with barbed corners -->
+  <g fill="none" stroke="#f3e8ff" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="11" y="11" width="266" height="228" rx="13" stroke-opacity="0.45" stroke-width="1.6"/>
+    <rect x="17" y="17" width="254" height="216" rx="10" stroke-opacity="0.18"/>
+    <g stroke-opacity="0.75" stroke-width="1.4">
+      <path d="M11 40c0-16 13-29 29-29M277 40c0-16-13-29-29-29M11 210c0 16 13 29 29 29M277 210c0 16-13 29-29 29"/>
+      <path d="M20 42l12-12-2 8 8-2M268 42l-12-12 2 8-8-2M20 208l12 12-2-8 8 2M268 208l-12 12 2-8-8 2"/>
+    </g>
+    <path d="M144 11l5 6-5 6-5-6zM144 227l5 6-5 6-5-6zM11 125l6-5 6 5-6 5zM265 125l6-5 6 5-6 5z" fill="#d8b4fe" fill-opacity="0.9" stroke="none"/>
+  </g>
+
+  <!-- Thorn ring -->
+  <g fill="none" stroke="#e9d5ff" stroke-linecap="round">
+    <circle cx="144" cy="136" r="68" stroke-opacity="0.35" stroke-width="2"/>
+    <circle cx="144" cy="136" r="76" stroke-opacity="0.14"/>
+    <g stroke-opacity="0.5" stroke-width="1.6">
+      <path d="M144 68l-4-8 4 2 4-2zM144 204l-4 8 4-2 4 2zM76 136l-8-4 2 4-2 4zM212 136l8-4-2 4 2 4z"/>
+      <path d="M96 88l-8-4 2 6-6 2zM192 88l8-4-2 6 6 2zM96 184l-8 4 2-6-6-2zM192 184l8 4-2-6 6-2z"/>
+    </g>
+  </g>
+
+  <!-- Horned sigil with the watching eye and dripping tendrils -->
   <g filter="url(#shadow)">
-    <path d="M92 150l14-46 38 26 38-26 14 46c-20 18-42 26-66 26s-46-8-66-26z" fill="#efe7ff" fill-opacity="0.78"/>
-    <path d="M106 104l12-18 18 14 18-18 18 18 18-14 12 18-66 38-66-38z" fill="#efe7ff" fill-opacity="0.5"/>
-    <path d="M114 154c10 6 22 9 36 9s26-3 36-9" fill="none" stroke="#15081f" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="144" cy="196" rx="58" ry="6" fill="#000" fill-opacity="0.5" filter="url(#soft)"/>
+    <!-- horns -->
+    <g fill="url(#horn)" stroke="#1c0a2e" stroke-width="1.2" stroke-linejoin="round">
+      <path d="M104 126c-22-10-36-32-30-62 10 18 24 28 42 34l6 20z"/>
+      <path d="M184 126c22-10 36-32 30-62-10 18-24 28-42 34l-6 20z"/>
+      <path d="M118 100c-10-8-16-20-14-36 6 12 14 18 24 22z" fill-opacity="0.7"/>
+      <path d="M170 100c10-8 16-20 14-36-6 12-14 18-24 22z" fill-opacity="0.7"/>
+    </g>
+    <!-- sigil plate -->
+    <path d="M144 86l48 28-8 56-40 24-40-24-8-56z" fill="#1c0a2e" fill-opacity="0.9" stroke="#d8b4fe" stroke-opacity="0.7" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M144 96l38 22-6 46-32 20-32-20-6-46z" fill="none" stroke="#b58cff" stroke-opacity="0.45" stroke-width="1"/>
+    <!-- eye -->
+    <path d="M100 140c14-20 30-30 44-30s30 10 44 30c-14 20-30 30-44 30s-30-10-44-30z" fill="#f3e8ff" stroke="#1c0a2e" stroke-width="1.2"/>
+    <circle cx="144" cy="140" r="17" fill="url(#iris)"/>
+    <ellipse cx="144" cy="140" rx="4" ry="13" fill="#0a0712"/>
+    <circle cx="138" cy="133" r="3" fill="#ffffff" fill-opacity="0.9"/>
+    <path d="M104 140c12-14 26-22 40-22s28 8 40 22" fill="none" stroke="#1c0a2e" stroke-opacity="0.6" stroke-width="2"/>
+    <!-- tendrils -->
+    <g fill="url(#drip)">
+      <path d="M118 168c2 10 0 20-4 30 6-6 8-16 8-30zM132 172c2 14 0 26-4 38 6-8 8-22 8-38zM156 172c-2 14 0 26 4 38-6-8-8-22-8-38zM170 168c-2 10 0 20 4 30-6-6-8-16-8-30z"/>
+    </g>
+    <!-- small flames -->
+    <g fill="#ffd166" fill-opacity="0.85">
+      <path d="M144 56c4 6 6 10 2 16-2-4-6-6-6-12 0-2 2-3 4-4z"/>
+      <path d="M126 64c3 4 4 7 1 11-1-3-4-4-4-8 0-1 1-2 3-3zM162 64c-3 4-4 7-1 11 1-3 4-4 4-8 0-1-1-2-3-3z"/>
+    </g>
   </g>
 
-  <text x="144" y="44" text-anchor="middle" fill="#fff" font-family="Georgia, 'Times New Roman', serif" font-size="26" letter-spacing="2.2">SOVEREIGN</text>
-  <text x="144" y="66" text-anchor="middle" fill="#e9dcff" font-family="Georgia, 'Times New Roman', serif" font-size="14">Domain · Evil</text>
-
-  <g>
-    <rect x="40" y="184" width="208" height="40" rx="10" fill="#07050b" fill-opacity="0.55" stroke="#e9dcff" stroke-opacity="0.15"/>
-    <text x="144" y="206" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" letter-spacing="1.2">CLICK TO VIEW POWER</text>
-  </g>
+  <text x="144" y="38" text-anchor="middle" fill="#ffffff" font-family="Georgia, 'Times New Roman', serif" font-size="24" letter-spacing="3">SOVEREIGN</text>
+  <text x="144" y="56" text-anchor="middle" fill="#e9d5ff" font-family="Georgia, 'Times New Roman', serif" font-size="12" letter-spacing="1.5">DOMAIN · EVIL</text>
+  <text x="144" y="226" text-anchor="middle" fill="#d8b4fe" fill-opacity="0.75" font-family="Georgia, 'Times New Roman', serif" font-size="9" letter-spacing="2">IT IS ALWAYS WATCHING</text>
 </svg>
-

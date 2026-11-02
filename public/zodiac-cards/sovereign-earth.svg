@@ -3,35 +3,84 @@
     <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
       <stop offset="0" stop-color="#0b120a"/>
       <stop offset="0.55" stop-color="#16351a"/>
-      <stop offset="1" stop-color="#7bcf6a"/>
+      <stop offset="1" stop-color="#5fae52"/>
     </linearGradient>
-    <radialGradient id="glow" cx="70%" cy="20%" r="80%">
-      <stop offset="0" stop-color="#dbffd4" stop-opacity="0.4"/>
-      <stop offset="0.7" stop-color="#dbffd4" stop-opacity="0"/>
+    <radialGradient id="glow" cx="50%" cy="58%" r="55%">
+      <stop offset="0" stop-color="#dbffd4" stop-opacity="0.45"/>
+      <stop offset="0.5" stop-color="#9fe28f" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#dbffd4" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="stone" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#f4fff1"/>
+      <stop offset="0.5" stop-color="#b9e3ad"/>
+      <stop offset="1" stop-color="#4c8a42"/>
+    </linearGradient>
+    <linearGradient id="gem" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.4" stop-color="#8ff7a0"/>
+      <stop offset="1" stop-color="#1d7a3a"/>
+    </linearGradient>
     <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="7" stdDeviation="11" flood-color="#000" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.55"/>
     </filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <pattern id="strata" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
+      <rect width="6" height="1.2" fill="#0a1a0a" fill-opacity="0.35"/>
+    </pattern>
   </defs>
 
-  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#bg)"/>
-  <rect x="3" y="3" width="282" height="244" rx="14" fill="url(#glow)"/>
-  <rect x="10" y="10" width="268" height="230" rx="12" fill="none" stroke="#e6ffe2" stroke-opacity="0.24"/>
-  <rect x="14" y="14" width="260" height="222" rx="10" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+  <rect x="3" y="3" width="282" height="244" rx="16" fill="url(#bg)"/>
+  <rect x="3" y="3" width="282" height="244" rx="16" fill="url(#glow)"/>
 
+  <!-- Ornate frame: double rule, corner knots, mid-edge gems -->
+  <g fill="none" stroke="#e6ffe2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="11" y="11" width="266" height="228" rx="13" stroke-opacity="0.45" stroke-width="1.6"/>
+    <rect x="17" y="17" width="254" height="216" rx="10" stroke-opacity="0.18"/>
+    <g stroke-opacity="0.7" stroke-width="1.4">
+      <path d="M11 40c0-16 13-29 29-29M277 40c0-16-13-29-29-29M11 210c0 16 13 29 29 29M277 210c0 16-13 29-29 29"/>
+      <path d="M22 22l14 14M266 22l-14 14M22 228l14-14M266 228l-14-14"/>
+      <path d="M30 14l6 8-6 8-6-8zM258 14l6 8-6 8-6-8zM30 220l6 8-6 8-6-8zM258 220l6 8-6 8-6-8z" fill="#9fe28f" fill-opacity="0.9"/>
+    </g>
+    <path d="M144 11l5 6-5 6-5-6zM144 227l5 6-5 6-5-6zM11 125l6-5 6 5-6 5zM265 125l6-5 6 5-6 5z" fill="#9fe28f" fill-opacity="0.9" stroke="none"/>
+  </g>
+
+  <!-- Radiant ring behind the emblem -->
+  <g fill="none" stroke="#dbffd4">
+    <circle cx="144" cy="140" r="64" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="3 5"/>
+    <circle cx="144" cy="140" r="72" stroke-opacity="0.18"/>
+    <g stroke-opacity="0.35" stroke-width="2" stroke-linecap="round">
+      <path d="M144 62v10M144 208v10M66 140h10M212 140h10M89 85l7 7M192 188l7 7M199 85l-7 7M96 188l-7 7"/>
+    </g>
+  </g>
+
+  <!-- Mountain triad with strata, roots, and the crowned gem -->
   <g filter="url(#shadow)">
-    <path d="M66 166l40-56 38 44 24-32 54 44v20H66z" fill="#ecffe9" fill-opacity="0.8"/>
-    <path d="M104 116l16-18 18 18-18 22z" fill="#ecffe9" fill-opacity="0.45"/>
-    <path d="M166 128l14-18 16 16-14 20z" fill="#ecffe9" fill-opacity="0.45"/>
-    <path d="M90 172c22 8 44 12 66 12s44-4 66-12" fill="none" stroke="#061006" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="144" cy="176" rx="68" ry="7" fill="#031003" fill-opacity="0.55" filter="url(#soft)"/>
+    <path d="M60 174l36-58 18 20 30-56 30 54 18-18 36 58z" fill="url(#stone)"/>
+    <path d="M60 174l36-58 18 20 30-56 30 54 18-18 36 58z" fill="url(#strata)"/>
+    <path d="M114 136l30-56 30 54-14 2-16-30-16 32z" fill="#ffffff" fill-opacity="0.35"/>
+    <path d="M96 116l18 20-8 6-10-14zM192 116l-18 18 8 6 10-14z" fill="#ffffff" fill-opacity="0.22"/>
+    <path d="M60 174h168" stroke="#0a1a0a" stroke-opacity="0.5" stroke-width="2"/>
+    <!-- roots -->
+    <g fill="none" stroke="#9fe28f" stroke-opacity="0.75" stroke-width="2.2" stroke-linecap="round">
+      <path d="M118 176c-6 10-16 14-30 16M128 176c-2 12-6 18-14 24M160 176c2 12 6 18 14 24M170 176c6 10 16 14 30 16M144 176v26"/>
+    </g>
+    <!-- crown -->
+    <g fill="#f4fff1" stroke="#1d4a1d" stroke-width="1.2" stroke-linejoin="round">
+      <path d="M118 78l8-20 10 12 8-22 8 22 10-12 8 20z"/>
+      <rect x="118" y="78" width="52" height="7" rx="2"/>
+    </g>
+    <path d="M144 48l8 12-8 14-8-14z" fill="url(#gem)" stroke="#0f3a16" stroke-width="1.2"/>
+    <circle cx="126" cy="70" r="2.4" fill="#8ff7a0"/><circle cx="162" cy="70" r="2.4" fill="#8ff7a0"/>
   </g>
 
-  <text x="144" y="44" text-anchor="middle" fill="#fff" font-family="Georgia, 'Times New Roman', serif" font-size="26" letter-spacing="2.2">SOVEREIGN</text>
-  <text x="144" y="66" text-anchor="middle" fill="#e1ffdc" font-family="Georgia, 'Times New Roman', serif" font-size="14">Domain · Earth</text>
-
-  <g>
-    <rect x="40" y="184" width="208" height="40" rx="10" fill="#040a04" fill-opacity="0.55" stroke="#e1ffdc" stroke-opacity="0.14"/>
-    <text x="144" y="206" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" letter-spacing="1.2">CLICK TO VIEW POWER</text>
+  <!-- Rune ring -->
+  <g fill="#dbffd4" fill-opacity="0.8" font-family="Georgia, 'Times New Roman', serif" font-size="9" text-anchor="middle">
+    <text x="88" y="210">ᚦ</text><text x="110" y="222">ᛟ</text><text x="144" y="226">ᛉ</text><text x="178" y="222">ᚨ</text><text x="200" y="210">ᛞ</text>
   </g>
+
+  <text x="144" y="38" text-anchor="middle" fill="#ffffff" font-family="Georgia, 'Times New Roman', serif" font-size="24" letter-spacing="3">SOVEREIGN</text>
+  <text x="144" y="56" text-anchor="middle" fill="#e1ffdc" font-family="Georgia, 'Times New Roman', serif" font-size="12" letter-spacing="1.5">DOMAIN · EARTH</text>
 </svg>
-
