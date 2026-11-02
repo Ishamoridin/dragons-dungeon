@@ -1782,13 +1782,99 @@ h1 {
   text-transform: none;
 }
 
+/* ---- Skins ----
+   Each skin sets colour variables plus two generated art assets, supplied inline by skinArtStyle():
+   --skin-texture (a seamless 240px tile layered over the page and panels) and --skin-ornament (a 360x28 flourish
+   drawn under headings in place of plain text rules). Skin-specific sections below add surface treatments. */
+
 .sheet-shell[data-skin],
 .dm-console-shell[data-skin] {
   min-height: 100vh;
   color: var(--skin-text);
-  background: var(--skin-page-bg);
+  background-color: #110f16;
+  background-image: var(--skin-texture, none), var(--skin-page-bg);
+  background-size: var(--skin-texture-size, 240px 240px), auto;
+  background-attachment: fixed, fixed;
+  background-blend-mode: var(--skin-texture-blend, soft-light), normal;
 }
 
+/* Textured surfaces: the tile shows through panels and cards at a skin-chosen strength. */
+[data-skin] .essence-panel,
+[data-skin] .identity-panel,
+[data-skin] .attribute-panel,
+[data-skin] .skills-panel,
+[data-skin] .detail-card,
+[data-skin] .status-box,
+[data-skin] .attribute-card,
+[data-skin] .dm-character-card,
+[data-skin] .dm-action-block,
+[data-skin] .timeline-board,
+[data-skin] .campaign-world-group,
+[data-skin] .faction-card {
+  position: relative;
+  isolation: isolate;
+}
+
+[data-skin] .essence-panel::before,
+[data-skin] .identity-panel::before,
+[data-skin] .attribute-panel::before,
+[data-skin] .skills-panel::before,
+[data-skin] .detail-card::before,
+[data-skin] .status-box::before,
+[data-skin] .attribute-card::before,
+[data-skin] .dm-character-card::before,
+[data-skin] .dm-action-block::before,
+[data-skin] .timeline-board::before,
+[data-skin] .campaign-world-group::before,
+[data-skin] .faction-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: var(--skin-texture, none);
+  background-size: var(--skin-texture-size, 240px 240px);
+  opacity: var(--skin-panel-texture-opacity, 0.22);
+  mix-blend-mode: var(--skin-texture-blend, soft-light);
+}
+
+/* Heading art: an ornament replaces the bare underline beneath page titles and panel headings. */
+[data-skin] .sheet-topbar h1,
+[data-skin] .campaign-page-heading h3,
+[data-skin] .essence-panel > h2,
+[data-skin] .dm-modal-header h2,
+[data-skin] .login-panel h1 {
+  position: relative;
+  padding-bottom: 14px;
+  font-family: var(--skin-heading-font, inherit);
+  letter-spacing: var(--skin-heading-spacing, normal);
+  text-transform: var(--skin-heading-transform, none);
+  text-shadow: var(--skin-heading-shadow, none);
+}
+
+[data-skin] .sheet-topbar h1::after,
+[data-skin] .campaign-page-heading h3::after,
+[data-skin] .essence-panel > h2::after,
+[data-skin] .dm-modal-header h2::after,
+[data-skin] .login-panel h1::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: min(100%, 360px);
+  height: 14px;
+  background: var(--skin-ornament, none) left center / 360px 28px no-repeat;
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+[data-skin] .eyebrow {
+  color: var(--skin-accent);
+  font-family: var(--skin-heading-font, inherit);
+}
+
+/* ---- Basalt: volcanic glass ---- */
 .sheet-shell[data-skin='basalt'],
 .dm-console-shell[data-skin='basalt'],
 :root[data-skin='basalt'] {
@@ -1801,13 +1887,22 @@ h1 {
   --skin-accent: #b39ef8;
   --skin-accent-strong: #7055bc;
   --skin-border: rgba(164, 146, 220, 0.3);
+  --skin-panel-texture-opacity: 0.35;
+  --skin-heading-font: Georgia, 'Times New Roman', serif;
+  --skin-heading-spacing: 0.02em;
 }
 
+[data-skin='basalt'] .essence-panel,
+[data-skin='basalt'] .dm-character-card {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* ---- Tideglass: sea glass and caustic light ---- */
 .sheet-shell[data-skin='tideglass'],
 .dm-console-shell[data-skin='tideglass'],
 :root[data-skin='tideglass'] {
   --skin-page-bg: linear-gradient(135deg, #06171d 0%, #0c2830 48%, #192026 100%);
-  --skin-panel-bg: rgba(13, 34, 40, 0.96);
+  --skin-panel-bg: rgba(13, 34, 40, 0.9);
   --skin-card-bg: linear-gradient(180deg, #18343a, #10272d);
   --skin-control-bg: #0f262b;
   --skin-text: #e4f2f0;
@@ -1815,13 +1910,24 @@ h1 {
   --skin-accent: #75d4cb;
   --skin-accent-strong: #21827f;
   --skin-border: rgba(112, 205, 202, 0.3);
+  --skin-texture-blend: screen;
+  --skin-panel-texture-opacity: 0.18;
 }
 
+[data-skin='tideglass'] .essence-panel,
+[data-skin='tideglass'] .dm-character-card,
+[data-skin='tideglass'] .identity-panel {
+  backdrop-filter: blur(6px);
+  border-color: rgba(191, 250, 244, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 10px 24px rgba(0, 20, 24, 0.5);
+}
+
+/* ---- Wildwood: oiled timber ---- */
 .sheet-shell[data-skin='wildwood'],
 .dm-console-shell[data-skin='wildwood'],
 :root[data-skin='wildwood'] {
   --skin-page-bg: linear-gradient(135deg, #11190f 0%, #1c2418 48%, #101614 100%);
-  --skin-panel-bg: rgba(24, 32, 22, 0.96);
+  --skin-panel-bg: rgba(24, 32, 22, 0.94);
   --skin-card-bg: linear-gradient(180deg, #263525, #182318);
   --skin-control-bg: #192318;
   --skin-text: #edf0dc;
@@ -1829,28 +1935,45 @@ h1 {
   --skin-accent: #c6d982;
   --skin-accent-strong: #6b813a;
   --skin-border: rgba(180, 197, 124, 0.3);
+  --skin-texture-blend: multiply;
+  --skin-panel-texture-opacity: 0.45;
+  --skin-heading-font: Georgia, 'Times New Roman', serif;
 }
 
+[data-skin='wildwood'] .essence-panel,
+[data-skin='wildwood'] .dm-character-card {
+  border-width: 2px;
+  border-color: rgba(120, 90, 50, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+/* ---- Moonstone: pearlescent haze ---- */
 .sheet-shell[data-skin='moonstone'],
 .dm-console-shell[data-skin='moonstone'],
 :root[data-skin='moonstone'] {
-  --skin-page-bg: linear-gradient(135deg, #e3edf1 0%, #f5f4ef 52%, #e0e8eb 100%);
-  --skin-panel-bg: rgba(250, 252, 253, 0.96);
-  --skin-card-bg: linear-gradient(180deg, #ffffff, #edf3f4);
-  --skin-control-bg: #ffffff;
-  --skin-text: #1c3038;
-  --skin-muted: #5e747c;
-  --skin-accent: #187e86;
-  --skin-accent-strong: #a64f36;
-  --skin-border: rgba(69, 102, 116, 0.25);
+  --skin-page-bg: linear-gradient(135deg, #1a1830 0%, #2b2650 48%, #16142a 100%);
+  --skin-panel-bg: rgba(34, 30, 58, 0.92);
+  --skin-card-bg: linear-gradient(180deg, #3a3466, #26224a);
+  --skin-control-bg: #241f44;
+  --skin-text: #f1edff;
+  --skin-muted: #b7afd6;
+  --skin-accent: #c7b8ff;
+  --skin-accent-strong: #7c6bd9;
+  --skin-border: rgba(199, 184, 255, 0.32);
+  --skin-texture-blend: screen;
+  --skin-panel-texture-opacity: 0.3;
 }
 
+[data-skin='moonstone'] .essence-panel,
+[data-skin='moonstone'] .dm-character-card {
+  box-shadow: 0 0 22px rgba(199, 184, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ---- Matrix: falling code ---- */
 .sheet-shell[data-skin='matrix'],
 .dm-console-shell[data-skin='matrix'],
 :root[data-skin='matrix'] {
-  --skin-page-bg:
-    repeating-linear-gradient(0deg, rgba(0, 255, 65, 0.05) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, #000400 0%, #001a05 55%, #000200 100%);
+  --skin-page-bg: linear-gradient(180deg, #000400 0%, #001a05 55%, #000200 100%);
   --skin-panel-bg: rgba(0, 10, 2, 0.92);
   --skin-card-bg: linear-gradient(180deg, #021b08, #000a02);
   --skin-control-bg: #001405;
@@ -1859,9 +1982,19 @@ h1 {
   --skin-accent: #00ff41;
   --skin-accent-strong: #0a7d28;
   --skin-border: rgba(0, 255, 65, 0.35);
+  --skin-texture-blend: screen;
+  --skin-panel-texture-opacity: 0.35;
+  --skin-heading-font: 'Consolas', 'Courier New', monospace;
+  --skin-heading-shadow: 0 0 6px #00ff41;
   font-family: 'Consolas', 'Courier New', monospace;
 }
 
+[data-skin='matrix'] .essence-panel,
+[data-skin='matrix'] .dm-character-card {
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 65, 0.15), 0 0 18px rgba(0, 255, 65, 0.08);
+}
+
+/* ---- Sword Art Online: luminous hex interface ---- */
 .sheet-shell[data-skin='sao'],
 .dm-console-shell[data-skin='sao'],
 :root[data-skin='sao'] {
@@ -1874,8 +2007,24 @@ h1 {
   --skin-accent: #4ad9ff;
   --skin-accent-strong: #1f7fb3;
   --skin-border: rgba(74, 217, 255, 0.4);
+  --skin-texture-blend: screen;
+  --skin-panel-texture-opacity: 0.5;
+  --skin-heading-shadow: 0 0 10px rgba(74, 217, 255, 0.6);
 }
 
+[data-skin='sao'] .identity-panel,
+[data-skin='sao'] .attribute-panel,
+[data-skin='sao'] .skills-panel,
+[data-skin='sao'] .detail-card,
+[data-skin='sao'] .status-box,
+[data-skin='sao'] .attribute-card,
+[data-skin='sao'] .dm-character-card,
+[data-skin='sao'] .essence-panel,
+[data-skin='sao'] .summary-pill {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--skin-accent) 25%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--skin-accent) 30%, transparent);
+}
+
+/* ---- Star Trek: LCARS panels ---- */
 .sheet-shell[data-skin='startrek'],
 .dm-console-shell[data-skin='startrek'],
 :root[data-skin='startrek'] {
@@ -1888,36 +2037,12 @@ h1 {
   --skin-accent: #ff9900;
   --skin-accent-strong: #cc6699;
   --skin-border: rgba(255, 153, 0, 0.4);
+  --skin-texture-blend: screen;
+  --skin-panel-texture-opacity: 0.4;
+  --skin-heading-font: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  --skin-heading-transform: uppercase;
+  --skin-heading-spacing: 0.08em;
   font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
-}
-
-[data-skin='matrix'] .eyebrow,
-[data-skin='matrix'] h1,
-[data-skin='matrix'] h2,
-[data-skin='matrix'] h3 {
-  text-shadow: 0 0 6px var(--skin-accent);
-}
-
-[data-skin='sao'] .identity-panel,
-[data-skin='sao'] .attribute-panel,
-[data-skin='sao'] .skills-panel,
-[data-skin='sao'] .detail-card,
-[data-skin='sao'] .status-box,
-[data-skin='sao'] .attribute-card,
-[data-skin='sao'] .dm-character-card,
-[data-skin='sao'] .summary-pill {
-  box-shadow: 0 0 14px color-mix(in srgb, var(--skin-accent) 25%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--skin-accent) 30%, transparent);
-}
-
-[data-skin='sao'] .eyebrow,
-[data-skin='sao'] h1 {
-  text-shadow: 0 0 10px color-mix(in srgb, var(--skin-accent) 60%, transparent);
-}
-
-[data-skin='startrek'] h1,
-[data-skin='startrek'] .eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 [data-skin='startrek'] .identity-panel,
@@ -1927,8 +2052,206 @@ h1 {
 [data-skin='startrek'] .status-box,
 [data-skin='startrek'] .attribute-card,
 [data-skin='startrek'] .dm-character-card,
+[data-skin='startrek'] .essence-panel,
 [data-skin='startrek'] .summary-pill {
   border-radius: 20px;
+  border-left-width: 6px;
+  border-left-color: var(--skin-accent);
+}
+
+/* ---- Rough Stone: carved rock ---- */
+.sheet-shell[data-skin='stone'],
+.dm-console-shell[data-skin='stone'],
+:root[data-skin='stone'] {
+  --skin-page-bg: linear-gradient(160deg, #2a2623 0%, #3a3531 50%, #1f1c1a 100%);
+  --skin-panel-bg: rgba(58, 52, 47, 0.97);
+  --skin-card-bg: linear-gradient(180deg, #514a44, #352f2b);
+  --skin-control-bg: #2b2724;
+  --skin-text: #efe6d8;
+  --skin-muted: #b9ab98;
+  --skin-accent: #d9a24f;
+  --skin-accent-strong: #8c5f22;
+  --skin-border: rgba(216, 199, 170, 0.28);
+  --skin-texture-blend: multiply;
+  --skin-panel-texture-opacity: 0.85;
+  --skin-heading-font: Georgia, 'Times New Roman', serif;
+  --skin-heading-spacing: 0.05em;
+  --skin-heading-transform: uppercase;
+  --skin-heading-shadow: 0 1px 0 rgba(0, 0, 0, 0.7), 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-skin='stone'] .essence-panel,
+[data-skin='stone'] .identity-panel,
+[data-skin='stone'] .dm-character-card,
+[data-skin='stone'] .dm-action-block,
+[data-skin='stone'] .dm-character-modal,
+[data-skin='stone'] .timeline-board {
+  border-radius: 4px;
+  border: 2px solid rgba(20, 16, 14, 0.9);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.07), inset 0 -3px 0 rgba(0, 0, 0, 0.55), inset 2px 0 0 rgba(255, 255, 255, 0.04), 0 10px 20px rgba(0, 0, 0, 0.55);
+}
+
+[data-skin='stone'] button,
+[data-skin='stone'] .skill-chip {
+  border-radius: 3px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* ---- Moonlit Silver: argent metal under moonlight ---- */
+.sheet-shell[data-skin='moonsilver'],
+.dm-console-shell[data-skin='moonsilver'],
+:root[data-skin='moonsilver'] {
+  --skin-page-bg: radial-gradient(circle at 72% 8%, rgba(226, 236, 255, 0.28), transparent 32%), linear-gradient(170deg, #0b1020 0%, #182238 50%, #0a0e1a 100%);
+  --skin-panel-bg: rgba(44, 52, 72, 0.92);
+  --skin-card-bg: linear-gradient(180deg, #5c6678 0%, #3a4252 45%, #4d5668 100%);
+  --skin-control-bg: #2a3142;
+  --skin-text: #eef2fa;
+  --skin-muted: #aeb8cc;
+  --skin-accent: #dfe7f7;
+  --skin-accent-strong: #7f8ea8;
+  --skin-border: rgba(214, 224, 245, 0.45);
+  --skin-texture-blend: soft-light;
+  --skin-panel-texture-opacity: 0.6;
+  --skin-heading-font: Georgia, 'Times New Roman', serif;
+  --skin-heading-shadow: 0 0 12px rgba(214, 224, 245, 0.55);
+}
+
+[data-skin='moonsilver'] .essence-panel,
+[data-skin='moonsilver'] .identity-panel,
+[data-skin='moonsilver'] .dm-character-card,
+[data-skin='moonsilver'] .dm-action-block,
+[data-skin='moonsilver'] .timeline-board {
+  border: 1px solid rgba(230, 238, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.35), 0 12px 26px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- Polished Steel: brushed plate ---- */
+.sheet-shell[data-skin='steel'],
+.dm-console-shell[data-skin='steel'],
+:root[data-skin='steel'] {
+  --skin-page-bg: linear-gradient(135deg, #3b4047 0%, #6b737c 30%, #2c3137 55%, #5a626b 80%, #22262b 100%);
+  --skin-panel-bg: rgba(52, 58, 65, 0.96);
+  --skin-card-bg: linear-gradient(180deg, #7b848e 0%, #4b535b 50%, #5f6870 100%);
+  --skin-control-bg: #353b42;
+  --skin-text: #f1f4f7;
+  --skin-muted: #b7bec6;
+  --skin-accent: #c9d6e3;
+  --skin-accent-strong: #6c7f91;
+  --skin-border: rgba(220, 228, 236, 0.4);
+  --skin-texture-blend: overlay;
+  --skin-panel-texture-opacity: 0.7;
+  --skin-heading-font: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  --skin-heading-transform: uppercase;
+  --skin-heading-spacing: 0.06em;
+}
+
+[data-skin='steel'] .essence-panel,
+[data-skin='steel'] .identity-panel,
+[data-skin='steel'] .dm-character-card,
+[data-skin='steel'] .dm-action-block,
+[data-skin='steel'] .timeline-board {
+  border: 1px solid rgba(230, 236, 242, 0.5);
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 0 0 4px rgba(0, 0, 0, 0.12), 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+[data-skin='steel'] .essence-panel::after,
+[data-skin='steel'] .dm-character-card::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 3px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 100% 0, rgba(255, 255, 255, 0.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 0 100%, rgba(255, 255, 255, 0.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.55) 0 2px, transparent 3px);
+}
+
+/* ---- Arcane Steel: rune-etched metal, glowing blue ---- */
+.sheet-shell[data-skin='arcane'],
+.dm-console-shell[data-skin='arcane'],
+:root[data-skin='arcane'] {
+  --skin-page-bg: radial-gradient(circle at 50% 0%, rgba(80, 160, 255, 0.28), transparent 45%), linear-gradient(160deg, #060b16 0%, #0c1a33 50%, #040812 100%);
+  --skin-panel-bg: rgba(14, 26, 48, 0.92);
+  --skin-card-bg: linear-gradient(180deg, #24466f, #122540);
+  --skin-control-bg: #0f1d33;
+  --skin-text: #e6f2ff;
+  --skin-muted: #8fb3dc;
+  --skin-accent: #5ab4ff;
+  --skin-accent-strong: #2a6fd6;
+  --skin-border: rgba(90, 180, 255, 0.5);
+  --skin-texture-blend: screen;
+  --skin-panel-texture-opacity: 0.55;
+  --skin-heading-shadow: 0 0 12px rgba(90, 180, 255, 0.75);
+}
+
+[data-skin='arcane'] .essence-panel,
+[data-skin='arcane'] .identity-panel,
+[data-skin='arcane'] .dm-character-card,
+[data-skin='arcane'] .dm-action-block,
+[data-skin='arcane'] .timeline-board {
+  box-shadow: 0 0 18px rgba(90, 180, 255, 0.25), inset 0 0 0 1px rgba(90, 180, 255, 0.35), inset 0 0 24px rgba(42, 111, 214, 0.18);
+  animation: arcane-breathe 6s ease-in-out infinite;
+}
+
+@keyframes arcane-breathe {
+  0%, 100% { box-shadow: 0 0 14px rgba(90, 180, 255, 0.2), inset 0 0 0 1px rgba(90, 180, 255, 0.3), inset 0 0 20px rgba(42, 111, 214, 0.15); }
+  50% { box-shadow: 0 0 26px rgba(90, 180, 255, 0.4), inset 0 0 0 1px rgba(90, 180, 255, 0.55), inset 0 0 30px rgba(42, 111, 214, 0.28); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin='arcane'] .essence-panel,
+  [data-skin='arcane'] .identity-panel,
+  [data-skin='arcane'] .dm-character-card,
+  [data-skin='arcane'] .dm-action-block,
+  [data-skin='arcane'] .timeline-board {
+    animation: none;
+  }
+}
+
+/* ---- Rusted Iron: pitted, flaking metal ---- */
+.sheet-shell[data-skin='rust'],
+.dm-console-shell[data-skin='rust'],
+:root[data-skin='rust'] {
+  --skin-page-bg: radial-gradient(ellipse at 70% 80%, #6b3a1c, transparent 55%), linear-gradient(150deg, #2b1a12 0%, #4a2a18 45%, #1d120c 100%);
+  --skin-panel-bg: rgba(56, 34, 22, 0.96);
+  --skin-card-bg: linear-gradient(180deg, #6a3d22, #3f2415);
+  --skin-control-bg: #332015;
+  --skin-text: #f3e3d1;
+  --skin-muted: #c9a98c;
+  --skin-accent: #e08a3c;
+  --skin-accent-strong: #8f4b1b;
+  --skin-border: rgba(224, 138, 60, 0.38);
+  --skin-texture-blend: multiply;
+  --skin-panel-texture-opacity: 0.9;
+  --skin-heading-font: Georgia, 'Times New Roman', serif;
+  --skin-heading-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+}
+
+[data-skin='rust'] .essence-panel,
+[data-skin='rust'] .identity-panel,
+[data-skin='rust'] .dm-character-card,
+[data-skin='rust'] .dm-action-block,
+[data-skin='rust'] .timeline-board {
+  border: 2px solid rgba(36, 20, 12, 0.9);
+  border-radius: 5px;
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 180, 120, 0.12), 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+[data-skin='rust'] .essence-panel::after,
+[data-skin='rust'] .dm-character-card::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 0 0, #2a1810 0 2.5px, #a35a2a 3px, transparent 4px),
+    radial-gradient(circle at 100% 0, #2a1810 0 2.5px, #a35a2a 3px, transparent 4px),
+    radial-gradient(circle at 0 100%, #2a1810 0 2.5px, #a35a2a 3px, transparent 4px),
+    radial-gradient(circle at 100% 100%, #2a1810 0 2.5px, #a35a2a 3px, transparent 4px);
+  opacity: 0.85;
 }
 
 :root[data-skin] body {

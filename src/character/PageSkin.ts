@@ -6,6 +6,11 @@ export const PAGE_SKINS = [
   { id: 'matrix', label: 'Matrix' },
   { id: 'sao', label: 'Sword Art Online' },
   { id: 'startrek', label: 'Star Trek' },
+  { id: 'stone', label: 'Rough Stone' },
+  { id: 'moonsilver', label: 'Moonlit Silver' },
+  { id: 'steel', label: 'Polished Steel' },
+  { id: 'arcane', label: 'Arcane Steel' },
+  { id: 'rust', label: 'Rusted Iron' },
 ] as const
 
 export type PageSkin = (typeof PAGE_SKINS)[number]['id']

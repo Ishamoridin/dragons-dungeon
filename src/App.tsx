@@ -5,6 +5,7 @@ import type { Attribute } from './character/Attribute'
 import { SKILLS, type Skill } from './character/Skills'
 import { refreshCharacterSheets, updateCharacterSheet, displayName, type CharacterSheetRecord } from './character/CharacterSheetDatabase'
 import { portraitShellClass, portraitStyle, type Portrait } from './character/Portrait'
+import { skinArtStyle } from './skins'
 import { applyEssenceChange, applySheetChange, logDevelopmentRequest, type DevelopmentRequest, type EssenceChange, type SheetChange } from './character/essence/EssenceChanges'
 import { EssenceSheetBody } from './character/essence/EssenceViews'
 import { spiritWeaponLabel } from './character/essence/EssenceSystem'
@@ -389,7 +390,7 @@ function App() {
 
   if (viewedEssence?.Essence) {
     return (
-      <div className={portraitShellClass('sheet-shell', viewedEssence.Portrait)} data-skin={pageSkin} style={portraitStyle(viewedEssence.Portrait)}>
+      <div className={portraitShellClass('sheet-shell', viewedEssence.Portrait)} data-skin={pageSkin} style={{ ...skinArtStyle(pageSkin), ...portraitStyle(viewedEssence.Portrait) }}>
         <header className="sheet-topbar">
           <div>
             <p className="eyebrow">{viewedEssence.CampaignName} · Essence</p>
@@ -456,7 +457,7 @@ function App() {
   }
 
   return (
-    <div className="sheet-shell" data-skin={pageSkin}>
+    <div className="sheet-shell" data-skin={pageSkin} style={skinArtStyle(pageSkin)}>
       <header className="sheet-topbar">
         <div>
           <p className="eyebrow">Campaign ledger</p>

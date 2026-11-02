@@ -15,7 +15,7 @@ const password = z.string().min(12).max(256)
 const accountInput = z.object({ Username: username, Password: password, Role: z.enum(['player', 'dm']) }).strict()
 const loginInput = z.object({ username: z.string().min(1).max(64), password: z.string().min(1).max(256) }).strict()
 const registrationInput = z.object({ email: z.string().trim().toLowerCase().email().max(254), username, password, role: z.enum(['player', 'dm']).default('player') }).strict()
-const accountUpdate = z.object({ Username: username.optional(), Password: password.optional(), PreferredSkin: z.enum(['basalt', 'tideglass', 'wildwood', 'moonstone', 'matrix', 'sao', 'startrek']).optional(), CurrentPassword: z.string().max(256).optional() }).strict()
+const accountUpdate = z.object({ Username: username.optional(), Password: password.optional(), PreferredSkin: z.enum(['basalt', 'tideglass', 'wildwood', 'moonstone', 'matrix', 'sao', 'startrek', 'stone', 'moonsilver', 'steel', 'arcane', 'rust']).optional(), CurrentPassword: z.string().max(256).optional() }).strict()
 const resourceKinds = new Set(['campaigns', 'items', 'techniques', 'development', 'systems'])
 const systemData = z.object({
   Id: z.string().min(1).max(100),

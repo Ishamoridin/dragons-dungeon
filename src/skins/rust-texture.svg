@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+<defs><filter id="f" x="0" y="0" width="100%" height="100%"><feTurbulence type="turbulence" baseFrequency="0.045 0.045" numOctaves="4" seed="27" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0.1582 0.1582 0.1582 0 0.1647  0.0863 0.0863 0.0863 0 0.0941  0.0340 0.0340 0.0340 0 0.0627  0 0 0 0 0.95" result="tint"/></filter><filter id="p" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.35 0.35" numOctaves="2" seed="31" stitchTiles="stitch" result="m"/><feColorMatrix in="m" type="matrix" values="0.3333 0.3333 0.3333 0 0.0000  0.3333 0.3333 0.3333 0 0.0000  0.3333 0.3333 0.3333 0 0.0000  0 0 0 0 0.18" result="pits"/></filter></defs>
+<rect width="240" height="240" fill="#3b2316"/><rect width="240" height="240" filter="url(#f)"/><rect width="240" height="240" filter="url(#p)"/>
+<g fill="#e08a3c" fill-opacity="0.25"><circle cx="40" cy="70" r="6"/><circle cx="170" cy="40" r="4"/><circle cx="200" cy="190" r="8"/><circle cx="90" cy="180" r="3"/></g>
+<g fill="#1a0e08" fill-opacity="0.55"><circle cx="120" cy="120" r="2.2"/><circle cx="30" cy="200" r="1.8"/><circle cx="210" cy="90" r="2.6"/><circle cx="70" cy="30" r="1.5"/></g>
+</svg>

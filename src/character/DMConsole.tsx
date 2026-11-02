@@ -5,6 +5,7 @@ import NewSystemModal from './NewSystemModal'
 import ImportSheetModal from './ImportSheetModal'
 import PortraitControl from './PortraitControl'
 import { portraitShellClass, portraitStyle, type Portrait } from './Portrait'
+import { skinArtStyle } from '../skins'
 import SettingsMenu from './SettingsMenu'
 import EssenceAdjustmentModal from './essence/EssenceAdjustmentModal'
 import type { CampaignAction, CampaignEventType, NPCFactionGroup } from './Campaign'
@@ -437,7 +438,7 @@ function PlayerSheetView({
 }) {
   const attributeEntries = Object.entries(record.Attributes)
   const resources = getResources(record)
-  const shellStyle = portraitStyle(record.Portrait)
+  const shellStyle = { ...skinArtStyle(skin), ...portraitStyle(record.Portrait) }
 
   if (record.Essence) {
     return (
@@ -1625,7 +1626,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
   }
 
   return (
-    <div className="dm-console-shell" data-skin={skin}>
+    <div className="dm-console-shell" data-skin={skin} style={skinArtStyle(skin)}>
       <header className="dm-console-header">
         <div>
           <p className="eyebrow">Dragon's Dungeon · Dungeon master</p>
