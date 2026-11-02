@@ -21,6 +21,7 @@ import { api } from './character/Api'
 import { DEFAULT_PAGE_SKIN, type PageSkin } from './character/PageSkin'
 import { savePreferredSkin } from './character/UserPreferences'
 import { connectRealtime, disconnectRealtime, onDataChanged } from './character/Realtime'
+import { clearSilentGoogleSignInAttempt, consumeGoogleAuthMarkers, forgetGoogleSignIn, shouldTrySilentGoogleSignIn, silentGoogleSignInAttempted, startSilentGoogleSignIn } from './character/GoogleSession'
 
 type SubStat = {
   label: string
@@ -272,7 +273,15 @@ function App() {
     const restore = registrationToken
       ? completeRegistration(registrationToken).catch((failure) => { if (active) setDatabaseRefreshStatus(failure instanceof Error ? failure.message : 'Registration link failed.'); return restoreSession() })
       : restoreSession()
-    void restore.then(async (user) => { if (active && user) await activateUser(user) })
+    // A Google-signed browser renews an expired session silently instead of showing the login screen.
+    const marker = consumeGoogleAuthMarkers()
+    if (marker === 'signed-in') clearSilentGoogleSignInAttempt()
+    void restore.then(async (user) => {
+      if (!active) return
+      if (user) { clearSilentGoogleSignInAttempt(); await activateUser(user); return }
+      if (marker !== 'silent-failed' && !silentGoogleSignInAttempted() && shouldTrySilentGoogleSignIn()) { startSilentGoogleSignIn(); return }
+      clearSilentGoogleSignInAttempt()
+    })
       .catch(() => { if (active) setDatabaseRefreshStatus('Unable to restore session.') })
       .finally(() => { if (active) setRestoring(false) })
     return () => { active = false }
@@ -297,6 +306,8 @@ function App() {
   const handleLogout = async () => {
     try { await signOut() }
     catch { setDatabaseRefreshStatus('Sign out failed. Please retry.'); return }
+    // Signing out is a choice; do not sign the browser straight back in through Google.
+    forgetGoogleSignIn()
     setCurrentUser(null)
     setCharacter(null)
     setLoadedAttributeValues(null)

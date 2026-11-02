@@ -53,7 +53,7 @@ test('Google OAuth state, persistent sessions, account modes, and explicit linki
     assert.match((await call(`/auth/google/callback?state=${state}&code=new-user`)).location, /google_state/)
     assert.match((await call('/auth/google/callback?state=wrong&code=new-user', 'GET', undefined, cookie)).location, /google_state/)
     const callback = await call(`/auth/google/callback?state=${state}&code=new-user`, 'GET', undefined, cookie)
-    assert.equal(callback.location, 'http://localhost:5173/')
+    assert.equal(callback.location, 'http://localhost:5173/?auth=google')
     const persistent = sessionCookie(callback)
     assert.ok(persistent)
     assert.match(callback.cookies.find((entry) => entry.startsWith('dd_session=')), /HttpOnly/)

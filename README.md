@@ -31,6 +31,8 @@ Sessions use revocable HttpOnly cookies and MongoDB-backed expiry, last up to 30
 
 Google login uses authorization code exchange, PKCE, a one-time state bound to an HttpOnly cookie, and an identity-token nonce. Google's library verifies token signatures and audience; only verified email identities are accepted. Google access and refresh tokens are not stored. A new Google account uses the selected registration mode, while returning accounts keep their saved mode. Accounts are never automatically linked solely because their email matches: sign in with the existing account first and use Connect Google account in Settings.
 
+Google sign-in is persistent. After a Google sign-in the browser remembers it, and whenever a later visit finds no live session (the 30-day cookie expired or was cleared) the app runs Google's silent `prompt=none` flow once and lands back signed in, with no clicking, as long as the Google account is still signed in. Signing out clears that memory. Silent attempts never create accounts. When the app is served under a sub-path, set `APP_URL` so Google returns the browser to the app rather than the origin root.
+
 ## Checks
 
 - `npm run build`: TypeScript checks and production frontend build.

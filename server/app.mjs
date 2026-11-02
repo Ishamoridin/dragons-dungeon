@@ -188,7 +188,7 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     await sessionLogs.updateOne({ SessionDigest: digest }, update)
   }
   const endSessionLog = (filter, reason, endedAt = new Date()) => sessionLogs.updateMany({ ...filter, EndedAt: null }, { $set: { EndedAt: endedAt, EndReason: reason } })
-  mountGoogleAuth(app, db, { key, origin, secureCookies, google, providerOverride: googleProvider, issueSession, findCurrentUser })
+  mountGoogleAuth(app, db, { key, origin, appUrl: appLink, secureCookies, google, providerOverride: googleProvider, issueSession, findCurrentUser })
 
   app.post('/api/auth/register', rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many registration attempts. Please try again later.' } }), async (req, res) => {
     const input = registrationInput.parse(req.body)
