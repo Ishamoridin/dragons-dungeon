@@ -15,7 +15,7 @@ export type Workbook = { title?: string; sheets: WorkbookSheet[] }
 export type CellUpdate = { sheet: string; cell: string; value: string | number }
 
 // Fields the app owns; the workbook never sees them and sync leaves them untouched.
-export const APP_ONLY_ESSENCE_FIELDS = ['Alias', 'TemporaryResources', 'AbilityTrackers', 'DisabledSpellPaths', 'DevelopmentLog', 'DevelopmentLogSeenAt', 'InjuryPresets'] as const
+export const APP_ONLY_ESSENCE_FIELDS = ['Alias', 'TemporaryResources', 'AbilityTrackers', 'DisabledSpellPaths', 'DevelopmentLog', 'DevelopmentLogSeenAt', 'InjuryPresets', 'EssenceRecipes'] as const
 
 export const TABS = {
   character: 'Character Sheet',

@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type { EssenceHolding, EssenceTechnique } from './EssenceTypes'
-import type { EssenceChange } from './EssenceChanges'
-import { combinesInto, textOn, treeNode, TREE_NODES, type TreeNode } from './EssenceTreeData'
+import type { EssenceCharacterData, EssenceHolding, EssenceTechnique } from './EssenceTypes'
+import { refinementPlan, type EssenceChange } from './EssenceChanges'
+import { combinesInto, rateLabel, recipeFor, textOn, treeNode, TREE_NODES, type TreeNode } from './EssenceTreeData'
 
 const NODES = TREE_NODES
 
@@ -9,7 +9,7 @@ const NODE_W = 172
 const NODE_H = 38
 const GAP_X = 56
 const ROW_H = 24
-const FIRST_ROW = 32
+const FIRST_ROW = 31
 const LAST_ROW = 62
 
 const left = (node: TreeNode) => (node.tier - 1) * (NODE_W + GAP_X)
@@ -49,6 +49,8 @@ function temperingNotes(name: string, techniques: EssenceTechnique[]): Tempering
 
 function QuantityDialog({
   title,
+  label = 'Quantity',
+  hint,
   max,
   askNote,
   confirmLabel,
@@ -56,6 +58,8 @@ function QuantityDialog({
   onConfirm,
 }: {
   title: string
+  label?: string
+  hint?: (amount: number) => string
   max?: number
   askNote: boolean
   confirmLabel: string
@@ -87,7 +91,7 @@ function QuantityDialog({
         }}
       >
         <h2 id="essence-quantity-title">{title}</h2>
-        <label className="dm-field-label">Quantity
+        <label className="dm-field-label">{label}
           <input
             type="number"
             min={1}
@@ -102,6 +106,7 @@ function QuantityDialog({
             }}
           />
         </label>
+        {hint && amount > 0 && <p className="essence-note">{hint(amount)}</p>}
         {askNote && (
           <label className="dm-field-label">Note (optional)
             <textarea
@@ -126,7 +131,7 @@ function QuantityDialog({
 
 function EssenceDialog({
   node,
-  holding,
+  data,
   techniques,
   playerView,
   onSelect,
@@ -134,17 +139,23 @@ function EssenceDialog({
   onClose,
 }: {
   node: TreeNode
-  holding?: EssenceHolding
+  data: EssenceCharacterData
   techniques: EssenceTechnique[]
   playerView: boolean
   onSelect: (name: string) => void
   onChange?: (change: EssenceChange) => void
   onClose: () => void
 }) {
-  const [quantity, setQuantity] = useState<'add' | 'remove' | null>(null)
+  const [quantity, setQuantity] = useState<'add' | 'remove' | 'refine' | null>(null)
+  const holding = data.Essences.find((item) => item.Name === node.name)
   const amount = holding?.Amount ?? 0
   const into = combinesInto(node.name)
   const notes = temperingNotes(node.name, techniques)
+  const recipe = recipeFor(node, data.EssenceRecipes)
+  const plan = refinementPlan(data, node.name)
+  const overridden = Boolean(data.EssenceRecipes?.[node.name])
+  const [cost, setCost] = useState(recipe.Cost)
+  const [yieldAmount, setYieldAmount] = useState(recipe.Yield)
 
   const link = (name: string) => (
     <button type="button" className="essence-link" key={name} style={{ background: treeNode(name)?.color, color: textOn(treeNode(name)?.color ?? '#000000') }} onClick={() => onSelect(name)}>
@@ -179,10 +190,34 @@ function EssenceDialog({
 
         <div className="essence-dialog-block">
           <h3>Combines from</h3>
-          {node.from.length === 0 ? <p className="essence-note">A base essence; it is harvested, cultivated or looted rather than combined.</p> : (
+          {node.from.length === 0 || !plan ? <p className="essence-note">A base essence; it is harvested, cultivated or looted rather than combined.</p> : (
             <>
               <div className="essence-link-row">{node.from.map(link)}</div>
-              <p className="essence-note">Refinement rate {node.rate}</p>
+              <p className="essence-note">Refinement rate {rateLabel(node, recipe)}{overridden ? ' (set by the DM)' : ''}</p>
+              <p className="essence-note">
+                {plan.inputs.map((input) => `${input.held.toLocaleString()} ${input.name}`).join(' \u00b7 ')} on hand
+                {plan.maxBatches > 0 ? ` \u00b7 enough for ${plan.maxBatches.toLocaleString()} batch${plan.maxBatches === 1 ? '' : 'es'}` : ' \u00b7 not enough to refine'}
+              </p>
+              {onChange && (
+                <div className="essence-amount-actions essence-refine-actions">
+                  <button type="button" className="dm-primary-action" disabled={plan.maxBatches < 1} onClick={() => setQuantity('refine')}>
+                    Refine {node.name}
+                  </button>
+                </div>
+              )}
+              {onChange && !playerView && (
+                <form className="essence-recipe-form" onSubmit={(event) => {
+                  event.preventDefault()
+                  onChange({ kind: 'recipe', name: node.name, cost, yield: yieldAmount })
+                }}>
+                  <span className="dm-inline-control">
+                    <label>Cost of each ingredient <input type="number" min={1} step={1} value={cost} onChange={(event) => setCost(event.currentTarget.valueAsNumber || 0)} /></label>
+                    <label>Yield <input type="number" min={1} step={1} value={yieldAmount} onChange={(event) => setYieldAmount(event.currentTarget.valueAsNumber || 0)} /></label>
+                    <button type="submit" disabled={cost < 1 || yieldAmount < 1 || (cost === recipe.Cost && yieldAmount === recipe.Yield)}>Set ratio</button>
+                  </span>
+                  <small className="essence-note">Changes the ratio for this character only; the chart's default is {rateLabel(node)}.</small>
+                </form>
+              )}
             </>
           )}
         </div>
@@ -192,7 +227,7 @@ function EssenceDialog({
           {into.length === 0 ? <p className="essence-note">Nothing further.</p> : (
             <>
               <div className="essence-link-row">{into.map((target) => link(target.name))}</div>
-              {into.map((target) => <p className="essence-note" key={target.name}>{target.from.join(' + ')} makes {target.name} ({target.rate})</p>)}
+              {into.map((target) => <p className="essence-note" key={target.name}>{target.from.join(' + ')} makes {target.name} ({rateLabel(target, recipeFor(target, data.EssenceRecipes))})</p>)}
             </>
           )}
         </div>
@@ -212,14 +247,17 @@ function EssenceDialog({
 
       {quantity && onChange && (
         <QuantityDialog
-          title={`${quantity === 'add' ? 'Add' : 'Remove'} ${node.name}`}
-          max={quantity === 'remove' ? amount : undefined}
+          title={quantity === 'refine' ? `Refine ${node.name}` : `${quantity === 'add' ? 'Add' : 'Remove'} ${node.name}`}
+          label={quantity === 'refine' ? 'Batches' : 'Quantity'}
+          hint={quantity === 'refine' && plan ? (batches) => `Spends ${plan.inputs.map((input) => `${(input.cost * batches).toLocaleString()} ${input.name}`).join(' + ')} to make ${(plan.produced * batches).toLocaleString()} ${node.name}.` : undefined}
+          max={quantity === 'remove' ? amount : quantity === 'refine' ? plan?.maxBatches : undefined}
           askNote={playerView}
-          confirmLabel={quantity === 'add' ? 'Add' : 'Remove'}
+          confirmLabel={quantity === 'add' ? 'Add' : quantity === 'remove' ? 'Remove' : 'Refine'}
           onCancel={() => setQuantity(null)}
           onConfirm={(value, note) => {
             setQuantity(null)
-            onChange({ name: node.name, delta: quantity === 'add' ? value : -value, note })
+            if (quantity === 'refine') onChange({ kind: 'refine', name: node.name, batches: value, note })
+            else onChange({ name: node.name, delta: quantity === 'add' ? value : -value, note })
           }}
         />
       )}
@@ -231,16 +269,16 @@ const toTempParagraphs = (text: string): string[] =>
   text.split(/\n\s*\n/).map((paragraph) => paragraph.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean)
 
 export default function EssenceTree({
-  holdings,
-  techniques,
+  data,
   role,
   onChange,
 }: {
-  holdings: EssenceHolding[]
-  techniques: EssenceTechnique[]
+  data: EssenceCharacterData
   role: 'player' | 'dm'
   onChange?: (change: EssenceChange) => void
 }) {
+  const holdings: EssenceHolding[] = data.Essences
+  const techniques = data.Techniques
   const [selected, setSelected] = useState<string | null>(null)
   const held = new Map(holdings.map((holding) => [holding.Name, holding]))
   const edges = NODES.flatMap((child) => child.from.map((name) => ({ parent: byName.get(name)!, child })))
@@ -250,7 +288,7 @@ export default function EssenceTree({
     <section className="essence-panel essence-tree-panel">
       <h2>Essences</h2>
       <p className="essence-note">
-        Refinement combines 100 of two essences into 1 of the next tier. Lines run from each ingredient to what it makes; Light also refines into Violation at 200:1, and Harmony converts to Breach at 1:1. T marks a Tempered essence.
+        Refinement combines 100 of two essences into 1 of the next tier; Light also refines into Violation at 200:1, Magma into Dragon at 500:1, Miracle into Absolution at 50:1, and Harmony converts to Breach at 1:1. Open an essence to refine it from what you hold{role === 'dm' ? ' or to change its ratio for this character' : ''}. T marks a Tempered essence.
       </p>
       <div className="essence-tree-scroll">
         <div className="essence-tree-heads" style={{ width: WIDTH }}>
@@ -272,7 +310,7 @@ export default function EssenceTree({
                     type="button"
                     className={`essence-node tier-${node.tier}${amount === 0 ? ' empty' : ''}${holding?.Tempered ? ' tempered' : ''}`}
                     style={{ background: node.color, color: textOn(node.color) }}
-                    title={node.from.length > 0 ? `${node.from.join(' + ')} (${node.rate})` : 'Base essence'}
+                    title={node.from.length > 0 ? `${node.from.join(' + ')} (${rateLabel(node, recipeFor(node, data.EssenceRecipes))})` : 'Base essence'}
                     aria-label={`${node.name}: ${amount}${holding?.Tempered ? ', tempered' : ''}`}
                     onClick={() => setSelected(node.name)}
                   >
@@ -288,7 +326,7 @@ export default function EssenceTree({
       {selectedNode && (
         <EssenceDialog
           node={selectedNode}
-          holding={held.get(selectedNode.name)}
+          data={data}
           techniques={techniques}
           playerView={role === 'player'}
           onSelect={setSelected}

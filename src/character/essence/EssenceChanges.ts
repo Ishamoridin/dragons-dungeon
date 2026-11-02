@@ -1,4 +1,5 @@
 import { computeEssenceStats } from './EssenceSystem'
+import { recipeFor, treeNode } from './EssenceTreeData'
 import type { DevelopmentLogEntry, EssenceCharacterData } from './EssenceTypes'
 
 export type StepKind = 'Attributes' | 'Skills' | 'AttributeUses' | 'SkillUses' | 'MetaphysicalUses' | 'Stats'
@@ -133,52 +134,96 @@ export function logDevelopmentRequest(
   draft.DevelopmentLog = log
 }
 
-export type EssenceChange = { name: string; delta: number; note?: string }
+export type EssenceChange =
+  // Add or remove a quantity of one essence.
+  | { kind?: 'adjust'; name: string; delta: number; note?: string }
+  // Refine `batches` lots of the chart recipe: each ingredient pays its cost, the named essence gains the yield.
+  | { kind: 'refine'; name: string; batches: number; note?: string }
+  // DM only: override the ratio used to refine the named essence on this sheet.
+  | { kind: 'recipe'; name: string; cost: number; yield: number }
 
-export function validateEssenceChange(data: EssenceCharacterData, change: EssenceChange): string | null {
+const holdingFor = (data: EssenceCharacterData, name: string) => data.Essences.find((holding) => holding.Name === name)
+
+// What a refinement would consume and produce for this character.
+export function refinementPlan(data: EssenceCharacterData, name: string, batches = 1) {
+  const node = treeNode(name)
+  if (!node || node.from.length === 0) return null
+  const recipe = recipeFor(node, data.EssenceRecipes)
+  const inputs = node.from.map((ingredient) => ({ name: ingredient, cost: recipe.Cost * batches, held: holdingFor(data, ingredient)?.Amount ?? 0 }))
+  const maxBatches = Math.min(...inputs.map((input) => Math.floor(input.held / recipe.Cost)))
+  return { node, recipe, inputs, produced: recipe.Yield * batches, maxBatches }
+}
+
+export function validateEssenceChange(data: EssenceCharacterData, change: EssenceChange, role: SheetRole = 'dm'): string | null {
+  if (change.kind === 'recipe') {
+    if (role !== 'dm') return 'Only the DM can change refinement ratios.'
+    if (!treeNode(change.name)?.from.length) return `${change.name} is not refined from other essences.`
+    return Number.isInteger(change.cost) && change.cost > 0 && Number.isInteger(change.yield) && change.yield > 0 ? null : 'Cost and yield must be whole numbers above zero.'
+  }
+  if (change.kind === 'refine') {
+    if (!Number.isInteger(change.batches) || change.batches < 1) return 'Enter a whole number of batches above zero.'
+    const plan = refinementPlan(data, change.name, change.batches)
+    if (!plan) return `${change.name} is not refined from other essences.`
+    const short = plan.inputs.find((input) => input.held < input.cost)
+    return short ? `Refining needs ${short.cost.toLocaleString()} ${short.name}; only ${short.held.toLocaleString()} is available.` : null
+  }
   if (!Number.isInteger(change.delta) || change.delta === 0) {
     return 'Enter a whole number above zero.'
   }
-  const held = data.Essences.find((holding) => holding.Name === change.name)
+  const held = holdingFor(data, change.name)
   if (!held) {
     return `${change.name} is not tracked on this sheet.`
   }
   return held.Amount + change.delta < 0 ? `Only ${held.Amount} ${change.name} is available.` : null
 }
 
-// Both roles can add or remove essence; a player's change is also written to the DM's log.
+// Both roles can add, remove or refine essence; a player's change is also written to the DM's log.
 export function applyEssenceChange(
   draft: EssenceCharacterData,
   change: EssenceChange,
   actor: { name: string; role: SheetRole },
   now = new Date(),
 ): void {
-  const error = validateEssenceChange(draft, change)
+  const error = validateEssenceChange(draft, change, actor.role)
   if (error) {
     throw new Error(error)
   }
 
-  const held = draft.Essences.find((holding) => holding.Name === change.name)!
-  const before = held.Amount
-  held.Amount = before + change.delta
+  if (change.kind === 'recipe') {
+    draft.EssenceRecipes = { ...draft.EssenceRecipes, [change.name]: { Cost: change.cost, Yield: change.yield } }
+    return
+  }
 
-  if (actor.role === 'player') {
-    const log: DevelopmentLogEntry[] = draft.DevelopmentLog ?? []
-    log.push({
-      Id: `log-${now.getTime()}-${log.length}`,
-      Timestamp: now.toISOString(),
-      Actor: actor.name,
-      Role: 'player',
-      Kind: 'essence',
-      Category: 'essence',
-      Target: change.name,
-      Amount: change.delta,
-      Before: before,
-      After: held.Amount,
-      Purpose: (change.note ?? '').trim(),
-    })
+  const log: DevelopmentLogEntry[] = draft.DevelopmentLog ?? []
+  const record = (target: string, amount: number, before: number, after: number, purpose: string) => {
+    if (actor.role !== 'player') return
+    log.push({ Id: `log-${now.getTime()}-${log.length}`, Timestamp: now.toISOString(), Actor: actor.name, Role: 'player', Kind: 'essence', Category: 'essence', Target: target, Amount: amount, Before: before, After: after, Purpose: purpose })
     draft.DevelopmentLog = log
   }
+
+  if (change.kind === 'refine') {
+    const plan = refinementPlan(draft, change.name, change.batches)!
+    const purpose = `Refined ${plan.inputs.map((input) => `${input.cost.toLocaleString()} ${input.name}`).join(' + ')} into ${plan.produced.toLocaleString()} ${change.name}${change.note?.trim() ? ` · ${change.note.trim()}` : ''}`
+    for (const input of plan.inputs) {
+      const held = holdingFor(draft, input.name)!
+      held.Amount -= input.cost
+      record(input.name, -input.cost, held.Amount + input.cost, held.Amount, purpose)
+    }
+    let target = holdingFor(draft, change.name)
+    if (!target) {
+      target = { Name: change.name, Tier: plan.node.tier, Amount: 0, Tempered: false }
+      draft.Essences.push(target)
+    }
+    const before = target.Amount
+    target.Amount = before + plan.produced
+    record(change.name, plan.produced, before, target.Amount, purpose)
+    return
+  }
+
+  const held = holdingFor(draft, change.name)!
+  const before = held.Amount
+  held.Amount = before + change.delta
+  record(change.name, change.delta, before, held.Amount, (change.note ?? '').trim())
 }
 
 export const unseenLogCount = (data: EssenceCharacterData): number =>

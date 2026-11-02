@@ -1,15 +1,17 @@
 export type TreeNode = {
   name: string
   tier: 1 | 2 | 3 | 4 | 5
-  // Vertical slot copied from the workbook's Essence Chart rows (32 to 62).
+  // Vertical slot copied from the workbook's Essence Chart rows (31 to 62).
   row: number
   from: string[]
-  rate?: string
+  // Default refinement: `cost` of each ingredient makes `yield` of this essence. DMs can override per character.
+  cost?: number
+  yield?: number
   // Fill colour of the essence's name cell in the workbook.
   color: string
 }
 
-const PAIR = '100 + 100 \u2192 1'
+export type EssenceRecipe = { Cost: number; Yield: number }
 
 export const TREE_NODES: TreeNode[] = [
   { name: 'Fire', tier: 1, row: 32, from: [], color: '#e69138' },
@@ -29,33 +31,53 @@ export const TREE_NODES: TreeNode[] = [
   { name: 'Determination', tier: 1, row: 60, from: [], color: '#fbbc04' },
   { name: 'Drive', tier: 1, row: 62, from: [], color: '#b7b7b7' },
 
-  { name: 'Steel', tier: 2, row: 33, from: ['Fire', 'Earth'], rate: PAIR, color: '#d9d2e9' },
-  { name: 'Resolve', tier: 2, row: 37, from: ['Hope', 'Courage'], rate: PAIR, color: '#ea9999' },
-  { name: 'Vitality', tier: 2, row: 41, from: ['Water', 'Nature'], rate: PAIR, color: '#00ff00' },
-  { name: 'Light', tier: 2, row: 45, from: ['Air', 'Insight'], rate: PAIR, color: '#f1c232' },
-  { name: 'Violation', tier: 2, row: 47, from: ['Light'], rate: '200 : 1', color: '#ff9900' },
-  { name: 'Night', tier: 2, row: 49, from: ['Beast', 'Surprise'], rate: PAIR, color: '#000000' },
-  { name: 'Despair', tier: 2, row: 53, from: ['Doom', 'Gloom'], rate: PAIR, color: '#741b47' },
-  { name: 'Corruption', tier: 2, row: 57, from: ['Evil', 'Order'], rate: PAIR, color: '#274e13' },
-  { name: 'Ambition', tier: 2, row: 61, from: ['Determination', 'Drive'], rate: PAIR, color: '#990000' },
+  { name: 'Steel', tier: 2, row: 33, from: ['Fire', 'Earth'], cost: 100, color: '#d9d2e9' },
+  { name: 'Resolve', tier: 2, row: 37, from: ['Hope', 'Courage'], cost: 100, color: '#ea9999' },
+  { name: 'Vitality', tier: 2, row: 41, from: ['Water', 'Nature'], cost: 100, color: '#00ff00' },
+  { name: 'Light', tier: 2, row: 45, from: ['Air', 'Insight'], cost: 100, color: '#f1c232' },
+  { name: 'Violation', tier: 2, row: 47, from: ['Light'], cost: 200, color: '#ff9900' },
+  { name: 'Night', tier: 2, row: 49, from: ['Beast', 'Surprise'], cost: 100, color: '#000000' },
+  { name: 'Despair', tier: 2, row: 53, from: ['Doom', 'Gloom'], cost: 100, color: '#741b47' },
+  { name: 'Corruption', tier: 2, row: 57, from: ['Evil', 'Order'], cost: 100, color: '#274e13' },
+  { name: 'Ambition', tier: 2, row: 61, from: ['Determination', 'Drive'], cost: 100, color: '#990000' },
 
-  { name: 'Miracle', tier: 3, row: 35, from: ['Steel', 'Resolve'], rate: PAIR, color: '#ffff00' },
-  { name: 'Magic', tier: 3, row: 43, from: ['Vitality', 'Light'], rate: PAIR, color: '#ff00ff' },
-  { name: 'Improbable', tier: 3, row: 51, from: ['Night', 'Despair'], rate: PAIR, color: '#a4c2f4' },
-  { name: 'Inevitable', tier: 3, row: 59, from: ['Corruption', 'Ambition'], rate: PAIR, color: '#351c75' },
+  // The chart lists Magma above Miracle with no arrow into it; Dragon is refined from it at 500:1.
+  { name: 'Magma', tier: 3, row: 31, from: [], color: '#ff9900' },
+  { name: 'Dragon', tier: 3, row: 33, from: ['Magma'], cost: 500, color: '#cc0000' },
+  { name: 'Miracle', tier: 3, row: 35, from: ['Steel', 'Resolve'], cost: 100, color: '#ffff00' },
+  { name: 'Magic', tier: 3, row: 43, from: ['Vitality', 'Light'], cost: 100, color: '#ff00ff' },
+  { name: 'Improbable', tier: 3, row: 51, from: ['Night', 'Despair'], cost: 100, color: '#a4c2f4' },
+  { name: 'Inevitable', tier: 3, row: 59, from: ['Corruption', 'Ambition'], cost: 100, color: '#351c75' },
   // The chart shows Inevitability beside Ambition with no arrow into it.
   { name: 'Inevitability', tier: 3, row: 61, from: [], color: '#9fc5e8' },
 
-  { name: 'Creation', tier: 4, row: 39, from: ['Miracle', 'Magic'], rate: PAIR, color: '#3d85c6' },
-  { name: 'Entropy', tier: 4, row: 55, from: ['Improbable', 'Inevitable'], rate: PAIR, color: '#4c1130' },
+  { name: 'Creation', tier: 4, row: 39, from: ['Miracle', 'Magic'], cost: 100, color: '#3d85c6' },
+  // The chart repeats Miracle in the Tier 4 column above Absolution: Miracle refines into Absolution at 50:1.
+  { name: 'Absolution', tier: 4, row: 46, from: ['Miracle'], cost: 50, color: '#38761d' },
+  { name: 'Entropy', tier: 4, row: 55, from: ['Improbable', 'Inevitable'], cost: 100, color: '#4c1130' },
 
-  { name: 'Breach', tier: 5, row: 44, from: ['Harmony'], rate: '1 : 1', color: '#ff00ff' },
-  { name: 'Harmony', tier: 5, row: 46, from: ['Creation', 'Entropy'], rate: PAIR, color: '#fff2cc' },
+  { name: 'Breach', tier: 5, row: 44, from: ['Harmony'], cost: 1, color: '#ff00ff' },
+  { name: 'Harmony', tier: 5, row: 46, from: ['Creation', 'Entropy'], cost: 100, color: '#fff2cc' },
 ]
 
 export const treeNode = (name: string): TreeNode | undefined => TREE_NODES.find((node) => node.name === name)
 
 export const combinesInto = (name: string): TreeNode[] => TREE_NODES.filter((node) => node.from.includes(name))
+
+// The chart's default ratio for a refined essence.
+export const defaultRecipe = (node: TreeNode): EssenceRecipe => ({ Cost: node.cost ?? 100, Yield: node.yield ?? 1 })
+
+// The ratio in force for a character: the DM's override when one exists, otherwise the chart's.
+export function recipeFor(node: TreeNode, overrides?: Record<string, EssenceRecipe>): EssenceRecipe {
+  const override = overrides?.[node.name]
+  return override && override.Cost > 0 && override.Yield > 0 ? override : defaultRecipe(node)
+}
+
+export function rateLabel(node: TreeNode, recipe: EssenceRecipe = defaultRecipe(node)): string {
+  if (node.from.length === 0) return 'Base essence'
+  const inputs = node.from.map(() => recipe.Cost.toLocaleString()).join(' + ')
+  return `${inputs} → ${recipe.Yield.toLocaleString()}`
+}
 
 // Readable text colour for a workbook fill.
 export function textOn(hex: string): string {

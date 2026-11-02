@@ -138,6 +138,8 @@ export type EssenceCharacterData = {
   // Named long-term counters (charges, stacks, ranks...) keyed by ability, e.g. "technique:Spirit Hardened (III)".
   AbilityTrackers?: Record<string, Record<string, number>>
   Essences: EssenceHolding[]
+  // DM overrides of the essence chart's refinement ratios, keyed by the essence being made.
+  EssenceRecipes?: Record<string, { Cost: number; Yield: number }>
   Mastery: number
   PotentialStored: number
   SpiritWeapons: EssenceSpiritWeapon[]
