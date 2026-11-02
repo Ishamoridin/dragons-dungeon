@@ -1,7 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { readPortraitFile, type Portrait } from './Portrait'
-import './portrait.css'
 
 // Shows a character's portrait and, when editable, lets the viewer upload or remove it. The palette sampled from
 // the image is what themes the surrounding sheet.
