@@ -82,6 +82,8 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     }
     next()
   })
+  // Unauthenticated probe for hosting health checks; it only answers once the database connection and app wiring succeeded.
+  app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
   const users = db.collection('users')
   const sessions = db.collection('sessions')
   const characters = db.collection('characters')
@@ -353,6 +355,9 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     app.use(express.static(staticDir, { index: 'index.html' }))
     // Single-page app fallback so deep links resolve when Express hosts the frontend.
     app.get(/^\/(?!api(?:\/|$)).*/, (req, res) => res.sendFile('index.html', { root: staticDir }))
+  } else {
+    // API-only hosts (the frontend lives on GitHub Pages) answer the root with a status instead of a bare 404.
+    app.get('/', (req, res) => res.json({ service: "Dragon's Dungeon API", status: 'ok', frontend: origin }))
   }
   app.use((error, req, res, next) => {
     const status = error instanceof z.ZodError ? 400 : error.code === 11000 ? 409 : error.status ?? 500

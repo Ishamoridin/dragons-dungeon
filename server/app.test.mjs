@@ -135,3 +135,30 @@ test('Atlas account, session, character, and owned-resource CRUD', { skip: proce
     try { await db.dropDatabase() } finally { await client.close() }
   }
 })
+
+test('API-only hosts answer the root and health probes without a database', async () => {
+  const db = { collection: () => ({}) }
+  const key = 'cors-test-key-with-at-least-32-bytes!!'
+  const origin = 'https://ishamoridin.github.io'
+  const listen = async (app) => { const server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); return server }
+  const stop = async (server) => { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)) }
+  const apiOnly = await listen(createApp(db, { key, origin }))
+  try {
+    const base = `http://127.0.0.1:${apiOnly.address().port}`
+    const root = await fetch(`${base}/`)
+    assert.equal(root.status, 200)
+    assert.deepEqual(await root.json(), { service: "Dragon's Dungeon API", status: 'ok', frontend: origin })
+    const health = await fetch(`${base}/api/health`)
+    assert.equal(health.status, 200)
+    assert.equal(health.headers.get('cache-control'), 'no-store')
+    assert.deepEqual(await health.json(), { status: 'ok' })
+  } finally { await stop(apiOnly) }
+  const staticDir = await mkdtemp(join(tmpdir(), 'dd-static-'))
+  await writeFile(join(staticDir, 'index.html'), '<!doctype html><title>Dragon Dungeon SPA</title>')
+  const withStatic = await listen(createApp(db, { key, origin, staticDir }))
+  try {
+    const root = await fetch(`http://127.0.0.1:${withStatic.address().port}/`)
+    assert.equal(root.status, 200)
+    assert.match(await root.text(), /Dragon Dungeon SPA/)
+  } finally { await stop(withStatic) }
+})
