@@ -76,9 +76,11 @@ export class CampaignEvent {
   public readonly Type: CampaignEventType
   public readonly Title: string
   public readonly Description: string
-  public readonly ScheduledAt: Date
+  public ScheduledAt: Date
   public readonly Actions: CampaignAction[]
   public Completed: boolean
+  // Where the event happens; matches a monster location group on the timeline board, or '' when unplaced.
+  public Location: string
 
   constructor(
     type: CampaignEventType,
@@ -87,6 +89,7 @@ export class CampaignEvent {
     scheduledAt: Date,
     actions: CampaignAction[],
     id = createEventId(),
+    location = '',
   ) {
     this.Id = id
     this.Type = type
@@ -95,6 +98,7 @@ export class CampaignEvent {
     this.ScheduledAt = new Date(scheduledAt)
     this.Actions = actions.map((action) => ({ ...action }))
     this.Completed = false
+    this.Location = location
   }
 }
 
@@ -137,6 +141,24 @@ export class Campaign {
     return event
   }
 
+  // Timeline board drags: a pending event can move to any later-than-now time and any location lane.
+  public moveEvent(id: string, scheduledAt: Date, location: string): CampaignEvent {
+    const event = this.scheduledEvents.find((item) => item.Id === id)
+    if (!event) {
+      throw new Error('Event was not found.')
+    }
+    if (event.Completed) {
+      throw new Error('Applied events cannot be moved.')
+    }
+    if (scheduledAt.getTime() <= this.currentTime.getTime()) {
+      throw new Error('Scheduled events must be later than campaign currentTime.')
+    }
+    event.ScheduledAt = new Date(scheduledAt)
+    event.Location = location
+    this.scheduledEvents.sort((left, right) => left.ScheduledAt.getTime() - right.ScheduledAt.getTime())
+    return event
+  }
+
   public advanceTo(time: Date): CampaignEvent[] {
     if (time.getTime() < this.currentTime.getTime()) {
       throw new Error('Campaign currentTime cannot move backwards.')
@@ -167,6 +189,7 @@ export class Campaign {
         event.ScheduledAt,
         event.Actions,
         event.Id,
+        event.Location,
       )
       copied.Completed = event.Completed
       return copied
