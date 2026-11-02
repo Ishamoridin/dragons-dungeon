@@ -8,6 +8,8 @@ services:
     plan: free
     buildCommand: npm ci
     startCommand: npm start
+    # Render routes traffic only after this returns 200, which happens once the API has connected to MongoDB.
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
