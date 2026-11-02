@@ -4667,29 +4667,6 @@ h1 {
   height: 40px;
 }
 
-.combat-bar-stats {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.combat-bar-stats > div {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.12));
-  border-radius: 6px;
-  font-size: 0.8rem;
-}
-
-.combat-bar-stats span {
-  color: var(--skin-muted, #aaa3b4);
-  text-transform: uppercase;
-  font-size: 0.68rem;
-}
-
 .sheet-tabs {
   display: flex;
   flex-wrap: wrap;

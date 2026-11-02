@@ -533,18 +533,17 @@ const TABS: { id: TabId; label: string; Icon: LucideIcon }[] = [
   { id: 'notes', label: 'Other Notes', Icon: NotebookPen },
 ]
 
-// Always visible above the tabs; opens the combat modal with the action buttons.
+// Always visible above the tabs; opens the combat modal with the action buttons. The derived combat numbers live
+// in the modal's Combat stats list rather than cluttering the bar.
 function CombatBar({
   stats,
   current,
   onCurrentChange,
-  derived,
   onOpen,
 }: {
   stats: EssenceDerived
   current: CurrentValues
   onCurrentChange: (patch: CurrentValues) => void
-  derived: [string, number, boolean][]
   onOpen: () => void
 }) {
   return (
@@ -554,15 +553,6 @@ function CombatBar({
         <span><strong>Combat</strong><small>Actions and Resero</small></span>
       </button>
       <Bars stats={stats} current={current} onChange={(key, value) => onCurrentChange({ [key]: value })} />
-      <div className="combat-bar-stats">
-        {derived.map(([label, value, rollable]) => (
-          <div key={label}>
-            <span>{label}</span>
-            <strong>{fmt(value)}</strong>
-            {rollable && <RollButton roll={d20Roll(label, 'Roll', value)} />}
-          </div>
-        ))}
-      </div>
     </section>
   )
 }
@@ -696,7 +686,6 @@ export function EssenceSheetBody({
         stats={stats}
         current={current}
         onCurrentChange={(patch) => setCurrent((values) => ({ ...values, ...patch }))}
-        derived={derived}
         onOpen={() => setCombatOpen(true)}
       />
       <EssenceCombatModule
