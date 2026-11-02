@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CalendarClock, Flag, GanttChart, Package, Plus, Skull, Swords, Users, type LucideIcon } from 'lucide-react'
+import { CalendarClock, Flag, GanttChart, Package, Pencil, Plus, Save, Skull, Swords, Users, type LucideIcon } from 'lucide-react'
 import { loadResources, resourceList, saveResource } from './Api'
 import { onDataChanged } from './Realtime'
 import NewSystemModal from './NewSystemModal'
@@ -571,6 +571,55 @@ function SheetSyncControl({ source, onSync }: { source: SheetSource; onSync?: ()
   )
 }
 
+// Renames the character in the app by editing its alias; the sheet's own name is untouched and returns when the alias is cleared.
+function EditableName({ record, onSave }: { record: CharacterSheetRecord; onSave: (alias: string | undefined) => Promise<void> }) {
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const name = displayName(record)
+  if (!editing) {
+    return (
+      <div className="dm-modal-title-row">
+        <h2 id="character-modal-title">{name}</h2>
+        <button type="button" className="rename-button" title="Rename" aria-label="Rename character" onClick={() => { setText(name); setError(''); setEditing(true) }}><Pencil size={15} /></button>
+      </div>
+    )
+  }
+  const trimmed = text.trim()
+  const dirty = trimmed !== name
+  return (
+    <form className="rename-form" onSubmit={(event) => {
+      event.preventDefault()
+      if (!dirty) { setEditing(false); return }
+      setBusy(true)
+      setError('')
+      onSave(trimmed && trimmed !== record.Name ? trimmed : undefined)
+        .then(() => setEditing(false))
+        .catch((failure) => setError(failure instanceof Error ? failure.message : 'Unable to rename this character.'))
+        .finally(() => setBusy(false))
+    }}>
+      <div className="dm-modal-title-row">
+        <input
+          id="character-modal-title"
+          type="text"
+          autoFocus
+          maxLength={100}
+          aria-label="Character name"
+          value={text}
+          disabled={busy}
+          onChange={(event) => setText(event.currentTarget.value)}
+          onKeyDown={(event) => { if (event.key === 'Escape') setEditing(false) }}
+        />
+        <button type="submit" className="rename-button" disabled={busy || !dirty} title="Save name" aria-label="Save name"><Save size={15} /></button>
+        <button type="button" className="rename-cancel" disabled={busy} onClick={() => setEditing(false)}>Cancel</button>
+      </div>
+      <small>{record.SheetSource ? `Leave blank to use the sheet name: ${record.Name}` : `Leave blank to use the original name: ${record.Name}`}</small>
+      {error && <small role="alert">{error}</small>}
+    </form>
+  )
+}
+
 function CharacterActionModal({
   record,
   campaign,
@@ -656,7 +705,7 @@ function CharacterActionModal({
           <header className="dm-modal-header">
             <div>
               <p className="eyebrow">{record.CampaignName} · Essence · {record.Essence.Race} · {spiritWeaponLabel(record.Essence)}</p>
-              <h2 id="character-modal-title">{displayName(record)}</h2>
+              <EditableName record={record} onSave={(alias) => onApplyEssence((draft) => { draft.Alias = alias })} />
               <div className="character-tags">{record.Tags.map((tag) => <span className="skill-chip flag-chip" key={tag}>{tag}</span>)}</div>
             </div>
             <button type="button" className="modal-toggle" onClick={onClose}>Close</button>

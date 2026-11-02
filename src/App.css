@@ -3067,6 +3067,69 @@ h1 {
   font-size: 1.55rem;
 }
 
+.dm-modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dm-modal-title-row h2 {
+  margin: 0;
+}
+
+.rename-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(170, 152, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(117, 84, 255, 0.12);
+  color: #e4dcff;
+  cursor: pointer;
+}
+
+.rename-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.rename-form {
+  display: grid;
+  gap: 4px;
+}
+
+.rename-form input {
+  min-width: 0;
+  width: min(100%, 26ch);
+  padding: 4px 10px;
+  border: 1px solid rgba(170, 152, 255, 0.45);
+  border-radius: 8px;
+  background: rgba(10, 8, 20, 0.6);
+  color: inherit;
+  font: inherit;
+  font-size: 1.55rem;
+  font-weight: 600;
+}
+
+.rename-cancel {
+  border: none;
+  background: transparent;
+  color: #aaa3b4;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.rename-form small {
+  color: #aaa3b4;
+  font-size: 0.72rem;
+}
+
+.rename-form small[role="alert"] {
+  color: #ff9c9c;
+}
+
 .mini-sheet {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.1fr);
