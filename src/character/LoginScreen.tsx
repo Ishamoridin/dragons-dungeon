@@ -26,6 +26,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [registerOpen, setRegisterOpen] = useState(false)
   const [notice, setNotice] = useState('')
+  const [previewLink, setPreviewLink] = useState('')
   useEffect(() => {
     const url = new URL(window.location.href)
     if (url.searchParams.has('authError')) { url.searchParams.delete('authError'); window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`) }
@@ -55,6 +56,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         <h1>Sign in</h1>
         {staticHosting && <p className="login-error" role="alert">Account service unavailable on this static deployment.</p>}
         {notice && <p className="registration-status" role="status">{notice}</p>}
+        {previewLink && <p className="registration-status"><a href={previewLink}>Finish creating the account</a></p>}
         <form className="login-form" onSubmit={submit}>
           <label>
             Username
@@ -83,11 +85,13 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         <GoogleSignInButton disabled={isSubmitting || staticHosting} />
         <button type="button" className="register-trigger" disabled={isSubmitting || staticHosting} onClick={() => { setError(''); setNotice(''); setRegisterOpen(true) }}>Register</button>
       </section>
-      {registerOpen && <RegisterModal onClose={() => setRegisterOpen(false)} onRegistered={(login) => {
-        setUsername(login)
+      {registerOpen && <RegisterModal onClose={() => setRegisterOpen(false)} onRegistered={(result) => {
         setPassword('')
         setRegisterOpen(false)
-        setNotice('Account created. Sign in to continue.')
+        setPreviewLink(result.previewLink ?? '')
+        setNotice(result.delivered
+          ? `We emailed a link to ${result.email}. Open it to finish creating your account; it works once and expires in 24 hours.`
+          : `Email delivery is not configured on this server, so the registration link is shown here instead:`)
       }} />}
     </main>
   )

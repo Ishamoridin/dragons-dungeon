@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Eye, EyeOff, WandSparkles, X } from 'lucide-react'
-import { api } from './Api'
+import { requestRegistration, type RegistrationResult } from './MockAuth'
 import { suggestStrongPassword } from './Password'
 import RoleToggle from './RoleToggle'
 import GoogleSignInButton from './GoogleSignInButton'
 import type { UserRole } from './User'
 
-export default function RegisterModal({ onRegistered, onClose }: { onRegistered: (username: string) => void; onClose: () => void }) {
+export default function RegisterModal({ onRegistered, onClose }: { onRegistered: (result: RegistrationResult) => void; onClose: () => void }) {
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -25,8 +25,7 @@ export default function RegisterModal({ onRegistered, onClose }: { onRegistered:
     event.preventDefault()
     setBusy(true); setError('')
     try {
-      const account = await api<{ Username: string }>('/auth/register', 'POST', { email: email.trim(), username: username.trim(), password, role })
-      onRegistered(account.Username)
+      onRegistered(await requestRegistration({ email: email.trim(), username: username.trim(), password, role }))
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to register right now.') }
     finally { setBusy(false) }
   }
@@ -60,7 +59,7 @@ export default function RegisterModal({ onRegistered, onClose }: { onRegistered:
           <GoogleSignInButton role={role} disabled={busy} />
           {status && <p className="registration-status" role="status">{status}</p>}
           {error && <p className="login-error" role="alert">{error}</p>}
-          <footer className="registration-footer"><button type="button" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" disabled={busy}>{busy ? 'Registering...' : 'Create Account'}</button></footer>
+          <footer className="registration-footer"><button type="button" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" disabled={busy}>{busy ? 'Sending link...' : 'Email me a link'}</button></footer>
         </form>
       </section>
     </div>

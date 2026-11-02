@@ -31,6 +31,17 @@ export async function restoreSession(): Promise<User | null> {
   }
 }
 
+export type RegistrationResult = { ok: true; email: string; delivered: boolean; previewLink?: string }
+
+// Registration is two steps: the request emails a link, and opening the link creates the account and signs in.
+export async function requestRegistration(input: { email: string; username: string; password: string; role: UserRole }): Promise<RegistrationResult> {
+  return api<RegistrationResult>('/auth/register', 'POST', input)
+}
+
+export async function completeRegistration(token: string): Promise<User> {
+  return prepareUser(await api<User>('/auth/register/complete', 'POST', { token }))
+}
+
 export async function signOut(): Promise<void> {
   await api('/auth/logout', 'POST', {})
   clearResources()

@@ -5139,3 +5139,26 @@ h1 {
 .timeline-ticks span:last-child {
   transform: translateX(-100%);
 }
+
+/* Account dialog */
+.account-modal {
+  display: grid;
+  gap: 14px;
+}
+
+.account-section {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  background: var(--skin-card-bg, rgba(255, 255, 255, 0.04));
+}
+
+.account-section h3 {
+  margin: 0;
+}
+
+.account-section .new-system-footer {
+  justify-content: flex-end;
+}

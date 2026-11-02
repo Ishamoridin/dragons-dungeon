@@ -8,7 +8,7 @@ import { portraitShellClass, portraitStyle, type Portrait } from './character/Po
 import { applyEssenceChange, applySheetChange, logDevelopmentRequest, type DevelopmentRequest, type EssenceChange, type SheetChange } from './character/essence/EssenceChanges'
 import { EssenceSheetBody } from './character/essence/EssenceViews'
 import { spiritWeaponLabel } from './character/essence/EssenceSystem'
-import { authenticateUser, DEMO_DM, restoreSession, signOut } from './character/MockAuth'
+import { authenticateUser, completeRegistration, DEMO_DM, restoreSession, signOut } from './character/MockAuth'
 import LoginScreen from './character/LoginScreen'
 import { DM, type User } from './character/User'
 import DMConsole from './character/DMConsole'
@@ -250,7 +250,17 @@ function App() {
 
   useEffect(() => {
     let active = true
-    void restoreSession().then(async (user) => { if (active && user) await activateUser(user) })
+    // An emailed registration link lands here with ?register=<token>; completing it creates the account and signs in.
+    const params = new URLSearchParams(window.location.search)
+    const registrationToken = params.get('register')
+    if (registrationToken) {
+      params.delete('register')
+      window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`)
+    }
+    const restore = registrationToken
+      ? completeRegistration(registrationToken).catch((failure) => { if (active) setDatabaseRefreshStatus(failure instanceof Error ? failure.message : 'Registration link failed.'); return restoreSession() })
+      : restoreSession()
+    void restore.then(async (user) => { if (active && user) await activateUser(user) })
       .catch(() => { if (active) setDatabaseRefreshStatus('Unable to restore session.') })
       .finally(() => { if (active) setRestoring(false) })
     return () => { active = false }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { RefreshCw, Settings } from 'lucide-react'
+import { RefreshCw, Settings, UserCog } from 'lucide-react'
 import { switchRole } from './MockAuth'
 import { api } from './Api'
 import type { User, UserRole } from './User'
@@ -7,6 +7,7 @@ import type { PageSkin } from './PageSkin'
 import PageSkinSelector from './PageSkinSelector'
 import RoleToggle from './RoleToggle'
 import GoogleSignInButton from './GoogleSignInButton'
+import AccountModal from './AccountModal'
 
 type RefreshSummary = { checked: number; changed: number; pushed: number; skipped: number; failed: number; errors: string[] }
 
@@ -21,6 +22,7 @@ export default function SettingsMenu({ user, pageSkin, onSkinChange, onLogout, o
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [refreshNote, setRefreshNote] = useState('')
+  const [accountOpen, setAccountOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
@@ -55,11 +57,13 @@ export default function SettingsMenu({ user, pageSkin, onSkinChange, onLogout, o
         <RoleToggle value={user.Role} disabled={busy} onChange={(role) => void changeRole(role)} />
         <PageSkinSelector value={pageSkin} onChange={onSkinChange} />
         {user.GoogleLinked ? <p className="settings-google-status">Google account connected</p> : <GoogleSignInButton link disabled={busy} />}
+        <button type="button" className="settings-refresh-button" disabled={busy} onClick={() => { setOpen(false); setAccountOpen(true) }}><UserCog size={14} aria-hidden="true" />Account: email and password</button>
         <button type="button" className="settings-refresh-button" disabled={busy} onClick={() => void refreshSheets()}><RefreshCw size={14} aria-hidden="true" />{busy ? 'Refreshing...' : 'Refresh from Google Sheets'}</button>
         {refreshNote && <p className="settings-google-status" role="status">{refreshNote}</p>}
         {error && <p role="alert">{error}</p>}
         <button type="button" className="sign-out-button" disabled={busy} onClick={onLogout}>Sign out</button>
       </div>}
+      {accountOpen && <AccountModal user={user} onUserChange={onUserChange} onClose={() => setAccountOpen(false)} />}
     </div>
   )
 }
