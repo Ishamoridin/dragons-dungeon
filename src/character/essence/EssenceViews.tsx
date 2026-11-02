@@ -929,8 +929,7 @@ export function EssenceActions({
   })
 
   return (
-    <section className="dm-action-block">
-      <h3>Essence actions</h3>
+    <section className="dm-action-block" aria-label="Essence actions">
       <label className="dm-field-label">Log development uses
         <span className="dm-inline-control">
           <select value={kind} onChange={(event) => setKind(event.currentTarget.value as UseKind)}>
