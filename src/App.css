@@ -4778,20 +4778,24 @@ h1 {
 }
 
 .ragdoll {
+  --doll-col: minmax(0, 1fr);
   display: grid;
-  grid-template-columns: repeat(3, minmax(70px, 1fr));
+  grid-template-columns: var(--doll-col) var(--doll-col) var(--doll-col) var(--doll-col) var(--doll-col) var(--doll-col);
+  /* Head, neck, upper torso/arms, lower torso/hands, legs, feet: roughly a 7.5-head figure. */
+  grid-template-rows: 78px 30px 84px 72px 128px 44px;
   grid-template-areas:
-    ".     head   ."
-    "larm  neck   rarm"
-    "larm  torso  rarm"
-    "lhand torso  rhand"
-    "lleg  .      rleg"
-    "lfoot .      rfoot";
+    ".     .     head  head  .     ."
+    ".     .     neck  neck  .     ."
+    "larm  larm  torso torso rarm  rarm"
+    "lhand lhand torso torso rhand rhand"
+    ".     lleg  lleg  rleg  rleg  ."
+    ".     lfoot lfoot rfoot rfoot .";
   gap: 6px;
-  padding: 10px;
+  width: min(100%, 420px);
+  margin: 0 auto;
+  padding: 12px;
   border: 1px dashed var(--skin-border, rgba(255, 255, 255, 0.2));
-  border-radius: 10px;
-  background: radial-gradient(ellipse at 50% 20%, rgba(255, 255, 255, 0.05), transparent 65%);
+  border-radius: 12px;
 }
 
 .ragdoll-part {
@@ -4799,12 +4803,15 @@ h1 {
   gap: 2px;
   align-content: start;
   justify-items: center;
-  min-height: 48px;
+  min-height: 0;
+  min-width: 0;
   padding: 6px 4px;
-  border-radius: 8px;
+  border-radius: 10px;
   text-align: center;
   font-size: 0.72rem;
   border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.1));
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .ragdoll-part-empty {
@@ -4901,10 +4908,30 @@ h1 {
 .ragdoll-lfoot { grid-area: lfoot; }
 .ragdoll-rfoot { grid-area: rfoot; }
 
+/* Body-part silhouettes */
+.ragdoll-head { border-radius: 45% 45% 40% 40% / 50% 50% 35% 35%; }
+.ragdoll-neck { border-radius: 4px 4px 10px 10px; padding-top: 2px; padding-bottom: 2px; }
+.ragdoll-torso { border-radius: 22px 22px 14px 14px; }
+.ragdoll-larm { border-radius: 22px 8px 8px 12px; }
+.ragdoll-rarm { border-radius: 8px 22px 12px 8px; }
+.ragdoll-lhand, .ragdoll-rhand { border-radius: 10px 10px 16px 16px; }
+.ragdoll-lleg { border-radius: 6px 12px 10px 10px; }
+.ragdoll-rleg { border-radius: 12px 6px 10px 10px; }
+.ragdoll-lfoot { border-radius: 10px 6px 6px 18px; }
+.ragdoll-rfoot { border-radius: 6px 10px 18px 6px; }
+
+/* Short parts drop the empty-state text so the silhouette stays legible. */
+.ragdoll-neck > small,
+.ragdoll-lfoot > small,
+.ragdoll-rfoot > small { display: none; }
+
 @media (max-width: 480px) {
   .ragdoll {
-    grid-template-columns: repeat(3, minmax(52px, 1fr));
+    grid-template-rows: 64px 24px 72px 60px 104px 36px;
+    gap: 4px;
+    padding: 8px;
   }
+  .ragdoll-part { font-size: 0.64rem; padding: 4px 2px; }
 }
 
 /* Inventory themed as a big backpack, with a persistent grid of slots (filled and empty) */
