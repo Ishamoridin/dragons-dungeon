@@ -1,4 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-<defs><filter id="f" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9 0.008" numOctaves="4" seed="13" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0.1111 0.1111 0.1111 0 0.2275  0.1163 0.1163 0.1163 0 0.2510  0.1203 0.1203 0.1203 0 0.2784  0 0 0 0 0.9" result="tint"/></filter><linearGradient id="s" x1="0" x2="1" y1="0" y2="0.3"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.45" stop-color="#fff" stop-opacity="0.16"/><stop offset="0.55" stop-color="#fff" stop-opacity="0.16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
-<rect width="240" height="240" fill="#4b5259"/><rect width="240" height="240" filter="url(#f)"/><rect width="240" height="240" fill="url(#s)"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs><filter id="surface" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02 2.4" numOctaves="4" seed="13" stitchTiles="stitch" result="height"/>
+    
+    <feDiffuseLighting in="height" surfaceScale="0.9" diffuseConstant="1" lighting-color="#ffffff" result="diffuse"><feDistantLight azimuth="0" elevation="42"/></feDiffuseLighting>
+    <feSpecularLighting in="height" surfaceScale="0.9" specularConstant="1.6" specularExponent="36" lighting-color="#ffffff" result="specular"><feDistantLight azimuth="0" elevation="27"/></feSpecularLighting>
+    <feFlood flood-color="#7a838d" result="base"/>
+    <feBlend in="base" in2="diffuse" mode="multiply" result="shaded"/>
+    <feComposite in="specular" in2="shaded" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="lit"/>
+    <feComposite in="lit" in2="SourceGraphic" operator="in"/>
+  </filter></defs><rect width="512" height="512" fill="#000"/><rect width="512" height="512" fill="#fff" filter="url(#surface)"/><defs><linearGradient id="gloss" x1="0" x2="1" y1="0" y2="0.25"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.42" stop-color="#fff" stop-opacity="0.22"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.34"/><stop offset="0.58" stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect width="512" height="512" fill="url(#gloss)"/><rect width="512" height="512" fill="#1c2026" fill-opacity="0.25"/>
 </svg>

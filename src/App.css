@@ -1783,22 +1783,51 @@ h1 {
 }
 
 /* ---- Skins ----
-   Each skin sets colour variables plus two generated art assets, supplied inline by skinArtStyle():
-   --skin-texture (a seamless 240px tile layered over the page and panels) and --skin-ornament (a 360x28 flourish
-   drawn under headings in place of plain text rules). Skin-specific sections below add surface treatments. */
+   Each skin sets colour variables, two generated art assets supplied inline by skinArtStyle() (--skin-texture, a
+   seamless lit 512px tile layered over the page and panels; --skin-ornament, a flourish drawn under headings), and
+   its own proportions: panel radius, padding, border weight, grid spacing, heading scale, and content width.
+   Skin-specific sections below change structure further (rails, floating cards, slabs). */
 
 .sheet-shell[data-skin],
 .dm-console-shell[data-skin] {
   min-height: 100vh;
   color: var(--skin-text);
+  font-family: var(--skin-font, inherit);
   background-color: #110f16;
   background-image: var(--skin-texture, none), var(--skin-page-bg);
-  background-size: var(--skin-texture-size, 240px 240px), auto;
+  background-size: var(--skin-texture-size, 512px 512px), auto;
   background-attachment: fixed, fixed;
   background-blend-mode: var(--skin-texture-blend, soft-light), normal;
 }
 
-/* Textured surfaces: the tile shows through panels and cards at a skin-chosen strength. */
+.sheet-shell[data-skin] {
+  max-width: var(--skin-content-width, 1200px);
+  padding: var(--skin-shell-pad, 32px 20px 48px);
+}
+
+.dm-console-shell[data-skin] {
+  width: min(var(--skin-console-width, 1440px), 100%);
+  padding: var(--skin-shell-pad, 30px 24px 56px);
+}
+
+/* Proportions */
+[data-skin] .sheet-topbar {
+  flex-direction: var(--skin-topbar-direction, row);
+  align-items: var(--skin-topbar-align, end);
+  text-align: var(--skin-topbar-text, left);
+  gap: var(--skin-gap, 24px);
+}
+
+[data-skin] .essence-sheet {
+  gap: var(--skin-gap, 16px);
+  grid-template-columns: repeat(auto-fit, minmax(var(--skin-panel-min, 340px), 1fr));
+}
+
+[data-skin] .dm-character-grid {
+  gap: var(--skin-gap, 12px);
+  grid-template-columns: repeat(auto-fill, minmax(var(--skin-card-min, 235px), 1fr));
+}
+
 [data-skin] .essence-panel,
 [data-skin] .identity-panel,
 [data-skin] .attribute-panel,
@@ -1813,8 +1842,14 @@ h1 {
 [data-skin] .faction-card {
   position: relative;
   isolation: isolate;
+  border-radius: var(--skin-radius, 8px);
+  border-width: var(--skin-border-w, 1px);
+  border-style: var(--skin-border-style, solid);
+  padding: var(--skin-pad, 14px 16px);
+  box-shadow: var(--skin-panel-shadow, none);
 }
 
+/* Textured surfaces: the tile shows through panels and cards at a skin-chosen strength. */
 [data-skin] .essence-panel::before,
 [data-skin] .identity-panel::before,
 [data-skin] .attribute-panel::before,
@@ -1834,12 +1869,12 @@ h1 {
   border-radius: inherit;
   pointer-events: none;
   background-image: var(--skin-texture, none);
-  background-size: var(--skin-texture-size, 240px 240px);
+  background-size: var(--skin-texture-size, 512px 512px);
   opacity: var(--skin-panel-texture-opacity, 0.22);
   mix-blend-mode: var(--skin-texture-blend, soft-light);
 }
 
-/* Heading art: an ornament replaces the bare underline beneath page titles and panel headings. */
+/* Heading art: typography per skin and an ornament in place of the bare underline. */
 [data-skin] .sheet-topbar h1,
 [data-skin] .campaign-page-heading h3,
 [data-skin] .essence-panel > h2,
@@ -1848,10 +1883,16 @@ h1 {
   position: relative;
   padding-bottom: 14px;
   font-family: var(--skin-heading-font, inherit);
+  font-weight: var(--skin-heading-weight, 500);
   letter-spacing: var(--skin-heading-spacing, normal);
   text-transform: var(--skin-heading-transform, none);
   text-shadow: var(--skin-heading-shadow, none);
 }
+
+[data-skin] .sheet-topbar h1 { font-size: var(--skin-h1-size, clamp(36px, 5vw, 56px)); }
+[data-skin] .essence-panel > h2,
+[data-skin] .dm-modal-header h2 { font-size: var(--skin-h2-size, 24px); }
+[data-skin] .campaign-page-heading h3 { font-size: var(--skin-h3-size, 1.2rem); }
 
 [data-skin] .sheet-topbar h1::after,
 [data-skin] .campaign-page-heading h3::after,
@@ -1860,11 +1901,12 @@ h1 {
 [data-skin] .login-panel h1::after {
   content: '';
   position: absolute;
-  left: 0;
+  left: var(--skin-ornament-left, 0);
+  right: var(--skin-ornament-right, auto);
   bottom: 0;
   width: min(100%, 360px);
   height: 14px;
-  background: var(--skin-ornament, none) left center / 360px 28px no-repeat;
+  background: var(--skin-ornament, none) var(--skin-ornament-anchor, left) center / 360px 28px no-repeat;
   opacity: 0.95;
   pointer-events: none;
 }
@@ -1874,7 +1916,7 @@ h1 {
   font-family: var(--skin-heading-font, inherit);
 }
 
-/* ---- Basalt: volcanic glass ---- */
+/* ---- Basalt: volcanic glass. Default proportions, a glassy sheen on panels. ---- */
 .sheet-shell[data-skin='basalt'],
 .dm-console-shell[data-skin='basalt'],
 :root[data-skin='basalt'] {
@@ -1887,272 +1929,329 @@ h1 {
   --skin-accent: #b39ef8;
   --skin-accent-strong: #7055bc;
   --skin-border: rgba(164, 146, 220, 0.3);
-  --skin-panel-texture-opacity: 0.35;
+  --skin-texture-blend: screen;
+  --skin-panel-texture-opacity: 0.5;
+  --skin-radius: 12px;
   --skin-heading-font: Georgia, 'Times New Roman', serif;
   --skin-heading-spacing: 0.02em;
+  --skin-panel-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 22px rgba(0, 0, 0, 0.5);
 }
 
-[data-skin='basalt'] .essence-panel,
-[data-skin='basalt'] .dm-character-card {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 18px rgba(0, 0, 0, 0.45);
-}
-
-/* ---- Tideglass: sea glass and caustic light ---- */
+/* ---- Tideglass: sea glass. Rounded, translucent, blurred; wide gaps like light through water. ---- */
 .sheet-shell[data-skin='tideglass'],
 .dm-console-shell[data-skin='tideglass'],
 :root[data-skin='tideglass'] {
   --skin-page-bg: linear-gradient(135deg, #06171d 0%, #0c2830 48%, #192026 100%);
-  --skin-panel-bg: rgba(13, 34, 40, 0.9);
-  --skin-card-bg: linear-gradient(180deg, #18343a, #10272d);
+  --skin-panel-bg: rgba(13, 34, 40, 0.72);
+  --skin-card-bg: linear-gradient(180deg, rgba(24, 52, 58, 0.8), rgba(16, 39, 45, 0.9));
   --skin-control-bg: #0f262b;
   --skin-text: #e4f2f0;
   --skin-muted: #a5bfbd;
   --skin-accent: #75d4cb;
   --skin-accent-strong: #21827f;
-  --skin-border: rgba(112, 205, 202, 0.3);
+  --skin-border: rgba(191, 250, 244, 0.35);
   --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.18;
+  --skin-panel-texture-opacity: 0.45;
+  --skin-radius: 18px;
+  --skin-gap: 20px;
+  --skin-pad: 16px 20px;
+  --skin-panel-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 14px 30px rgba(0, 20, 24, 0.55);
 }
 
 [data-skin='tideglass'] .essence-panel,
 [data-skin='tideglass'] .dm-character-card,
 [data-skin='tideglass'] .identity-panel {
-  backdrop-filter: blur(6px);
-  border-color: rgba(191, 250, 244, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 10px 24px rgba(0, 20, 24, 0.5);
+  backdrop-filter: blur(8px) saturate(1.2);
 }
 
-/* ---- Wildwood: oiled timber ---- */
+/* ---- Wildwood: oiled timber. Plank panels with double borders, warm serif headings. ---- */
 .sheet-shell[data-skin='wildwood'],
 .dm-console-shell[data-skin='wildwood'],
 :root[data-skin='wildwood'] {
   --skin-page-bg: linear-gradient(135deg, #11190f 0%, #1c2418 48%, #101614 100%);
-  --skin-panel-bg: rgba(24, 32, 22, 0.94);
-  --skin-card-bg: linear-gradient(180deg, #263525, #182318);
-  --skin-control-bg: #192318;
-  --skin-text: #edf0dc;
-  --skin-muted: #b7c0a6;
+  --skin-panel-bg: rgba(38, 28, 18, 0.9);
+  --skin-card-bg: linear-gradient(180deg, #3b2a1a, #24180e);
+  --skin-control-bg: #241a10;
+  --skin-text: #f0e8d4;
+  --skin-muted: #c4b79a;
   --skin-accent: #c6d982;
   --skin-accent-strong: #6b813a;
-  --skin-border: rgba(180, 197, 124, 0.3);
+  --skin-border: rgba(120, 90, 50, 0.75);
   --skin-texture-blend: multiply;
-  --skin-panel-texture-opacity: 0.45;
+  --skin-panel-texture-opacity: 0.95;
+  --skin-radius: 6px;
+  --skin-border-w: 3px;
+  --skin-border-style: double;
+  --skin-pad: 16px 18px;
+  --skin-gap: 14px;
   --skin-heading-font: Georgia, 'Times New Roman', serif;
+  --skin-h1-size: clamp(34px, 4.6vw, 52px);
+  --skin-panel-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.5);
 }
 
-[data-skin='wildwood'] .essence-panel,
-[data-skin='wildwood'] .dm-character-card {
-  border-width: 2px;
-  border-color: rgba(120, 90, 50, 0.6);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 6px 14px rgba(0, 0, 0, 0.45);
-}
-
-/* ---- Moonstone: pearlescent haze ---- */
+/* ---- Moonstone: nacre. Large soft radii, generous spacing, iridescent glow. ---- */
 .sheet-shell[data-skin='moonstone'],
 .dm-console-shell[data-skin='moonstone'],
 :root[data-skin='moonstone'] {
   --skin-page-bg: linear-gradient(135deg, #1a1830 0%, #2b2650 48%, #16142a 100%);
-  --skin-panel-bg: rgba(34, 30, 58, 0.92);
-  --skin-card-bg: linear-gradient(180deg, #3a3466, #26224a);
-  --skin-control-bg: #241f44;
-  --skin-text: #f1edff;
-  --skin-muted: #b7afd6;
+  --skin-panel-bg: rgba(44, 38, 74, 0.88);
+  --skin-card-bg: linear-gradient(180deg, #4a4280, #2e2858);
+  --skin-control-bg: #2a2450;
+  --skin-text: #f4f0ff;
+  --skin-muted: #beb6dc;
   --skin-accent: #c7b8ff;
   --skin-accent-strong: #7c6bd9;
-  --skin-border: rgba(199, 184, 255, 0.32);
+  --skin-border: rgba(199, 184, 255, 0.35);
   --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.3;
+  --skin-panel-texture-opacity: 0.55;
+  --skin-radius: 24px;
+  --skin-gap: 22px;
+  --skin-pad: 18px 22px;
+  --skin-heading-weight: 400;
+  --skin-panel-shadow: 0 0 28px rgba(199, 184, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
-[data-skin='moonstone'] .essence-panel,
-[data-skin='moonstone'] .dm-character-card {
-  box-shadow: 0 0 22px rgba(199, 184, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-/* ---- Matrix: falling code ---- */
+/* ---- Matrix: falling code. Square, dashed, dense, monospace, bracketed headings. ---- */
 .sheet-shell[data-skin='matrix'],
 .dm-console-shell[data-skin='matrix'],
 :root[data-skin='matrix'] {
   --skin-page-bg: linear-gradient(180deg, #000400 0%, #001a05 55%, #000200 100%);
-  --skin-panel-bg: rgba(0, 10, 2, 0.92);
+  --skin-panel-bg: rgba(0, 10, 2, 0.9);
   --skin-card-bg: linear-gradient(180deg, #021b08, #000a02);
   --skin-control-bg: #001405;
   --skin-text: #58ff7a;
   --skin-muted: #2f8a45;
   --skin-accent: #00ff41;
   --skin-accent-strong: #0a7d28;
-  --skin-border: rgba(0, 255, 65, 0.35);
+  --skin-border: rgba(0, 255, 65, 0.45);
   --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.35;
+  --skin-panel-texture-opacity: 0.55;
+  --skin-radius: 0;
+  --skin-border-style: dashed;
+  --skin-pad: 12px 12px;
+  --skin-gap: 10px;
+  --skin-panel-min: 300px;
+  --skin-card-min: 210px;
+  --skin-font: 'Consolas', 'Courier New', monospace;
   --skin-heading-font: 'Consolas', 'Courier New', monospace;
-  --skin-heading-shadow: 0 0 6px #00ff41;
-  font-family: 'Consolas', 'Courier New', monospace;
+  --skin-heading-transform: uppercase;
+  --skin-heading-spacing: 0.08em;
+  --skin-h1-size: clamp(26px, 3.4vw, 34px);
+  --skin-h2-size: 18px;
+  --skin-heading-shadow: 0 0 8px #00ff41;
+  --skin-panel-shadow: inset 0 0 0 1px rgba(0, 255, 65, 0.12), 0 0 18px rgba(0, 255, 65, 0.1);
 }
 
-[data-skin='matrix'] .essence-panel,
-[data-skin='matrix'] .dm-character-card {
-  box-shadow: inset 0 0 0 1px rgba(0, 255, 65, 0.15), 0 0 18px rgba(0, 255, 65, 0.08);
-}
+[data-skin='matrix'] .sheet-topbar h1::before { content: '[ '; opacity: 0.6; }
+[data-skin='matrix'] .sheet-topbar h1 span::after,
+[data-skin='matrix'] .essence-panel > h2::before { content: '> '; opacity: 0.6; }
 
-/* ---- Sword Art Online: luminous hex interface ---- */
+/* ---- Sword Art Online: floating glass cards, centred title, wide airy layout. ---- */
 .sheet-shell[data-skin='sao'],
 .dm-console-shell[data-skin='sao'],
 :root[data-skin='sao'] {
   --skin-page-bg: linear-gradient(160deg, #040c18 0%, #081f33 55%, #020810 100%);
-  --skin-panel-bg: rgba(8, 24, 42, 0.78);
+  --skin-panel-bg: rgba(8, 24, 42, 0.62);
   --skin-card-bg: linear-gradient(180deg, rgba(23, 69, 97, 0.55), rgba(5, 18, 32, 0.85));
   --skin-control-bg: rgba(6, 22, 38, 0.9);
   --skin-text: #d9f4ff;
   --skin-muted: #7fb8d6;
   --skin-accent: #4ad9ff;
   --skin-accent-strong: #1f7fb3;
-  --skin-border: rgba(74, 217, 255, 0.4);
+  --skin-border: rgba(74, 217, 255, 0.45);
   --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.5;
-  --skin-heading-shadow: 0 0 10px rgba(74, 217, 255, 0.6);
+  --skin-panel-texture-opacity: 0.7;
+  --skin-radius: 16px;
+  --skin-gap: 24px;
+  --skin-pad: 18px 22px;
+  --skin-content-width: 1320px;
+  --skin-topbar-direction: column;
+  --skin-topbar-align: center;
+  --skin-topbar-text: center;
+  --skin-ornament-left: 50%;
+  --skin-heading-weight: 300;
+  --skin-heading-spacing: 0.12em;
+  --skin-heading-transform: uppercase;
+  --skin-h1-size: clamp(30px, 4vw, 48px);
+  --skin-heading-shadow: 0 0 12px rgba(74, 217, 255, 0.7);
+  --skin-panel-shadow: 0 0 22px color-mix(in srgb, var(--skin-accent) 25%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--skin-accent) 30%, transparent), 0 18px 40px rgba(0, 0, 0, 0.5);
 }
 
-[data-skin='sao'] .identity-panel,
-[data-skin='sao'] .attribute-panel,
-[data-skin='sao'] .skills-panel,
-[data-skin='sao'] .detail-card,
-[data-skin='sao'] .status-box,
-[data-skin='sao'] .attribute-card,
-[data-skin='sao'] .dm-character-card,
+[data-skin='sao'] .sheet-topbar h1::after { transform: translateX(-50%); }
 [data-skin='sao'] .essence-panel,
-[data-skin='sao'] .summary-pill {
-  box-shadow: 0 0 14px color-mix(in srgb, var(--skin-accent) 25%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--skin-accent) 30%, transparent);
+[data-skin='sao'] .dm-character-card {
+  backdrop-filter: blur(10px);
+  transform: translateY(0);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
+[data-skin='sao'] .essence-panel:hover,
+[data-skin='sao'] .dm-character-card:hover { transform: translateY(-3px); }
 
-/* ---- Star Trek: LCARS panels ---- */
+/* ---- Star Trek: LCARS. A rail of bars down the left, flat right-angled panels with thick left borders. ---- */
 .sheet-shell[data-skin='startrek'],
 .dm-console-shell[data-skin='startrek'],
 :root[data-skin='startrek'] {
   --skin-page-bg: linear-gradient(135deg, #000000 0%, #0a0a0f 60%, #000000 100%);
-  --skin-panel-bg: rgba(10, 8, 12, 0.94);
+  --skin-panel-bg: rgba(10, 8, 12, 0.96);
   --skin-card-bg: linear-gradient(180deg, #1a1118, #0c0a0e);
   --skin-control-bg: #140f14;
   --skin-text: #ffd9a3;
   --skin-muted: #cc99cc;
   --skin-accent: #ff9900;
   --skin-accent-strong: #cc6699;
-  --skin-border: rgba(255, 153, 0, 0.4);
+  --skin-border: rgba(255, 153, 0, 0.5);
   --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.4;
+  --skin-panel-texture-opacity: 0.35;
+  --skin-radius: 0 18px 18px 0;
+  --skin-border-w: 1px;
+  --skin-pad: 14px 18px 14px 20px;
+  --skin-gap: 12px;
+  --skin-shell-pad: 30px 24px 56px 110px;
+  --skin-topbar-direction: row-reverse;
+  --skin-topbar-text: right;
+  --skin-ornament-left: auto;
+  --skin-ornament-right: 0;
+  --skin-ornament-anchor: right;
+  --skin-font: 'Trebuchet MS', 'Segoe UI', sans-serif;
   --skin-heading-font: 'Trebuchet MS', 'Segoe UI', sans-serif;
   --skin-heading-transform: uppercase;
-  --skin-heading-spacing: 0.08em;
-  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  --skin-heading-spacing: 0.1em;
+  --skin-heading-weight: 400;
+  --skin-h1-size: clamp(28px, 3.6vw, 44px);
+  position: relative;
 }
 
-[data-skin='startrek'] .identity-panel,
-[data-skin='startrek'] .attribute-panel,
-[data-skin='startrek'] .skills-panel,
-[data-skin='startrek'] .detail-card,
-[data-skin='startrek'] .status-box,
-[data-skin='startrek'] .attribute-card,
-[data-skin='startrek'] .dm-character-card,
+.sheet-shell[data-skin='startrek']::before,
+.dm-console-shell[data-skin='startrek']::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 72px;
+  background:
+    linear-gradient(#ff9900 0 18%, transparent 18% 20%, #cc99cc 20% 42%, transparent 42% 44%, #9999ff 44% 56%, transparent 56% 58%, #ff9900 58% 78%, transparent 78% 80%, #cc6699 80% 100%);
+  border-radius: 0 36px 36px 0;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
 [data-skin='startrek'] .essence-panel,
-[data-skin='startrek'] .summary-pill {
-  border-radius: 20px;
-  border-left-width: 6px;
+[data-skin='startrek'] .identity-panel,
+[data-skin='startrek'] .dm-character-card,
+[data-skin='startrek'] .dm-action-block,
+[data-skin='startrek'] .timeline-board {
+  border-left-width: 8px;
   border-left-color: var(--skin-accent);
 }
 
-/* ---- Rough Stone: carved rock ---- */
+[data-skin='startrek'] .essence-panel:nth-child(3n) { border-left-color: #cc99cc; }
+[data-skin='startrek'] .essence-panel:nth-child(3n+1) { border-left-color: #9999ff; }
+
+/* ---- Rough Stone: carved slabs. Heavy square panels, chiselled edges, uppercase serif headings on dark bands. ---- */
 .sheet-shell[data-skin='stone'],
 .dm-console-shell[data-skin='stone'],
 :root[data-skin='stone'] {
   --skin-page-bg: linear-gradient(160deg, #2a2623 0%, #3a3531 50%, #1f1c1a 100%);
-  --skin-panel-bg: rgba(58, 52, 47, 0.97);
-  --skin-card-bg: linear-gradient(180deg, #514a44, #352f2b);
-  --skin-control-bg: #2b2724;
-  --skin-text: #efe6d8;
-  --skin-muted: #b9ab98;
+  --skin-panel-bg: rgba(84, 76, 69, 0.96);
+  --skin-card-bg: linear-gradient(180deg, #5e564f, #3c3531);
+  --skin-control-bg: #2f2a27;
+  --skin-text: #f1e9dc;
+  --skin-muted: #c3b6a3;
   --skin-accent: #d9a24f;
   --skin-accent-strong: #8c5f22;
-  --skin-border: rgba(216, 199, 170, 0.28);
+  --skin-border: rgba(20, 16, 14, 0.9);
   --skin-texture-blend: multiply;
-  --skin-panel-texture-opacity: 0.85;
+  --skin-panel-texture-opacity: 1;
+  --skin-radius: 3px;
+  --skin-border-w: 3px;
+  --skin-pad: 20px 22px;
+  --skin-gap: 10px;
+  --skin-panel-min: 400px;
+  --skin-card-min: 260px;
   --skin-heading-font: Georgia, 'Times New Roman', serif;
-  --skin-heading-spacing: 0.05em;
+  --skin-heading-weight: 700;
+  --skin-heading-spacing: 0.08em;
   --skin-heading-transform: uppercase;
-  --skin-heading-shadow: 0 1px 0 rgba(0, 0, 0, 0.7), 0 -1px 0 rgba(255, 255, 255, 0.08);
+  --skin-h1-size: clamp(38px, 5.4vw, 64px);
+  --skin-h2-size: 20px;
+  --skin-heading-shadow: 0 2px 0 rgba(0, 0, 0, 0.8), 0 -1px 0 rgba(255, 255, 255, 0.1);
+  --skin-panel-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.08), inset 0 -4px 0 rgba(0, 0, 0, 0.55), inset 3px 0 0 rgba(255, 255, 255, 0.05), inset -3px 0 0 rgba(0, 0, 0, 0.35), 0 14px 24px rgba(0, 0, 0, 0.6);
 }
 
-[data-skin='stone'] .essence-panel,
-[data-skin='stone'] .identity-panel,
-[data-skin='stone'] .dm-character-card,
-[data-skin='stone'] .dm-action-block,
-[data-skin='stone'] .dm-character-modal,
-[data-skin='stone'] .timeline-board {
-  border-radius: 4px;
-  border: 2px solid rgba(20, 16, 14, 0.9);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.07), inset 0 -3px 0 rgba(0, 0, 0, 0.55), inset 2px 0 0 rgba(255, 255, 255, 0.04), 0 10px 20px rgba(0, 0, 0, 0.55);
+[data-skin='stone'] .essence-panel > h2 {
+  margin: -20px -22px 4px;
+  padding: 10px 22px 20px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.2));
+  border-bottom: 2px solid rgba(0, 0, 0, 0.6);
 }
-
+[data-skin='stone'] .essence-panel > h2::after { left: 22px; }
 [data-skin='stone'] button,
-[data-skin='stone'] .skill-chip {
-  border-radius: 3px;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
-}
+[data-skin='stone'] .skill-chip { border-radius: 3px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
 
-/* ---- Moonlit Silver: argent metal under moonlight ---- */
+/* ---- Moonlit Silver: argent plate under moonlight. Airy spacing, thin light type, centred title. ---- */
 .sheet-shell[data-skin='moonsilver'],
 .dm-console-shell[data-skin='moonsilver'],
 :root[data-skin='moonsilver'] {
-  --skin-page-bg: radial-gradient(circle at 72% 8%, rgba(226, 236, 255, 0.28), transparent 32%), linear-gradient(170deg, #0b1020 0%, #182238 50%, #0a0e1a 100%);
-  --skin-panel-bg: rgba(44, 52, 72, 0.92);
-  --skin-card-bg: linear-gradient(180deg, #5c6678 0%, #3a4252 45%, #4d5668 100%);
-  --skin-control-bg: #2a3142;
-  --skin-text: #eef2fa;
-  --skin-muted: #aeb8cc;
-  --skin-accent: #dfe7f7;
+  --skin-page-bg: radial-gradient(circle at 72% 8%, rgba(226, 236, 255, 0.3), transparent 32%), linear-gradient(170deg, #0b1020 0%, #182238 50%, #0a0e1a 100%);
+  --skin-panel-bg: rgba(68, 78, 100, 0.9);
+  --skin-card-bg: linear-gradient(180deg, #6a7488 0%, #434c5e 45%, #56607a 100%);
+  --skin-control-bg: #2d3446;
+  --skin-text: #f2f5fc;
+  --skin-muted: #b7c0d4;
+  --skin-accent: #e6edfb;
   --skin-accent-strong: #7f8ea8;
-  --skin-border: rgba(214, 224, 245, 0.45);
+  --skin-border: rgba(230, 238, 255, 0.6);
   --skin-texture-blend: soft-light;
-  --skin-panel-texture-opacity: 0.6;
+  --skin-panel-texture-opacity: 0.9;
+  --skin-radius: 14px;
+  --skin-gap: 30px;
+  --skin-pad: 24px 28px;
+  --skin-content-width: 1120px;
+  --skin-topbar-direction: column;
+  --skin-topbar-align: center;
+  --skin-topbar-text: center;
+  --skin-ornament-left: 50%;
   --skin-heading-font: Georgia, 'Times New Roman', serif;
-  --skin-heading-shadow: 0 0 12px rgba(214, 224, 245, 0.55);
+  --skin-heading-weight: 300;
+  --skin-heading-spacing: 0.14em;
+  --skin-h1-size: clamp(40px, 6vw, 74px);
+  --skin-h2-size: 22px;
+  --skin-heading-shadow: 0 0 14px rgba(214, 224, 245, 0.6);
+  --skin-panel-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 16px 34px rgba(0, 0, 0, 0.55);
 }
+[data-skin='moonsilver'] .sheet-topbar h1::after { transform: translateX(-50%); }
 
-[data-skin='moonsilver'] .essence-panel,
-[data-skin='moonsilver'] .identity-panel,
-[data-skin='moonsilver'] .dm-character-card,
-[data-skin='moonsilver'] .dm-action-block,
-[data-skin='moonsilver'] .timeline-board {
-  border: 1px solid rgba(230, 238, 255, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.35), 0 12px 26px rgba(0, 0, 0, 0.5);
-}
-
-/* ---- Polished Steel: brushed plate ---- */
+/* ---- Polished Steel: brushed plate. Compact, dense, square corners, riveted panels. ---- */
 .sheet-shell[data-skin='steel'],
 .dm-console-shell[data-skin='steel'],
 :root[data-skin='steel'] {
   --skin-page-bg: linear-gradient(135deg, #3b4047 0%, #6b737c 30%, #2c3137 55%, #5a626b 80%, #22262b 100%);
-  --skin-panel-bg: rgba(52, 58, 65, 0.96);
-  --skin-card-bg: linear-gradient(180deg, #7b848e 0%, #4b535b 50%, #5f6870 100%);
-  --skin-control-bg: #353b42;
-  --skin-text: #f1f4f7;
-  --skin-muted: #b7bec6;
-  --skin-accent: #c9d6e3;
+  --skin-panel-bg: rgba(70, 77, 86, 0.96);
+  --skin-card-bg: linear-gradient(180deg, #8a939d 0%, #596169 50%, #6b747d 100%);
+  --skin-control-bg: #3a4047;
+  --skin-text: #f4f6f9;
+  --skin-muted: #c0c7cf;
+  --skin-accent: #d7e2ee;
   --skin-accent-strong: #6c7f91;
-  --skin-border: rgba(220, 228, 236, 0.4);
+  --skin-border: rgba(230, 236, 242, 0.55);
   --skin-texture-blend: overlay;
-  --skin-panel-texture-opacity: 0.7;
+  --skin-panel-texture-opacity: 1;
+  --skin-radius: 4px;
+  --skin-pad: 10px 12px;
+  --skin-gap: 8px;
+  --skin-panel-min: 300px;
+  --skin-card-min: 200px;
+  --skin-content-width: 1360px;
+  --skin-font: 'Trebuchet MS', 'Segoe UI', sans-serif;
   --skin-heading-font: 'Trebuchet MS', 'Segoe UI', sans-serif;
   --skin-heading-transform: uppercase;
   --skin-heading-spacing: 0.06em;
-}
-
-[data-skin='steel'] .essence-panel,
-[data-skin='steel'] .identity-panel,
-[data-skin='steel'] .dm-character-card,
-[data-skin='steel'] .dm-action-block,
-[data-skin='steel'] .timeline-board {
-  border: 1px solid rgba(230, 236, 242, 0.5);
-  border-radius: 6px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 0 0 4px rgba(0, 0, 0, 0.12), 0 8px 18px rgba(0, 0, 0, 0.45);
+  --skin-heading-weight: 700;
+  --skin-h1-size: clamp(26px, 3.2vw, 40px);
+  --skin-h2-size: 16px;
+  --skin-panel-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 0 0 4px rgba(0, 0, 0, 0.14), 0 6px 14px rgba(0, 0, 0, 0.45);
 }
 
 [data-skin='steel'] .essence-panel::after,
@@ -2160,31 +2259,36 @@ h1 {
   content: '';
   position: absolute;
   inset: 6px;
-  border-radius: 3px;
+  border-radius: 2px;
   pointer-events: none;
   background:
-    radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.55) 0 2px, transparent 3px),
-    radial-gradient(circle at 100% 0, rgba(255, 255, 255, 0.55) 0 2px, transparent 3px),
-    radial-gradient(circle at 0 100%, rgba(255, 255, 255, 0.55) 0 2px, transparent 3px),
-    radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.55) 0 2px, transparent 3px);
+    radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.7) 0 2px, rgba(0, 0, 0, 0.5) 2.5px, transparent 3.5px),
+    radial-gradient(circle at 100% 0, rgba(255, 255, 255, 0.7) 0 2px, rgba(0, 0, 0, 0.5) 2.5px, transparent 3.5px),
+    radial-gradient(circle at 0 100%, rgba(255, 255, 255, 0.7) 0 2px, rgba(0, 0, 0, 0.5) 2.5px, transparent 3.5px),
+    radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.7) 0 2px, rgba(0, 0, 0, 0.5) 2.5px, transparent 3.5px);
 }
 
-/* ---- Arcane Steel: rune-etched metal, glowing blue ---- */
+/* ---- Arcane Steel: rune-etched metal. Big rounded panels, generous gaps, breathing blue glow. ---- */
 .sheet-shell[data-skin='arcane'],
 .dm-console-shell[data-skin='arcane'],
 :root[data-skin='arcane'] {
-  --skin-page-bg: radial-gradient(circle at 50% 0%, rgba(80, 160, 255, 0.28), transparent 45%), linear-gradient(160deg, #060b16 0%, #0c1a33 50%, #040812 100%);
-  --skin-panel-bg: rgba(14, 26, 48, 0.92);
-  --skin-card-bg: linear-gradient(180deg, #24466f, #122540);
+  --skin-page-bg: radial-gradient(circle at 50% 0%, rgba(80, 160, 255, 0.3), transparent 45%), linear-gradient(160deg, #060b16 0%, #0c1a33 50%, #040812 100%);
+  --skin-panel-bg: rgba(18, 32, 58, 0.9);
+  --skin-card-bg: linear-gradient(180deg, #2a4f7d, #142a4a);
   --skin-control-bg: #0f1d33;
-  --skin-text: #e6f2ff;
-  --skin-muted: #8fb3dc;
+  --skin-text: #e8f3ff;
+  --skin-muted: #96b9e0;
   --skin-accent: #5ab4ff;
   --skin-accent-strong: #2a6fd6;
-  --skin-border: rgba(90, 180, 255, 0.5);
+  --skin-border: rgba(90, 180, 255, 0.55);
   --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.55;
-  --skin-heading-shadow: 0 0 12px rgba(90, 180, 255, 0.75);
+  --skin-panel-texture-opacity: 0.75;
+  --skin-radius: 22px;
+  --skin-gap: 22px;
+  --skin-pad: 18px 22px;
+  --skin-heading-spacing: 0.06em;
+  --skin-heading-shadow: 0 0 14px rgba(90, 180, 255, 0.8);
+  --skin-panel-shadow: 0 0 20px rgba(90, 180, 255, 0.28), inset 0 0 0 1px rgba(90, 180, 255, 0.4), inset 0 0 28px rgba(42, 111, 214, 0.2);
 }
 
 [data-skin='arcane'] .essence-panel,
@@ -2192,13 +2296,12 @@ h1 {
 [data-skin='arcane'] .dm-character-card,
 [data-skin='arcane'] .dm-action-block,
 [data-skin='arcane'] .timeline-board {
-  box-shadow: 0 0 18px rgba(90, 180, 255, 0.25), inset 0 0 0 1px rgba(90, 180, 255, 0.35), inset 0 0 24px rgba(42, 111, 214, 0.18);
   animation: arcane-breathe 6s ease-in-out infinite;
 }
 
 @keyframes arcane-breathe {
-  0%, 100% { box-shadow: 0 0 14px rgba(90, 180, 255, 0.2), inset 0 0 0 1px rgba(90, 180, 255, 0.3), inset 0 0 20px rgba(42, 111, 214, 0.15); }
-  50% { box-shadow: 0 0 26px rgba(90, 180, 255, 0.4), inset 0 0 0 1px rgba(90, 180, 255, 0.55), inset 0 0 30px rgba(42, 111, 214, 0.28); }
+  0%, 100% { box-shadow: 0 0 14px rgba(90, 180, 255, 0.22), inset 0 0 0 1px rgba(90, 180, 255, 0.32), inset 0 0 22px rgba(42, 111, 214, 0.16); }
+  50% { box-shadow: 0 0 30px rgba(90, 180, 255, 0.45), inset 0 0 0 1px rgba(90, 180, 255, 0.6), inset 0 0 34px rgba(42, 111, 214, 0.3); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2206,39 +2309,40 @@ h1 {
   [data-skin='arcane'] .identity-panel,
   [data-skin='arcane'] .dm-character-card,
   [data-skin='arcane'] .dm-action-block,
-  [data-skin='arcane'] .timeline-board {
-    animation: none;
-  }
+  [data-skin='arcane'] .timeline-board { animation: none; }
+  [data-skin='sao'] .essence-panel,
+  [data-skin='sao'] .dm-character-card { transition: none; }
 }
 
-/* ---- Rusted Iron: pitted, flaking metal ---- */
+/* ---- Rusted Iron: pitted, flaking plate. Uneven panels, bolted corners, slightly askew. ---- */
 .sheet-shell[data-skin='rust'],
 .dm-console-shell[data-skin='rust'],
 :root[data-skin='rust'] {
   --skin-page-bg: radial-gradient(ellipse at 70% 80%, #6b3a1c, transparent 55%), linear-gradient(150deg, #2b1a12 0%, #4a2a18 45%, #1d120c 100%);
-  --skin-panel-bg: rgba(56, 34, 22, 0.96);
-  --skin-card-bg: linear-gradient(180deg, #6a3d22, #3f2415);
-  --skin-control-bg: #332015;
-  --skin-text: #f3e3d1;
-  --skin-muted: #c9a98c;
+  --skin-panel-bg: rgba(92, 52, 30, 0.96);
+  --skin-card-bg: linear-gradient(180deg, #7a4626, #4a2a18);
+  --skin-control-bg: #3a2317;
+  --skin-text: #f6e7d5;
+  --skin-muted: #d2b094;
   --skin-accent: #e08a3c;
   --skin-accent-strong: #8f4b1b;
-  --skin-border: rgba(224, 138, 60, 0.38);
+  --skin-border: rgba(36, 20, 12, 0.95);
   --skin-texture-blend: multiply;
-  --skin-panel-texture-opacity: 0.9;
+  --skin-panel-texture-opacity: 1;
+  --skin-radius: 5px 3px 6px 2px;
+  --skin-border-w: 2px;
+  --skin-pad: 16px 18px;
+  --skin-gap: 16px;
   --skin-heading-font: Georgia, 'Times New Roman', serif;
-  --skin-heading-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+  --skin-heading-weight: 700;
+  --skin-heading-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
+  --skin-panel-shadow: inset 0 0 26px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 180, 120, 0.14), 0 10px 20px rgba(0, 0, 0, 0.55);
 }
 
-[data-skin='rust'] .essence-panel,
-[data-skin='rust'] .identity-panel,
-[data-skin='rust'] .dm-character-card,
-[data-skin='rust'] .dm-action-block,
-[data-skin='rust'] .timeline-board {
-  border: 2px solid rgba(36, 20, 12, 0.9);
-  border-radius: 5px;
-  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 180, 120, 0.12), 0 8px 18px rgba(0, 0, 0, 0.5);
-}
+[data-skin='rust'] .essence-panel:nth-child(odd) { transform: rotate(-0.4deg); }
+[data-skin='rust'] .essence-panel:nth-child(even) { transform: rotate(0.35deg); }
+[data-skin='rust'] .dm-character-card:nth-child(3n) { transform: rotate(0.5deg); }
+[data-skin='rust'] .dm-character-card:nth-child(3n+1) { transform: rotate(-0.4deg); }
 
 [data-skin='rust'] .essence-panel::after,
 [data-skin='rust'] .dm-character-card::after {
@@ -2247,11 +2351,11 @@ h1 {
   inset: 5px;
   pointer-events: none;
   background:
-    radial-gradient(circle at 0 0, #2a1810 0 2.5px, #a35a2a 3px, transparent 4px),
-    radial-gradient(circle at 100% 0, #2a1810 0 2.5px, #a35a2a 3px, transparent 4px),
-    radial-gradient(circle at 0 100%, #2a1810 0 2.5px, #a35a2a 3px, transparent 4px),
-    radial-gradient(circle at 100% 100%, #2a1810 0 2.5px, #a35a2a 3px, transparent 4px);
-  opacity: 0.85;
+    radial-gradient(circle at 0 0, #1a0e08 0 2.5px, #a35a2a 3px, #e59a4a 3.6px, transparent 4.6px),
+    radial-gradient(circle at 100% 0, #1a0e08 0 2.5px, #a35a2a 3px, #e59a4a 3.6px, transparent 4.6px),
+    radial-gradient(circle at 0 100%, #1a0e08 0 2.5px, #a35a2a 3px, #e59a4a 3.6px, transparent 4.6px),
+    radial-gradient(circle at 100% 100%, #1a0e08 0 2.5px, #a35a2a 3px, #e59a4a 3.6px, transparent 4.6px);
+  opacity: 0.9;
 }
 
 :root[data-skin] body {

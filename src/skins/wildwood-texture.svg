@@ -1,5 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-<defs><filter id="f" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9 0.012" numOctaves="3" seed="5" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0.0497 0.0497 0.0497 0 0.0824  0.0588 0.0588 0.0588 0 0.1255  0.0366 0.0366 0.0366 0 0.0588  0 0 0 0 0.85" result="tint"/></filter></defs>
-<rect width="240" height="240" fill="#1a2516"/><rect width="240" height="240" filter="url(#f)"/>
-<g fill="none" stroke="#0a120a" stroke-opacity="0.5" stroke-width="1.2"><path d="M30 0c6 60-6 120 0 240M110 0c-5 80 5 160 0 240M190 0c7 70-7 150 0 240"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs><filter id="surface" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012 0.75" numOctaves="5" seed="5" stitchTiles="stitch" result="height"/>
+    
+    <feDiffuseLighting in="height" surfaceScale="2.2" diffuseConstant="1.1" lighting-color="#fff3dc" result="diffuse"><feDistantLight azimuth="0" elevation="35"/></feDiffuseLighting>
+    <feSpecularLighting in="height" surfaceScale="2.2" specularConstant="0.35" specularExponent="18" lighting-color="#fff3dc" result="specular"><feDistantLight azimuth="0" elevation="20"/></feSpecularLighting>
+    <feFlood flood-color="#4a3420" result="base"/>
+    <feBlend in="base" in2="diffuse" mode="multiply" result="shaded"/>
+    <feComposite in="specular" in2="shaded" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="lit"/>
+    <feComposite in="lit" in2="SourceGraphic" operator="in"/>
+  </filter></defs><rect width="512" height="512" fill="#000"/><rect width="512" height="512" fill="#fff" filter="url(#surface)"/><g fill="none" stroke="#1c120a" stroke-opacity="0.55" stroke-width="1.4"><path d="M60 0c8 120-8 260 0 512M190 0c-6 150 6 300 0 512M330 0c8 130-8 280 0 512M450 0c-6 120 6 260 0 512"/></g><g fill="none" stroke="#2a1a0e" stroke-opacity="0.7" stroke-width="2"><ellipse cx="120" cy="300" rx="14" ry="30"/><ellipse cx="120" cy="300" rx="26" ry="52"/><ellipse cx="390" cy="110" rx="10" ry="22"/><ellipse cx="390" cy="110" rx="20" ry="40"/></g>
 </svg>

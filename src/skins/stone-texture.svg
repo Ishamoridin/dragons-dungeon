@@ -1,6 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-<defs><filter id="f" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.05 0.05" numOctaves="5" seed="21" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0.0980 0.0980 0.0980 0 0.1216  0.0915 0.0915 0.0915 0 0.1059  0.0863 0.0863 0.0863 0 0.0941  0 0 0 0 0.95" result="tint"/></filter><filter id="g" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.2 1.2" numOctaves="2" seed="4" stitchTiles="stitch" result="m"/><feColorMatrix in="m" type="matrix" values="0.3333 0.3333 0.3333 0 0.0000  0.3333 0.3333 0.3333 0 0.0000  0.3333 0.3333 0.3333 0 0.0000  0 0 0 0 0.12" result="grain"/></filter></defs>
-<rect width="240" height="240" fill="#2e2926"/><rect width="240" height="240" filter="url(#f)"/><rect width="240" height="240" filter="url(#g)"/>
-<g fill="none" stroke="#0d0b0a" stroke-opacity="0.6" stroke-width="1.6" stroke-linecap="round"><path d="M12 30l28 14 10 26 30 12M150 20l18 30-6 28 26 30M60 200l34-18 28 10 40-6M205 110l-20 28 10 36"/></g>
-<g fill="none" stroke="#fff" stroke-opacity="0.07" stroke-width="1"><path d="M13 32l28 14 10 26 30 12M151 22l18 30-6 28 26 30"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs><filter id="surface" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.028 0.028" numOctaves="6" seed="21" stitchTiles="stitch" result="height"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="4" stitchTiles="stitch" result="grain"/><feComposite in="height" in2="grain" operator="arithmetic" k1="0" k2="0.85" k3="0.15" k4="0" result="height"/>
+    <feDiffuseLighting in="height" surfaceScale="9" diffuseConstant="1.15" lighting-color="#fff4e4" result="diffuse"><feDistantLight azimuth="125" elevation="38"/></feDiffuseLighting>
+    <feSpecularLighting in="height" surfaceScale="9" specularConstant="0.25" specularExponent="12" lighting-color="#fff4e4" result="specular"><feDistantLight azimuth="125" elevation="23"/></feSpecularLighting>
+    <feFlood flood-color="#8a7f74" result="base"/>
+    <feBlend in="base" in2="diffuse" mode="multiply" result="shaded"/>
+    <feComposite in="specular" in2="shaded" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="lit"/>
+    <feComposite in="lit" in2="SourceGraphic" operator="in"/>
+  </filter></defs><rect width="512" height="512" fill="#000"/><rect width="512" height="512" fill="#fff" filter="url(#surface)"/><g fill="none" stroke-linecap="round"><path d="M30 70l56 28 20 52 60 24 10 60M320 40l36 60-12 56 52 60M120 430l68-36 56 20 80-12M440 230l-40 56 20 72" stroke="#17120f" stroke-opacity="0.75" stroke-width="2.4"/><path d="M32 73l56 28 20 52 60 24 10 60M322 43l36 60-12 56 52 60M122 433l68-36 56 20 80-12" stroke="#fff6ea" stroke-opacity="0.16" stroke-width="1.2"/></g>
 </svg>

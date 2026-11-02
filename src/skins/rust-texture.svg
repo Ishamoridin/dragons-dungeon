@@ -1,6 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-<defs><filter id="f" x="0" y="0" width="100%" height="100%"><feTurbulence type="turbulence" baseFrequency="0.045 0.045" numOctaves="4" seed="27" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0.1582 0.1582 0.1582 0 0.1647  0.0863 0.0863 0.0863 0 0.0941  0.0340 0.0340 0.0340 0 0.0627  0 0 0 0 0.95" result="tint"/></filter><filter id="p" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.35 0.35" numOctaves="2" seed="31" stitchTiles="stitch" result="m"/><feColorMatrix in="m" type="matrix" values="0.3333 0.3333 0.3333 0 0.0000  0.3333 0.3333 0.3333 0 0.0000  0.3333 0.3333 0.3333 0 0.0000  0 0 0 0 0.18" result="pits"/></filter></defs>
-<rect width="240" height="240" fill="#3b2316"/><rect width="240" height="240" filter="url(#f)"/><rect width="240" height="240" filter="url(#p)"/>
-<g fill="#e08a3c" fill-opacity="0.25"><circle cx="40" cy="70" r="6"/><circle cx="170" cy="40" r="4"/><circle cx="200" cy="190" r="8"/><circle cx="90" cy="180" r="3"/></g>
-<g fill="#1a0e08" fill-opacity="0.55"><circle cx="120" cy="120" r="2.2"/><circle cx="30" cy="200" r="1.8"/><circle cx="210" cy="90" r="2.6"/><circle cx="70" cy="30" r="1.5"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs><filter id="surface" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="turbulence" baseFrequency="0.05 0.05" numOctaves="5" seed="27" stitchTiles="stitch" result="height"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.3" numOctaves="2" seed="31" stitchTiles="stitch" result="pits"/><feComposite in="height" in2="pits" operator="arithmetic" k1="0" k2="0.8" k3="0.2" k4="0" result="height"/>
+    <feDiffuseLighting in="height" surfaceScale="4.5" diffuseConstant="1.2" lighting-color="#ffe2c8" result="diffuse"><feDistantLight azimuth="135" elevation="40"/></feDiffuseLighting>
+    <feSpecularLighting in="height" surfaceScale="4.5" specularConstant="0.2" specularExponent="10" lighting-color="#ffe2c8" result="specular"><feDistantLight azimuth="135" elevation="25"/></feSpecularLighting>
+    <feFlood flood-color="#9a4f22" result="base"/>
+    <feBlend in="base" in2="diffuse" mode="multiply" result="shaded"/>
+    <feComposite in="specular" in2="shaded" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="lit"/>
+    <feComposite in="lit" in2="SourceGraphic" operator="in"/>
+  </filter></defs><rect width="512" height="512" fill="#000"/><rect width="512" height="512" fill="#fff" filter="url(#surface)"/><defs><filter id="patch" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="7" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 0.16  0 0 0 0 0.09  0 0 0 0 0.05  2 0 0 -0.9 0"/></filter></defs><rect width="512" height="512" filter="url(#patch)"/><g fill="#1a0e08" fill-opacity="0.7"><circle cx="90" cy="140" r="3"/><circle cx="420" cy="90" r="4.5"/><circle cx="300" cy="380" r="2.5"/><circle cx="160" cy="430" r="3.5"/><circle cx="470" cy="300" r="2"/></g><g fill="#e59a4a" fill-opacity="0.35"><circle cx="230" cy="110" r="14"/><circle cx="60" cy="360" r="10"/><circle cx="400" cy="460" r="18"/></g>
 </svg>

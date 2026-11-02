@@ -1,5 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-<defs><filter id="f" x="0" y="0" width="100%" height="100%"><feTurbulence type="turbulence" baseFrequency="0.012 0.03" numOctaves="2" seed="11" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0.0732 0.0732 0.0732 0 0.0275  0.2039 0.2039 0.2039 0 0.1373  0.1804 0.1804 0.1804 0 0.1686  0 0 0 0 0.55" result="tint"/></filter></defs>
-<rect width="240" height="240" fill="#0b2a31"/><rect width="240" height="240" filter="url(#f)"/>
-<g fill="none" stroke="#bffaf4" stroke-opacity="0.12" stroke-width="2"><path d="M0 60c40-20 80 20 120 0s80-20 120 0M0 150c40-20 80 20 120 0s80-20 120 0"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs><filter id="surface" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="turbulence" baseFrequency="0.014 0.026" numOctaves="3" seed="11" stitchTiles="stitch" result="height"/>
+    
+    <feDiffuseLighting in="height" surfaceScale="7" diffuseConstant="1.1" lighting-color="#dffcf6" result="diffuse"><feDistantLight azimuth="60" elevation="45"/></feDiffuseLighting>
+    <feSpecularLighting in="height" surfaceScale="7" specularConstant="1.4" specularExponent="60" lighting-color="#dffcf6" result="specular"><feDistantLight azimuth="60" elevation="30"/></feSpecularLighting>
+    <feFlood flood-color="#11404a" result="base"/>
+    <feBlend in="base" in2="diffuse" mode="multiply" result="shaded"/>
+    <feComposite in="specular" in2="shaded" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="lit"/>
+    <feComposite in="lit" in2="SourceGraphic" operator="in"/>
+  </filter></defs><rect width="512" height="512" fill="#000"/><rect width="512" height="512" fill="#fff" filter="url(#surface)"/><g fill="none" stroke="#bffaf4" stroke-opacity="0.18" stroke-width="3"><path d="M0 120c60-30 120 30 180 0s120-30 180 0 120 30 172 0M0 330c60-30 120 30 180 0s120-30 180 0 120 30 172 0"/></g>
 </svg>
