@@ -7,6 +7,8 @@ services:
     runtime: node
     plan: free
     buildCommand: npm ci
+    # npm ci runs scripts/render-prepare.mjs, which builds the frontend here (RENDER=true), so this one service serves
+    # the whole app at its root as well as the API. Set SERVE_STATIC_DIR=off to make it API-only again.
     startCommand: npm start
     # Render routes traffic only after this returns 200, which happens once the API has connected to MongoDB.
     healthCheckPath: /api/health
