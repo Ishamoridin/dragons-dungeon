@@ -591,6 +591,15 @@ export function EssenceSheetBody({
   const open = onChange
     ? (kind: StepKind, id: string, name: string) => (direction: 1 | -1) => setPending({ kind, id, name, direction })
     : undefined
+  // Attribute and skill steppers change the score by one straight away; the dialog only appears to explain a
+  // change that is not allowed (for example a player with no points left).
+  const step = onChange
+    ? (kind: 'Attributes' | 'Skills', id: string, name: string) => (direction: 1 | -1) => {
+      const change: SheetChange = { kind, id, name, amount: direction }
+      if (validateSheetChange(data, change, role)) setPending({ kind, id, name, direction })
+      else onChange(change)
+    }
+    : undefined
   // One-click "+1" for development tallies; players' quick logs carry a standard note so the DM's log stays complete.
   const quickPlus = onChange
     ? (kind: StepKind, id: string, name: string) => (
@@ -723,7 +732,7 @@ export function EssenceSheetBody({
             {ESSENCE_ATTRIBUTES.filter((attribute) => attribute.Group === group.Id).map((attribute) => (
               <article className="essence-attribute" key={attribute.Id} title={attribute.Description}>
                 <div><strong>{attribute.Name}</strong><small>{attribute.Tag.toUpperCase()}</small></div>
-                <span className="score-value"><Stepper value={data.Attributes[attribute.Id]} label={attribute.Name} onOpen={open?.('Attributes', attribute.Id, attribute.Name)} showDecrease={isDm} canIncrease={canSpend} increaseHint={noPointsHint} /></span>
+                <span className="score-value"><Stepper value={data.Attributes[attribute.Id]} label={attribute.Name} onOpen={step?.('Attributes', attribute.Id, attribute.Name)} showDecrease={isDm} canIncrease={canSpend} increaseHint={noPointsHint} /></span>
                 {stats.attributes[attribute.Id] !== data.Attributes[attribute.Id] && <small className="wound-effective-value">Effective {fmt(stats.attributes[attribute.Id])}</small>}
               </article>
             ))}
@@ -735,7 +744,7 @@ export function EssenceSheetBody({
                 <div className="essence-skill-row" key={skill.Id}>
                   <strong>{skill.Name}</strong>
                   <small>{skill.Governors.map(tagName).join(' / ')}</small>
-                  <span><Stepper value={data.Skills[skill.Id]} label={skill.Name} onOpen={open?.('Skills', skill.Id, skill.Name)} showDecrease={isDm} canIncrease={canSpend} increaseHint={noPointsHint} /> / {cap}</span>
+                  <span><Stepper value={data.Skills[skill.Id]} label={skill.Name} onOpen={step?.('Skills', skill.Id, skill.Name)} showDecrease={isDm} canIncrease={canSpend} increaseHint={noPointsHint} /> / {cap}</span>
                   <small>{stats.skills[skill.Id] !== data.Skills[skill.Id] ? `Effective ${fmt(stats.skills[skill.Id])}` : ''}</small>
                 </div>
               )
