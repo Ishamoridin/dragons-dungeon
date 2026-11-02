@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import RollButton from './RollButton'
 import { d20Roll, maxRoll, scaleRoll, toRoll, type Roll } from './Roll20'
-import { ATTRIBUTE_GROUPS, ESSENCE_ATTRIBUTES, ESSENCE_SKILLS, isReseroUnlocked, type EssenceDerived, type ReseroStage } from './EssenceSystem'
+import { ATTRIBUTE_GROUPS, ESSENCE_ATTRIBUTES, ESSENCE_SKILLS, isReseroUnlocked, weaponFormBonus, type EssenceDerived, type ReseroStage } from './EssenceSystem'
 import type { EssenceCharacterData } from './EssenceTypes'
 
 export type ResourceKey = 'hp' | 'reiryoku' | 'willpower'
@@ -239,6 +239,8 @@ export function EssenceCombatModule({
   onCurrentChange,
   reseroStage,
   onReseroChange,
+  activeWeapons,
+  onWeaponsChange,
   derived,
   open,
   onClose,
@@ -249,6 +251,9 @@ export function EssenceCombatModule({
   onCurrentChange: (patch: CurrentValues) => void
   reseroStage: ReseroStage | null
   onReseroChange: (stage: ReseroStage | null) => void
+  // Names of the spirit weapons currently summoned.
+  activeWeapons: string[]
+  onWeaponsChange: (names: string[]) => void
   // Combat summary rows as shown on the sheet's combat bar: [label, value, rollable].
   derived: [string, number, boolean][]
   open: boolean
@@ -321,6 +326,24 @@ export function EssenceCombatModule({
 
   const bonus = stats.reseroActive
   const stages: (ReseroStage | null)[] = [null, 'Partial', 'First', 'True']
+  // Resero stages are named after the weapon they belong to ("Snowball - Overrun"); that weapon is the Resero weapon.
+  const reseroWeapon = data.SpiritWeapons.find((weapon) => data.Resero.some((stage) => stage.Name.toLowerCase().startsWith(weapon.Name.toLowerCase())))
+  const extraMinor = stats.weaponForms.reduce((total, form) => total + form.extraMinorActions, 0)
+
+  const toggleWeapon = (weapon: EssenceCharacterData['SpiritWeapons'][number]) => {
+    if (activeWeapons.includes(weapon.Name)) {
+      onWeaponsChange(activeWeapons.filter((name) => name !== weapon.Name))
+      if (weapon === reseroWeapon && reseroStage) onReseroChange(null)
+      setMessage(`${weapon.Name} dismissed${weapon === reseroWeapon && reseroStage ? '; Resero ended' : ''}.`)
+      return
+    }
+    const cost = parseCost(weapon.CostToSummon) ?? 0
+    if (!pay(cost, 0, `summoning ${weapon.Name}`)) return
+    onWeaponsChange([...activeWeapons, weapon.Name])
+    const form = weaponFormBonus(weapon)
+    const effects = [form.armour && `${signed(form.armour)} armour`, form.hp && `${signed(form.hp)} max HP`, form.reiryoku && `${signed(form.reiryoku)} max Reiryoku`, form.extraMinorActions && `${form.extraMinorActions} extra minor action`].filter(Boolean).join(', ')
+    setMessage(`${weapon.Name} summoned: -${cost} Reiryoku${effects ? ` · ${effects}` : ''}.`)
+  }
 
   // State above stays alive while closed, so messages and used actions persist.
   if (!open) {
@@ -352,8 +375,28 @@ export function EssenceCombatModule({
         <button type="button" onClick={() => setOpenStats('combat')}>{STATS_LABELS.combat} <span>{derived.filter(([, , rollable]) => rollable).length}</span></button>
       </div>
 
+      <div className="essence-combat-resero essence-combat-weapons" role="group" aria-label="Spirit weapons">
+        <span className="essence-sub">Spirit weapons</span>
+        {data.SpiritWeapons.map((weapon) => {
+          const active = activeWeapons.includes(weapon.Name)
+          const form = weaponFormBonus(weapon)
+          const effects = [form.armour && `${signed(form.armour)} armour`, form.hp && `${signed(form.hp)} HP`, form.reiryoku && `${signed(form.reiryoku)} Rei`, form.extraMinorActions && `+${form.extraMinorActions} minor action`].filter(Boolean).join(', ')
+          return (
+            <button
+              type="button"
+              key={weapon.Name}
+              aria-pressed={active}
+              title={`${weapon.Category} · summon ${weapon.CostToSummon} · ${weapon.ActionType}${effects ? ` · while wielded: ${effects}` : ''}${weapon === reseroWeapon ? ' · Resero weapon' : ''}`}
+              onClick={() => toggleWeapon(weapon)}
+            >
+              {weapon.Name}{effects ? <small> {effects}</small> : null}
+            </button>
+          )
+        })}
+      </div>
+
       <div className="essence-combat-resero" role="group" aria-label="Resero state">
-        <span className="essence-sub">Resero</span>
+        <span className="essence-sub">Resero{reseroWeapon ? ` · ${reseroWeapon.Name}` : ''}</span>
         {stages.map((stage) => {
           const definition = data.Resero.find((item) => item.Stage === stage)
           const locked = definition ? !isReseroUnlocked(data, definition) : false
@@ -374,11 +417,12 @@ export function EssenceCombatModule({
       </div>
 
       <div className="essence-stat-grid">
-        <div><span>Max HP</span><strong>{stats.maxHP}</strong>{bonus && <small>{signed(bonus.hp)} Resero</small>}</div>
-        <div><span>Max Reiryoku</span><strong>{stats.maxReiryoku}</strong>{bonus && <small>{signed(bonus.reiryoku)} Resero</small>}</div>
-        <div><span>Armour</span><strong>{stats.armour}</strong>{bonus && <small>{signed(bonus.armour)} Resero</small>}</div>
+        <div><span>Max HP</span><strong>{stats.maxHP}</strong>{bonus && <small>{signed(bonus.hp)} Resero</small>}{stats.weaponForms.filter((form) => form.hp).map((form) => <small key={form.name}>{signed(form.hp)} {form.name}</small>)}</div>
+        <div><span>Max Reiryoku</span><strong>{stats.maxReiryoku}</strong>{bonus && <small>{signed(bonus.reiryoku)} Resero</small>}{stats.weaponForms.filter((form) => form.reiryoku).map((form) => <small key={form.name}>{signed(form.reiryoku)} {form.name}</small>)}</div>
+        <div><span>Armour</span><strong>{stats.armour}</strong>{bonus && <small>{signed(bonus.armour)} Resero</small>}{stats.weaponForms.filter((form) => form.armour).map((form) => <small key={form.name}>{signed(form.armour)} {form.name}</small>)}</div>
         <div><span>Resero damage</span><strong>{bonus ? stats.resero.damageBonus : 0}</strong></div>
         <div><span>Resero roll</span><strong>{bonus ? signed(stats.resero.rollBonus) : '+0'}</strong></div>
+        {extraMinor > 0 && <div><span>Minor actions</span><strong>{1 + extraMinor}</strong><small>{stats.weaponForms.filter((form) => form.extraMinorActions).map((form) => form.name).join(', ')}</small></div>}
       </div>
 
       {message && <p className="essence-note" role="status">{message}</p>}

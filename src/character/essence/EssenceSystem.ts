@@ -1,4 +1,4 @@
-import type { EssenceCharacterData, EssenceRace, EssenceResero, EssenceZodiac } from './EssenceTypes'
+import type { EssenceCharacterData, EssenceRace, EssenceResero, EssenceSpiritWeapon, EssenceZodiac } from './EssenceTypes'
 import { applyWoundModifiers, interpretWoundResult, type WoundTarget } from './WoundEffects'
 
 export const ESSENCE_SYSTEM_ID = 'essence'
@@ -245,7 +245,29 @@ export type EssenceDerived = {
     // Only the current form's aligned essence applies, never a lower stage's.
     alignedEssence: { name: string; amount: number } | null
   } | null
+  // Summoned spirit weapons whose text grants a form bonus (armour, bars, extra actions) while wielded; already
+  // included in maxHP, maxReiryoku and armour.
+  weaponForms: WeaponForm[]
 }
+
+export type WeaponForm = { name: string; armour: number; hp: number; reiryoku: number; extraMinorActions: number }
+
+// Some spirit weapons are transformations in their own right ("anti-Resero" forms such as Stick): their Details
+// grant armour, bar maxima or extra actions while wielded. Read those numbers out of the text.
+export function weaponFormBonus(weapon: EssenceSpiritWeapon): WeaponForm {
+  const text = weapon.Details.replace(/\s+/g, ' ')
+  const first = (pattern: RegExp) => { const match = pattern.exec(text); return match ? Number(match[1].replace(/,/g, '')) : 0 }
+  const both = first(/maximum of their HP and Reiryoku (?:is|are) increased by \+?([\d,]+)/i)
+  return {
+    name: weapon.Name,
+    armour: first(/\+([\d,]+) (?:innate |permanent )?armour/i),
+    hp: both || first(/\+([\d,]+) (?:to )?(?:max(?:imum)? )?HP\b/i),
+    reiryoku: both || first(/\+([\d,]+) (?:to )?(?:max(?:imum)? )?Reiryoku\b/i),
+    extraMinorActions: /\b(?:one|an|1) extra minor action/i.test(text) ? 1 : first(/\+?(\d+) extra minor actions?/i),
+  }
+}
+
+export const hasWeaponForm = (form: WeaponForm): boolean => form.armour > 0 || form.hp > 0 || form.reiryoku > 0 || form.extraMinorActions > 0
 
 const tagToAttributeId = Object.fromEntries(ESSENCE_ATTRIBUTES.map((attribute) => [attribute.Tag, attribute.Id])) as Record<AttributeTag, string>
 
@@ -263,7 +285,7 @@ export function skillCap(data: EssenceCharacterData, skill: EssenceSkillDefiniti
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
 
-export function computeEssenceStats(data: EssenceCharacterData, reseroStage: ReseroStage | null = null): EssenceDerived {
+export function computeEssenceStats(data: EssenceCharacterData, reseroStage: ReseroStage | null = null, activeWeapons: string[] = []): EssenceDerived {
   const woundModifiers = (data.Injuries ?? []).flatMap((injury) => interpretWoundResult(injury.Result, ESSENCE_WOUND_TARGETS).Modifiers)
   const adjusted = (id: string, value: number) => applyWoundModifiers(woundTargets.get(id) ?? { Id: id, Name: id }, value, woundModifiers)
   const attributes = Object.fromEntries(Object.entries(data.Attributes).map(([id, value]) => [id, adjusted(`attribute:${id}`, value)]))
@@ -300,6 +322,11 @@ export function computeEssenceStats(data: EssenceCharacterData, reseroStage: Res
   const reseroHP = sum(appliedResero.map((stage) => stage.BonusHP))
   const reseroReiryoku = sum(appliedResero.map((stage) => stage.BonusReiryoku))
   const reseroArmour = Math.max(0, ...appliedResero.map((stage) => stage.BonusArmour))
+  // Wielded weapon forms stack with each other and with Resero.
+  const weaponForms = data.SpiritWeapons.filter((weapon) => activeWeapons.includes(weapon.Name)).map(weaponFormBonus).filter(hasWeaponForm)
+  const formHP = sum(weaponForms.map((form) => form.hp))
+  const formReiryoku = sum(weaponForms.map((form) => form.reiryoku))
+  const formArmour = sum(weaponForms.map((form) => form.armour))
 
   const maxBurden = adjusted('maxBurden', a('strength') + a('agility') + a('reiatsuRelease') + a('resolve') + wear.pouch)
   // Inventory items only, matching the workbook's "Current burden"; worn armour has its own burden column.
@@ -309,12 +336,12 @@ export function computeEssenceStats(data: EssenceCharacterData, reseroStage: Res
     attributes,
     skills,
     trueHP,
-    maxHP: maximum('hp', adjusted('maxHP', trueHP + bonus.hp + reseroHP)),
+    maxHP: maximum('hp', adjusted('maxHP', trueHP + bonus.hp + reseroHP + formHP)),
     trueReiryoku,
-    maxReiryoku: maximum('reiryoku', adjusted('maxReiryoku', trueReiryoku + bonus.reiryoku + reseroReiryoku)),
+    maxReiryoku: maximum('reiryoku', adjusted('maxReiryoku', trueReiryoku + bonus.reiryoku + reseroReiryoku + formReiryoku)),
     trueWillpower,
     maxWillpower: maximum('willpower', adjusted('maxWillpower', trueWillpower + bonus.willpower)),
-    armour: adjusted('armour', race.armour + armourSum('ArmourValue') + armourSum('ArmourMod') + wear.mask + bonus.armour + potentialTier * 25 + reseroArmour),
+    armour: adjusted('armour', race.armour + armourSum('ArmourValue') + armourSum('ArmourMod') + wear.mask + bonus.armour + potentialTier * 25 + reseroArmour + formArmour),
     // The sheet's dodge formula reads Weaponry where this sits, not Athletics.
     dodge: adjusted('dodge', (a('wisdom') + a('agility') + s('weaponry') + a('composure')) / 4 + race.dodge + armourSum('DodgeMod')),
     defense: adjusted('defense', (a('strength') + a('constitution') + a('reiatsuRelease') + a('agility')) / 4 + race.defense + armourSum('DefenseMod')),
@@ -353,6 +380,7 @@ export function computeEssenceStats(data: EssenceCharacterData, reseroStage: Res
             : { name: activeResero.AlignedEssence, amount: activeResero.EssenceInvested },
         }
       : null,
+    weaponForms,
   }
 }
 
