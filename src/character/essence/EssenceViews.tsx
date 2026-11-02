@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RotateCcw, Save } from 'lucide-react'
+import PortraitControl from '../PortraitControl'
+import type { Portrait } from '../Portrait'
 import {
   ATTRIBUTE_GROUPS,
   ESSENCE_ATTRIBUTES,
@@ -513,6 +515,8 @@ export function EssenceSheetBody({
   development,
   onEditData,
   onEssenceChange,
+  portrait,
+  onPortraitChange,
 }: {
   data: EssenceCharacterData
   role?: SheetRole
@@ -523,6 +527,9 @@ export function EssenceSheetBody({
   development?: { campaignName: string; onRequest: (request: DevelopmentRequest) => void }
   // Lets the DM edit lists such as injuries and inventory directly.
   onEditData?: (mutate: (draft: EssenceCharacterData) => void) => void
+  // Portrait lives on the character record rather than the Essence block; the sheet shows and (optionally) edits it.
+  portrait?: Portrait | null
+  onPortraitChange?: (portrait: Portrait | null) => void
 }) {
   const [tab, setTab] = useState<TabId>('basic')
   const [combatOpen, setCombatOpen] = useState(false)
@@ -530,6 +537,13 @@ export function EssenceSheetBody({
   const [pending, setPending] = useState<PendingChange | null>(null)
   const open = onChange
     ? (kind: StepKind, id: string, name: string) => (direction: 1 | -1) => setPending({ kind, id, name, direction })
+    : undefined
+  // One-click "+1" for development tallies; players' quick logs carry a standard note so the DM's log stays complete.
+  const quickPlus = onChange
+    ? (kind: StepKind, id: string, name: string) => (
+      <button type="button" className="essence-inline-button quick-plus" aria-label={`Log one ${name} use`} title="Log one use"
+        onClick={() => onChange({ kind, id, name, amount: 1, purpose: role === 'dm' ? undefined : 'Quick +1 from the Development tab' })}>+1</button>
+    )
     : undefined
   const [localCurrent, setCurrent] = useState<CurrentValues>({})
   const [reseroStage, setReseroStage] = useState<ReseroStage | null>(null)
@@ -587,6 +601,7 @@ export function EssenceSheetBody({
         onCurrentChange={(patch) => setCurrent((values) => ({ ...values, ...patch }))}
         reseroStage={reseroStage}
         onReseroChange={setReseroStage}
+        derived={derived}
         open={combatOpen}
         onClose={() => setCombatOpen(false)}
       />
@@ -604,6 +619,7 @@ export function EssenceSheetBody({
         <>
           <section className="essence-panel">
             <h2>Basic Info</h2>
+            <PortraitControl portrait={portrait} name={data.Alias ?? data.PlayerName} onChange={onPortraitChange} />
             <div className="essence-facts">
               <span>Player <strong>{data.PlayerName}</strong></span>
               <span>Concept <strong>{data.Concept}</strong></span>
@@ -804,15 +820,25 @@ export function EssenceSheetBody({
             <h2>{development ? <button type="button" className="heading-button" onClick={() => setDevelopmentOpen(true)}>Development</button> : 'Development'}</h2>
             {development && <p className="essence-note">Click Development to spend development on something new.</p>}
             <h3>Metaphysical uses</h3>
-            <div className="essence-stat-grid">
+            <div className="essence-skill-list">
               {Object.entries(data.Development.Metaphysical).map(([key, value]) => (
-                <div key={key}><span>{METAPHYSICAL_LABELS[key] ?? key}</span><strong>{value}</strong></div>
+                <div className="essence-skill-row" key={key}>
+                  <strong>{METAPHYSICAL_LABELS[key] ?? key}</strong>
+                  <small>metaphysical</small>
+                  <span><Stepper value={value} label={`${METAPHYSICAL_LABELS[key] ?? key} uses`} onOpen={open?.('MetaphysicalUses', key, METAPHYSICAL_LABELS[key] ?? key)} showDecrease={isDm} /></span>
+                  <small>{quickPlus?.('MetaphysicalUses', key, METAPHYSICAL_LABELS[key] ?? key)}</small>
+                </div>
               ))}
             </div>
             <h3>Other statistics</h3>
-            <div className="essence-stat-grid">
+            <div className="essence-skill-list">
               {Object.entries(data.Development.Stats).map(([key, value]) => (
-                <div key={key}><span>{STAT_LABELS[key] ?? key}</span><strong>{value}</strong></div>
+                <div className="essence-skill-row" key={key}>
+                  <strong>{STAT_LABELS[key] ?? key}</strong>
+                  <small>statistic</small>
+                  <span><Stepper value={value} label={STAT_LABELS[key] ?? key} onOpen={open?.('Stats', key, STAT_LABELS[key] ?? key)} showDecrease={isDm} /></span>
+                  <small>{quickPlus?.('Stats', key, STAT_LABELS[key] ?? key)}</small>
+                </div>
               ))}
             </div>
           </section>
@@ -825,7 +851,7 @@ export function EssenceSheetBody({
                     <strong>{attribute.Name}</strong>
                     <small>attribute</small>
                     <span><Stepper value={data.Development.AttributeUses[attribute.Id] ?? 0} label={`${attribute.Name} uses`} onOpen={open?.('AttributeUses', attribute.Id, attribute.Name)} showDecrease={isDm} /></span>
-                    <small />
+                    <small>{quickPlus?.('AttributeUses', attribute.Id, attribute.Name)}</small>
                   </div>
                 ))}
                 {ESSENCE_SKILLS.filter((skill) => skill.Group === group.Id).map((skill) => (
@@ -833,7 +859,7 @@ export function EssenceSheetBody({
                     <strong>{skill.Name}</strong>
                     <small>skill</small>
                     <span><Stepper value={data.Development.SkillUses[skill.Id] ?? 0} label={`${skill.Name} uses`} onOpen={open?.('SkillUses', skill.Id, skill.Name)} showDecrease={isDm} /></span>
-                    <small />
+                    <small>{quickPlus?.('SkillUses', skill.Id, skill.Name)}</small>
                   </div>
                 ))}
               </div>

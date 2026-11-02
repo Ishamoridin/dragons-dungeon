@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import RollButton from './RollButton'
 import { d20Roll, maxRoll, scaleRoll, toRoll, type Roll } from './Roll20'
-import { isReseroUnlocked, type EssenceDerived, type ReseroStage } from './EssenceSystem'
+import { ATTRIBUTE_GROUPS, ESSENCE_ATTRIBUTES, ESSENCE_SKILLS, isReseroUnlocked, type EssenceDerived, type ReseroStage } from './EssenceSystem'
 import type { EssenceCharacterData } from './EssenceTypes'
 
 export type ResourceKey = 'hp' | 'reiryoku' | 'willpower'
@@ -42,6 +42,20 @@ const KIND_LABELS: Record<ActionKind, string> = {
   reaction: 'Reactions',
 }
 const KINDS: ActionKind[] = ['basic', 'major', 'minor', 'full', 'reaction']
+
+// Stat lists the combat screen can open beside the action lists; each row carries a d20 roll.
+type StatsKind = 'attributes' | 'skills' | 'combat'
+const STATS_LABELS: Record<StatsKind, string> = { attributes: 'Attributes', skills: 'Skills', combat: 'Combat stats' }
+const tagName = (tag: string) => ESSENCE_ATTRIBUTES.find((attribute) => attribute.Tag === tag)?.Name ?? tag
+
+// Resero details end with an "Essence trait:" section on the workbook; split it off so it can be shown selectively.
+export function splitEssenceTrait(details: string): { body: string; trait: string | null } {
+  const match = /(?:^|\n)\s*Essence trait:\s*/i.exec(details)
+  if (!match) return { body: details.trim(), trait: null }
+  const body = details.slice(0, match.index).trim()
+  const trait = details.slice(match.index + match[0].length).trim()
+  return { body, trait: trait || null }
+}
 
 const isBlank = (text: string) => !text || /^(n\/a|not applicable|passive)$/i.test(text.trim())
 
@@ -216,6 +230,7 @@ function buildActions(data: EssenceCharacterData, stats: EssenceDerived): Action
 }
 
 const signed = (value: number) => (value >= 0 ? `+${value}` : String(value))
+const fmt = (value: number): string => Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, '')
 
 export function EssenceCombatModule({
   data,
@@ -224,6 +239,7 @@ export function EssenceCombatModule({
   onCurrentChange,
   reseroStage,
   onReseroChange,
+  derived,
   open,
   onClose,
 }: {
@@ -233,10 +249,13 @@ export function EssenceCombatModule({
   onCurrentChange: (patch: CurrentValues) => void
   reseroStage: ReseroStage | null
   onReseroChange: (stage: ReseroStage | null) => void
+  // Combat summary rows as shown on the sheet's combat bar: [label, value, rollable].
+  derived: [string, number, boolean][]
   open: boolean
   onClose: () => void
 }) {
   const [openKind, setOpenKind] = useState<ActionKind | null>(null)
+  const [openStats, setOpenStats] = useState<StatsKind | null>(null)
   const [message, setMessage] = useState('')
   const [used, setUsed] = useState<string[]>([])
   const [amounts, setAmounts] = useState<Record<string, number>>({})
@@ -327,6 +346,12 @@ export function EssenceCombatModule({
         ))}
       </div>
 
+      <div className="essence-combat-actions" role="group" aria-label="Rollable stats">
+        <button type="button" onClick={() => setOpenStats('attributes')}>{STATS_LABELS.attributes} <span>{ESSENCE_ATTRIBUTES.length}</span></button>
+        <button type="button" onClick={() => setOpenStats('skills')}>{STATS_LABELS.skills} <span>{ESSENCE_SKILLS.length}</span></button>
+        <button type="button" onClick={() => setOpenStats('combat')}>{STATS_LABELS.combat} <span>{derived.filter(([, , rollable]) => rollable).length}</span></button>
+      </div>
+
       <div className="essence-combat-resero" role="group" aria-label="Resero state">
         <span className="essence-sub">Resero</span>
         {stages.map((stage) => {
@@ -362,10 +387,15 @@ export function EssenceCombatModule({
         <div className="essence-resero-effects" aria-label="Active Resero effects">
           {bonus.stages.map((stageName) => {
             const stage = data.Resero.find((item) => item.Stage === stageName)
-            return stage && (
+            if (!stage) return null
+            const isCurrent = stageName === bonus.stage
+            const { body, trait } = splitEssenceTrait(stage.Details)
+            return (
               <details className="essence-detail" key={stageName}>
-                <summary><strong>{stage.Stage}: {stage.Name}</strong> <small>{stageName === bonus.stage ? 'current form' : 'carried over'}</small></summary>
-                <p>{stage.Details}</p>
+                <summary><strong>{stage.Stage}: {stage.Name}</strong> <small>{isCurrent ? 'current form' : 'carried over'}</small></summary>
+                <p>{body}</p>
+                {/* The Essence trait belongs to the form actually taken; a higher Resero does not keep the lower forms' traits. */}
+                {isCurrent && trait && <p><strong>Essence trait:</strong> {trait}</p>}
               </details>
             )
           })}
@@ -453,6 +483,55 @@ export function EssenceCombatModule({
                 )
               })}
             </div>
+          </section>
+        </div>
+      )}
+
+      {openStats && (
+        <div className="dm-modal-backdrop dm-modal-backdrop-secondary" onClick={() => setOpenStats(null)}>
+          <section className="dm-character-modal" role="dialog" aria-modal="true" aria-labelledby="essence-stats-title" onClick={(event) => event.stopPropagation()}>
+            <header className="dm-modal-header">
+              <div>
+                <p className="eyebrow">{bonus ? `${bonus.stage} Resero active · effective values` : 'Effective values'}</p>
+                <h2 id="essence-stats-title">{STATS_LABELS[openStats]}</h2>
+              </div>
+              <button type="button" className="modal-toggle" onClick={() => setOpenStats(null)}>Close</button>
+            </header>
+            {openStats === 'combat' && (
+              <div className="essence-skill-list">
+                {derived.map(([label, value, rollable]) => (
+                  <div className="essence-skill-row" key={label}>
+                    <strong>{label}</strong>
+                    <small />
+                    <span>{fmt(value)}</span>
+                    <small>{rollable && <RollButton roll={d20Roll(label, 'Roll', value)} />}</small>
+                  </div>
+                ))}
+              </div>
+            )}
+            {openStats !== 'combat' && ATTRIBUTE_GROUPS.map((group) => (
+              <section className="essence-panel" key={group.Id}>
+                <h3>{group.Label}</h3>
+                <div className="essence-skill-list">
+                  {openStats === 'attributes' && ESSENCE_ATTRIBUTES.filter((attribute) => attribute.Group === group.Id).map((attribute) => (
+                    <div className="essence-skill-row" key={attribute.Id} title={attribute.Description}>
+                      <strong>{attribute.Name}</strong>
+                      <small>{attribute.Tag.toUpperCase()}</small>
+                      <span>{fmt(stats.attributes[attribute.Id] ?? data.Attributes[attribute.Id] ?? 0)}</span>
+                      <small><RollButton roll={d20Roll(attribute.Name, 'Roll', stats.attributes[attribute.Id] ?? data.Attributes[attribute.Id] ?? 0)} /></small>
+                    </div>
+                  ))}
+                  {openStats === 'skills' && ESSENCE_SKILLS.filter((skill) => skill.Group === group.Id).map((skill) => (
+                    <div className="essence-skill-row" key={skill.Id}>
+                      <strong>{skill.Name}</strong>
+                      <small>{skill.Governors.map(tagName).join(' / ')}</small>
+                      <span>{fmt(stats.skills[skill.Id] ?? data.Skills[skill.Id] ?? 0)}</span>
+                      <small><RollButton roll={d20Roll(skill.Name, 'Roll', stats.skills[skill.Id] ?? data.Skills[skill.Id] ?? 0)} /></small>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
           </section>
         </div>
       )}

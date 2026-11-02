@@ -4,6 +4,7 @@ import Person from './character/Person'
 import type { Attribute } from './character/Attribute'
 import { SKILLS, type Skill } from './character/Skills'
 import { refreshCharacterSheets, updateCharacterSheet, displayName, type CharacterSheetRecord } from './character/CharacterSheetDatabase'
+import { portraitShellClass, portraitStyle, type Portrait } from './character/Portrait'
 import { applyEssenceChange, applySheetChange, logDevelopmentRequest, type DevelopmentRequest, type EssenceChange, type SheetChange } from './character/essence/EssenceChanges'
 import { EssenceSheetBody } from './character/essence/EssenceViews'
 import { spiritWeaponLabel } from './character/essence/EssenceSystem'
@@ -336,6 +337,15 @@ function App() {
     await persistEssence(next)
   }
 
+  // The portrait sits on the record itself so both the Essence block and the shared sheet fields stay untouched.
+  const setPortrait = async (id: string, portrait: Portrait | null) => {
+    const record = essenceSheets.find((sheet) => sheet.Id === id)
+    if (!record) return
+    const next: CharacterSheetRecord = { ...record, Portrait: portrait }
+    setEssenceSheets((sheets) => sheets.map((sheet) => sheet.Id === id ? next : sheet))
+    await persistEssence(next)
+  }
+
   const requestDevelopment = async (id: string, request: DevelopmentRequest) => {
     const record = essenceSheets.find((sheet) => sheet.Id === id)
     if (!record?.Essence) {
@@ -369,7 +379,7 @@ function App() {
 
   if (viewedEssence?.Essence) {
     return (
-      <div className="sheet-shell" data-skin={pageSkin}>
+      <div className={portraitShellClass('sheet-shell', viewedEssence.Portrait)} data-skin={pageSkin} style={portraitStyle(viewedEssence.Portrait)}>
         <header className="sheet-topbar">
           <div>
             <p className="eyebrow">{viewedEssence.CampaignName} · Essence</p>
@@ -382,7 +392,7 @@ function App() {
             <SettingsMenu user={currentUser} pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} onUserChange={activateUser} />
           </div>
         </header>
-        <EssenceSheetBody data={viewedEssence.Essence} role="player" onChange={(change) => void editEssence(viewedEssence.Id, change)} onEssenceChange={(change) => void changeEssence(viewedEssence.Id, change)} development={{ campaignName: viewedEssence.CampaignName, onRequest: (request) => void requestDevelopment(viewedEssence.Id, request) }} />
+        <EssenceSheetBody data={viewedEssence.Essence} role="player" onChange={(change) => void editEssence(viewedEssence.Id, change)} onEssenceChange={(change) => void changeEssence(viewedEssence.Id, change)} development={{ campaignName: viewedEssence.CampaignName, onRequest: (request) => void requestDevelopment(viewedEssence.Id, request) }} portrait={viewedEssence.Portrait} onPortraitChange={(portrait) => void setPortrait(viewedEssence.Id, portrait)} />
       </div>
     )
   }

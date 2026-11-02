@@ -4,6 +4,7 @@ import type { SkillAttribute } from './Skills'
 import type { User } from './User'
 import { DEMO_DM, DEMO_PLAYER } from './MockAuth'
 import type { EssenceCharacterData } from './essence/EssenceTypes'
+import type { Portrait } from './Portrait'
 import { ESSENCE_SYSTEM_ID } from './essence/EssenceSystem'
 import { GILES_YAVIN_MEGATRON, GILES_YAVIN_MEGATRON_NAME } from './essence/EssenceCharacters'
 import { api, resourceList, saveResource } from './Api'
@@ -44,6 +45,34 @@ export type CharacterSheetData = {
   }
   Attributes: Record<PrimaryAttributeName, CharacterAttributeData>
   Skills: CharacterSkillData[]
+  // Present when the character was imported from, and stays synced with, a Google Sheets workbook.
+  SheetSource?: SheetSource
+  // Optional player portrait; its sampled palette themes every sheet that shows the character.
+  Portrait?: Portrait | null
+}
+
+export type SheetSource = {
+  Provider: 'google-sheets'
+  SpreadsheetId: string
+  Url: string
+  Title?: string
+  SyncedAt: string
+  Fingerprint: string
+  LastError?: string
+  LastErrorAt?: string
+}
+
+export type SheetImportResult = {
+  record: CharacterSheetRecord
+  system: { Id: string; Name: string; Ruleset: string; created: boolean }
+  warnings: string[]
+}
+
+export type SheetSyncResult = {
+  record: CharacterSheetRecord
+  changed: boolean
+  pushed: number
+  warnings: string[]
 }
 
 export type CharacterSheetRecord = CharacterSheetData & {
@@ -101,6 +130,20 @@ export async function createCharacterSheet(
   const record = await api<CharacterSheetRecord>('/characters', 'POST', { data, ownerId: owner.Id })
   remember(record)
   return record
+}
+
+// The API downloads the workbook, matches or creates the stat system, and links the record for ongoing sync.
+export async function importCharacterSheetFromGoogleSheets(input: { url: string; campaignName: string; ownerId?: string }): Promise<SheetImportResult> {
+  const result = await api<SheetImportResult>('/characters/import/google-sheets', 'POST', input)
+  remember(result.record)
+  return result
+}
+
+// Pulls the linked workbook now (sheet values win) and pushes any local-only changes back when the host can write.
+export async function syncCharacterSheetWithGoogleSheets(id: string): Promise<SheetSyncResult> {
+  const result = await api<SheetSyncResult>(`/characters/${encodeURIComponent(id)}/sheet-sync`, 'POST')
+  remember(result.record)
+  return result
 }
 
 export async function readCharacterSheet(id: string, _user: User): Promise<CharacterSheetRecord | null> {
@@ -315,3 +358,7 @@ export function seedCharacterRecords(): CharacterSheetRecord[] {
   seedDemoCharacterSheets()
   return [...records.values()].map(clone)
 }
+
+// Placeholder shared-sheet fields for characters whose rules live elsewhere (Essence block or an imported system).
+export const placeholderAttributes = (): Record<PrimaryAttributeName, CharacterAttributeData> => demoAttributes(0)
+export const placeholderGrowth = (): AttributeGrowth => ({ Strength: 1, Dexterity: 1, Constitution: 1, Mental: 1, Social: 1, Mana: 1 })

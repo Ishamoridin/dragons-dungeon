@@ -1,7 +1,7 @@
 import { computeEssenceStats } from './EssenceSystem'
 import type { DevelopmentLogEntry, EssenceCharacterData } from './EssenceTypes'
 
-export type StepKind = 'Attributes' | 'Skills' | 'AttributeUses' | 'SkillUses'
+export type StepKind = 'Attributes' | 'Skills' | 'AttributeUses' | 'SkillUses' | 'MetaphysicalUses' | 'Stats'
 export type SheetRole = 'player' | 'dm'
 
 export type SheetChange = {
@@ -12,7 +12,8 @@ export type SheetChange = {
   purpose?: string
 }
 
-export const isUsesKind = (kind: StepKind) => kind === 'AttributeUses' || kind === 'SkillUses'
+// Development tallies (uses and other statistics) are logged rather than bought with points.
+export const isUsesKind = (kind: StepKind) => kind === 'AttributeUses' || kind === 'SkillUses' || kind === 'MetaphysicalUses' || kind === 'Stats'
 
 export function bucketFor(data: EssenceCharacterData, kind: StepKind): Record<string, number> {
   switch (kind) {
@@ -20,8 +21,13 @@ export function bucketFor(data: EssenceCharacterData, kind: StepKind): Record<st
     case 'Skills': return data.Skills
     case 'AttributeUses': return data.Development.AttributeUses
     case 'SkillUses': return data.Development.SkillUses
+    case 'MetaphysicalUses': return data.Development.Metaphysical
+    case 'Stats': return data.Development.Stats
   }
 }
+
+const categoryFor = (kind: StepKind): DevelopmentLogEntry['Category'] =>
+  kind === 'Attributes' || kind === 'AttributeUses' ? 'attribute' : kind === 'Skills' || kind === 'SkillUses' ? 'skill' : 'other'
 
 // Players may log development uses with a purpose, or spend DM-issued points to raise a value; nothing else.
 export function validateSheetChange(data: EssenceCharacterData, change: SheetChange, role: SheetRole): string | null {
@@ -67,7 +73,7 @@ export function applySheetChange(
       Actor: actor.name,
       Role: 'player',
       Kind: uses ? 'uses' : 'points',
-      Category: change.kind === 'Attributes' || change.kind === 'AttributeUses' ? 'attribute' : 'skill',
+      Category: categoryFor(change.kind),
       Target: change.name,
       Amount: change.amount,
       Before: before,
