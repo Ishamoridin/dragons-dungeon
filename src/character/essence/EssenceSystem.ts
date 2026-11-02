@@ -222,6 +222,9 @@ export type EssenceDerived = {
   reiatsuModifier: number
   reishiModifier: number
   maxBurden: number
+  // Burden of carried inventory items, and what is left before the maximum (shown everywhere except the inventory itself).
+  carriedBurden: number
+  burdenRemaining: number
   points: {
     attributesInvested: number
     skillsInvested: number
@@ -298,6 +301,10 @@ export function computeEssenceStats(data: EssenceCharacterData, reseroStage: Res
   const reseroReiryoku = sum(appliedResero.map((stage) => stage.BonusReiryoku))
   const reseroArmour = Math.max(0, ...appliedResero.map((stage) => stage.BonusArmour))
 
+  const maxBurden = adjusted('maxBurden', a('strength') + a('agility') + a('reiatsuRelease') + a('resolve') + wear.pouch)
+  // Inventory items only, matching the workbook's "Current burden"; worn armour has its own burden column.
+  const carriedBurden = sum((data.Inventory ?? []).map((item) => item.Burden))
+
   return {
     attributes,
     skills,
@@ -317,7 +324,9 @@ export function computeEssenceStats(data: EssenceCharacterData, reseroStage: Res
     brawl: adjusted('brawl', (s('brawl') + a('strength') + a('reiatsuRelease')) / 2 + race.brawl),
     reiatsuModifier: adjusted('reiatsuModifier', a('presence') / 2 + a('reishiManipulation') / 2 + a('reiatsuRelease') / 4 + a('reiryokuControl') / 4),
     reishiModifier: adjusted('reishiModifier', a('presence') / 4 + a('resolve') / 4 + a('reishiManipulation') / 2 + a('reiryokuControl') / 2),
-    maxBurden: adjusted('maxBurden', a('strength') + a('agility') + a('reiatsuRelease') + a('resolve') + wear.pouch),
+    maxBurden,
+    carriedBurden,
+    burdenRemaining: maxBurden - carriedBurden,
     points: {
       attributesInvested,
       skillsInvested,

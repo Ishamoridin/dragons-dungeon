@@ -557,7 +557,7 @@ export function EssenceSheetBody({
   const derived: [string, number, boolean][] = [
     ['Armour', stats.armour, false], ['Dodge', stats.dodge, true], ['Defense', stats.defense, true], ['Initiative', stats.initiative, false],
     ['Ranged mod', stats.ranged, true], ['Weaponry mod', stats.weaponry, true], ['Brawl mod', stats.brawl, true],
-    ['Reiatsu modifier', stats.reiatsuModifier, true], ['Reishi modifier', stats.reishiModifier, true], ['Max burden', stats.maxBurden, false],
+    ['Reiatsu modifier', stats.reiatsuModifier, true], ['Reishi modifier', stats.reishiModifier, true], ['Burden remaining', stats.burdenRemaining, false],
   ]
   const spiritWeaponUses = data.Development.Metaphysical.spiritWeapon ?? 0
   const kido = data.Spells.filter((spell) => spell.Path === 'Kido')
