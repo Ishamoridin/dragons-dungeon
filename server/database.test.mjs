@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { databaseConfig } from './database.mjs'
+import { databaseConfig, describeConnectionFailure } from './database.mjs'
+
+test('explains Atlas TLS rejections as a Network Access problem', () => {
+  const tlsReject = new Error('40BD6FC248790000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:../deps/openssl/openssl/ssl/record/rec_layer_s3.c:918:SSL alert number 80\n')
+  const message = describeConnectionFailure(tlsReject)
+  assert.match(message, /rejected this host's IP address/)
+  assert.match(message, /0\.0\.0\.0\/0/)
+  assert.doesNotMatch(message, /\n/)
+  assert.match(describeConnectionFailure(new Error('Server selection timed out after 10000 ms')), /\(Server selection timed out after 10000 ms\)\. Check credentials/)
+  assert.match(describeConnectionFailure('not an error'), /^MongoDB connection failed\. Check credentials/)
+})
 
 test('requires a configured URI and rejects placeholder credentials', () => {
   assert.throws(() => databaseConfig({}), /Set MONGODB_URI/)

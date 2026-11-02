@@ -28,10 +28,20 @@ export async function connectDatabase(env = process.env) {
     return { client, database }
   } catch (error) {
     await client.close()
-    // Surface the driver's reason (DNS failure, server selection timeout, auth rejection) so hosted deploy logs are actionable.
-    const detail = error instanceof Error && error.message ? ` (${error.message})` : ''
-    throw new Error(`MongoDB connection failed${detail}. Check credentials, Atlas Network Access (hosts such as Render need 0.0.0.0/0 allowed), and connectivity.`, { cause: error })
+    throw new Error(describeConnectionFailure(error), { cause: error })
   }
+}
+
+// Surface the driver's reason (DNS failure, server selection timeout, auth rejection) so hosted deploy logs are actionable.
+export function describeConnectionFailure(error) {
+  const reason = error instanceof Error ? error.message.trim() : ''
+  const detail = reason ? ` (${reason})` : ''
+  // Atlas aborts the TLS handshake with this alert when the client IP is not on the cluster's Network Access list,
+  // so credentials are never even checked. Name that directly instead of leaving an OpenSSL error to decode.
+  if (/tlsv1 alert internal error/i.test(reason)) {
+    return `MongoDB connection failed${detail}. Atlas rejected this host's IP address: add it, or 0.0.0.0/0 for hosts without fixed egress IPs such as Render, under Network Access in Atlas.`
+  }
+  return `MongoDB connection failed${detail}. Check credentials, Atlas Network Access (hosts such as Render need 0.0.0.0/0 allowed), and connectivity.`
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
