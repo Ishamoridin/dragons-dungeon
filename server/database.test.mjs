@@ -16,7 +16,7 @@ test('uses the Atlas URI and an explicit database name', () => {
 
 test('builds the Atlas URI from separate credentials and encodes special characters', () => {
   const config = databaseConfig({ MONGO_USERNAME: 'example@user', MONGO_PASSWORD: 'example:/?#%password' })
-  assert.equal(config.uri, 'mongodb://example%40user:example%3A%2F%3F%23%25password@ac-wiglvce-shard-00-00.btnjg7b.mongodb.net:27017,ac-wiglvce-shard-00-01.btnjg7b.mongodb.net:27017,ac-wiglvce-shard-00-02.btnjg7b.mongodb.net:27017/?ssl=true&replicaSet=atlas-5mxowm-shard-0&authSource=admin')
+  assert.equal(config.uri, 'mongodb://example%40user:example%3A%2F%3F%23%25password@ac-b4mt5i5-shard-00-00.bgpfcdw.mongodb.net:27017,ac-b4mt5i5-shard-00-01.bgpfcdw.mongodb.net:27017,ac-b4mt5i5-shard-00-02.bgpfcdw.mongodb.net:27017/?ssl=true&replicaSet=atlas-ni68fe-shard-0&authSource=admin')
   assert.equal(config.name, 'dragons_dungeon')
   assert.throws(() => databaseConfig({ MONGO_USERNAME: 'example' }), /Set MONGODB_URI/)
 })

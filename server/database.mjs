@@ -7,7 +7,7 @@ export function databaseConfig(env = process.env) {
   const uri = (configuredUri && env.MONGO_USERNAME && env.MONGO_PASSWORD
     ? configuredUri.replaceAll('<db_username>', () => encodeURIComponent(env.MONGO_USERNAME)).replaceAll('<db_password>', () => encodeURIComponent(env.MONGO_PASSWORD))
     : configuredUri) || (env.MONGO_USERNAME && env.MONGO_PASSWORD
-    ? `mongodb://${encodeURIComponent(env.MONGO_USERNAME)}:${encodeURIComponent(env.MONGO_PASSWORD)}@ac-wiglvce-shard-00-00.btnjg7b.mongodb.net:27017,ac-wiglvce-shard-00-01.btnjg7b.mongodb.net:27017,ac-wiglvce-shard-00-02.btnjg7b.mongodb.net:27017/?ssl=true&replicaSet=atlas-5mxowm-shard-0&authSource=admin`
+    ? `mongodb://${encodeURIComponent(env.MONGO_USERNAME)}:${encodeURIComponent(env.MONGO_PASSWORD)}@ac-b4mt5i5-shard-00-00.bgpfcdw.mongodb.net:27017,ac-b4mt5i5-shard-00-01.bgpfcdw.mongodb.net:27017,ac-b4mt5i5-shard-00-02.bgpfcdw.mongodb.net:27017/?ssl=true&replicaSet=atlas-ni68fe-shard-0&authSource=admin`
     : undefined)
   if (!uri || /<db_username>|<db_password>/.test(uri)) {
     throw new Error('Set MONGODB_URI or both MONGO_USERNAME and MONGO_PASSWORD in .env with your Atlas database credentials.')
