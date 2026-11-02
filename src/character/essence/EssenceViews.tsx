@@ -15,6 +15,7 @@ import {
   damageLabel,
   type EssenceDerived,
   type ReseroStage,
+  type AttributeGroupId,
 } from './EssenceSystem'
 import type { EssenceCharacterData } from './EssenceTypes'
 import { bucketFor, isUsesKind, validateDevelopmentRequest, validateSheetChange, type DevelopmentRequest, type EssenceChange, type SheetChange, type SheetRole, type StepKind } from './EssenceChanges'
@@ -139,26 +140,71 @@ function Bars({
   )
 }
 
-function GroupDistribution({ label, definitions, values }: {
+function GroupDistribution({ label, kind, values }: {
   label: string
-  definitions: { Id: string; Group: string }[]
+  kind: 'attributes' | 'skills'
   values: Record<string, number>
 }) {
+  const definitions = kind === 'attributes' ? ESSENCE_ATTRIBUTES : ESSENCE_SKILLS
+  const [openGroup, setOpenGroup] = useState<AttributeGroupId | null>(null)
   const groups = ATTRIBUTE_GROUPS.map((group) => ({
     ...group,
     total: definitions.filter((definition) => definition.Group === group.Id)
       .reduce((sum, definition) => sum + Math.max(0, values[definition.Id] ?? 0), 0),
   }))
   const total = groups.reduce((sum, group) => sum + group.total, 0)
+  const open = groups.find((group) => group.Id === openGroup) ?? null
   return (
     <section className="essence-distribution" aria-label={`${label} distribution`}>
       <div className="essence-distribution-heading"><h3>{label}</h3><span>{fmt(total)}</span></div>
-      <div className="essence-distribution-track" role="img" aria-label={`${label}: ${groups.map((group) => `${group.Label} ${fmt(group.total)}`).join(', ')}`}>
-        {groups.map((group) => <span key={group.Id} className={`essence-group-${group.Id}`} style={{ width: `${total ? group.total / total * 100 : 0}%` }} title={`${group.Label}: ${fmt(group.total)} (${total ? (group.total / total * 100).toFixed(1) : 0}%)`} />)}
+      {/* Each segment opens the list of that group's entries; the whole bar still reads as one figure to screen readers. */}
+      <div className="essence-distribution-track" role="group" aria-label={`${label}: ${groups.map((group) => `${group.Label} ${fmt(group.total)}`).join(', ')}`}>
+        {groups.map((group) => (
+          <button type="button" key={group.Id} className={`essence-group-${group.Id}`} style={{ width: `${total ? group.total / total * 100 : 0}%` }}
+            title={`${group.Label}: ${fmt(group.total)} (${total ? (group.total / total * 100).toFixed(1) : 0}%) · click to list`}
+            aria-label={`${group.Label} ${label.toLowerCase()}: ${fmt(group.total)}. Open list.`}
+            onClick={() => setOpenGroup(group.Id)} />
+        ))}
       </div>
       <div className="essence-distribution-legend">
-        {groups.map((group) => <div key={group.Id}><span className={`essence-group-swatch essence-group-${group.Id}`} aria-hidden="true" /><span>{group.Label}</span><strong>{fmt(group.total)}</strong></div>)}
+        {groups.map((group) => (
+          <button type="button" key={group.Id} className="essence-distribution-legend-item" onClick={() => setOpenGroup(group.Id)}>
+            <span className={`essence-group-swatch essence-group-${group.Id}`} aria-hidden="true" /><span>{group.Label}</span><strong>{fmt(group.total)}</strong>
+          </button>
+        ))}
       </div>
+      {open && (
+        <div className="dm-modal-backdrop dm-modal-backdrop-secondary" onClick={() => setOpenGroup(null)}>
+          <section className="dm-character-modal" role="dialog" aria-modal="true" aria-labelledby="group-list-title" onClick={(event) => event.stopPropagation()}>
+            <header className="dm-modal-header">
+              <div>
+                <p className="eyebrow">{label} · {fmt(open.total)} of {fmt(total)}</p>
+                <h2 id="group-list-title">{open.Label} {label.toLowerCase()}</h2>
+              </div>
+              <button type="button" className="modal-toggle" onClick={() => setOpenGroup(null)}>Close</button>
+            </header>
+            <div className="essence-skill-list">
+              {kind === 'attributes'
+                ? ESSENCE_ATTRIBUTES.filter((attribute) => attribute.Group === open.Id).map((attribute) => (
+                  <div className="essence-skill-row essence-group-list-row" key={attribute.Id}>
+                    <strong>{attribute.Name}</strong>
+                    <small>{attribute.Tag.toUpperCase()}</small>
+                    <span>{fmt(values[attribute.Id] ?? 0)}</span>
+                    <small>{attribute.Description}</small>
+                  </div>
+                ))
+                : ESSENCE_SKILLS.filter((skill) => skill.Group === open.Id).map((skill) => (
+                  <div className="essence-skill-row essence-group-list-row" key={skill.Id}>
+                    <strong>{skill.Name}</strong>
+                    <small>{skill.Governors.map(tagName).join(' / ')}</small>
+                    <span>{fmt(values[skill.Id] ?? 0)}</span>
+                    <small>Governed by {skill.Governors.map(tagName).join(' and ')}</small>
+                  </div>
+                ))}
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   )
 }
@@ -238,8 +284,8 @@ export function EssenceMiniSheet({ data, name, onEdit }: { data: EssenceCharacte
         {resourceError && <small role="alert">{resourceError}</small>}
       </div> : <Bars stats={stats} current={current} />}
       <div className="essence-distributions">
-        <GroupDistribution label="Attributes" definitions={ESSENCE_ATTRIBUTES} values={stats.attributes} />
-        <GroupDistribution label="Skills" definitions={ESSENCE_SKILLS} values={stats.skills} />
+        <GroupDistribution label="Attributes" kind="attributes" values={stats.attributes} />
+        <GroupDistribution label="Skills" kind="skills" values={stats.skills} />
       </div>
       <section className="essence-mini-combat" aria-label="Combat statistics">
         <h3>Combat</h3>
