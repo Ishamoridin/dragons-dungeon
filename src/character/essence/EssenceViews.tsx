@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Backpack, Dumbbell, NotebookPen, RotateCcw, Save, Sparkles, Swords, TrendingUp, UserRound, type LucideIcon } from 'lucide-react'
 import PortraitControl from '../PortraitControl'
 import type { Portrait } from '../Portrait'
@@ -21,6 +21,7 @@ import type { EssenceCharacterData, EssenceTechnique } from './EssenceTypes'
 import { collateTempering, isTempering, temperingSource } from './EssenceTempering'
 import { bucketFor, isUsesKind, validateDevelopmentRequest, validateSheetChange, type DevelopmentRequest, type EssenceChange, type SheetChange, type SheetRole, type StepKind } from './EssenceChanges'
 import { addDevelopmentType, getDevelopmentTypes } from '../CharacterSheetDatabase'
+import { getScreen, rememberScreen } from '../ScreenState'
 import { SheetArt, SheetEmblem, type ArtKind } from './SheetArt'
 import { ArmourPanel, InjuriesPanel, InventoryPanel } from './EssenceInventory'
 import EssenceTree from './EssenceTree'
@@ -303,6 +304,16 @@ export function EssenceMiniSheet({ data, name, onEdit }: { data: EssenceCharacte
 }
 
 type PendingChange = { kind: StepKind; id: string; name: string; direction: 1 | -1 }
+
+// A section title that opens and closes its panel.
+function PanelTitle({ expanded, onToggle, children }: { expanded: boolean; onToggle: () => void; children: ReactNode; 'data-collapsed'?: true }) {
+  return (
+    <button type="button" className="panel-title-toggle" aria-expanded={expanded} onClick={onToggle}>
+      {children}
+      <span className="panel-title-chevron" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+    </button>
+  )
+}
 
 // Players only ever see the plus; the DM also gets a minus to correct values.
 function Stepper({
@@ -610,7 +621,20 @@ export function EssenceSheetBody({
     : undefined
   const [localCurrent, setCurrent] = useState<CurrentValues>({})
   const [reseroStage, setReseroStage] = useState<ReseroStage | null>(null)
-  const stats = computeEssenceStats(data, reseroStage)
+  // Spirit weapons currently summoned; forms such as Stick add armour and bar maxima while wielded.
+  const [activeWeapons, setActiveWeapons] = useState<string[]>([])
+  const stats = computeEssenceStats(data, reseroStage, activeWeapons)
+  // Techniques tab sections collapse by clicking their titles; the choice is remembered with the rest of the screen.
+  const [collapsedPanels, setCollapsedPanels] = useState<string[]>(() => (getScreen<string>('collapsedPanels') ?? '').split(',').filter(Boolean))
+  const panelProps = (id: string) => ({
+    'data-collapsed': collapsedPanels.includes(id) || undefined,
+    onToggle: () => setCollapsedPanels((ids) => {
+      const next = ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]
+      rememberScreen({ collapsedPanels: next.join(',') })
+      return next
+    }),
+    expanded: !collapsedPanels.includes(id),
+  })
   const current = { ...currentEssenceResources(data, stats), ...localCurrent }
   const { points } = stats
   const isDm = role === 'dm'
@@ -682,6 +706,8 @@ export function EssenceSheetBody({
         onCurrentChange={(patch) => setCurrent((values) => ({ ...values, ...patch }))}
         reseroStage={reseroStage}
         onReseroChange={setReseroStage}
+        activeWeapons={activeWeapons}
+        onWeaponsChange={setActiveWeapons}
         derived={derived}
         open={combatOpen}
         onClose={() => setCombatOpen(false)}
@@ -776,8 +802,8 @@ export function EssenceSheetBody({
 
       {tab === 'techniques' && (
         <>
-      <section className="essence-panel">
-        <h2>Spirit weapons</h2>
+      <section className="essence-panel" data-collapsed={panelProps('weapons')['data-collapsed']}>
+        <h2><PanelTitle {...panelProps('weapons')}>Spirit weapons</PanelTitle></h2>
         {data.SpiritWeapons.map((weapon) => (
           <details className="essence-detail" key={weapon.Name} open>
             <summary><strong>{weapon.Name}</strong> · {weapon.Category} · {weapon.Damage}</summary>
@@ -797,8 +823,8 @@ export function EssenceSheetBody({
         ))}
       </section>
 
-      <section className="essence-panel">
-        <h2>Resero <span className="essence-sub">Mastery {data.Mastery} · Potential {data.PotentialStored} / {stats.resero.maxPotential}</span></h2>
+      <section className="essence-panel" data-collapsed={panelProps('resero')['data-collapsed']}>
+        <h2><PanelTitle {...panelProps('resero')}>Resero</PanelTitle> <span className="essence-sub">Mastery {data.Mastery} · Potential {data.PotentialStored} / {stats.resero.maxPotential}</span></h2>
         <p className="essence-note">
           Damage bonus {stats.resero.damageBonus} · armour bonus {stats.resero.armourBonus} · roll bonus +{stats.resero.rollBonus} · {spiritWeaponUses} spirit weapon uses
         </p>
@@ -826,8 +852,8 @@ export function EssenceSheetBody({
         })}
       </section>
 
-      <section className="essence-panel">
-        <h2>Kido and Hado</h2>
+      <section className="essence-panel" data-collapsed={panelProps('spells')['data-collapsed']}>
+        <h2><PanelTitle {...panelProps('spells')}>Kido and Hado</PanelTitle></h2>
         {[['Kido', kido], ['Hado', hado]].map(([label, spells]) => (
           <div key={label as string}>
             <h3>{label as string}</h3>
@@ -856,8 +882,8 @@ export function EssenceSheetBody({
       </section>
 
       {temperings.length > 0 && (
-        <section className="essence-panel tempering-panel">
-          <h2>Tempering <span className="essence-sub">{temperings.length}</span></h2>
+        <section className="essence-panel tempering-panel" data-collapsed={panelProps('tempering')['data-collapsed']}>
+          <h2><PanelTitle {...panelProps('tempering')}>Tempering</PanelTitle> <span className="essence-sub">{temperings.length}</span></h2>
           <p className="essence-note">Every effect from this character's temperings, grouped by how it is used. Open a tempering below for its full text.</p>
           {collateTempering(data.Techniques).map(({ group, effects }) => (
             <div key={group}>
@@ -877,8 +903,8 @@ export function EssenceSheetBody({
         </section>
       )}
 
-      <section className="essence-panel">
-        <h2>Known techniques <span className="essence-sub">{otherTechniques.length}</span></h2>
+      <section className="essence-panel" data-collapsed={panelProps('techniques')['data-collapsed']}>
+        <h2><PanelTitle {...panelProps('techniques')}>Known techniques</PanelTitle> <span className="essence-sub">{otherTechniques.length}</span></h2>
         {otherTechniques.map(renderTechnique)}
       </section>
         </>

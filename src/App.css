@@ -6039,3 +6039,38 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---- Collapsible sheet panels: click a section title to fold its body away ---- */
+.panel-title-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+
+.panel-title-chevron {
+  font-size: 0.7em;
+  opacity: 0.7;
+}
+
+.essence-panel[data-collapsed] > :not(h2) {
+  display: none;
+}
+
+.essence-panel[data-collapsed] > h2 {
+  margin-bottom: 0;
+}
+
+.essence-combat-weapons button small {
+  display: block;
+  font-size: 0.68rem;
+  opacity: 0.8;
+}
