@@ -27,19 +27,22 @@ import arcaneOrnament from './arcane-ornament.svg'
 import rustTexture from './rust-texture.svg'
 import rustOrnament from './rust-ornament.svg'
 
+// Photographic or AI-generated tiles saved as <skin>-texture.png/.jpg/.webp (see PROMPTS.md) take precedence over the SVG.
+const rasterTiles = import.meta.glob<string>('./*-texture.{png,jpg,jpeg,webp}', { eager: true, query: '?url', import: 'default' })
+const rasterFor = (id: string): string | undefined => Object.entries(rasterTiles).find(([path]) => path.includes(`/${id}-texture.`))?.[1]
 export const SKIN_ART: Record<PageSkin, { texture: string; ornament: string }> = {
-  basalt: { texture: basaltTexture, ornament: basaltOrnament },
-  tideglass: { texture: tideglassTexture, ornament: tideglassOrnament },
-  wildwood: { texture: wildwoodTexture, ornament: wildwoodOrnament },
-  moonstone: { texture: moonstoneTexture, ornament: moonstoneOrnament },
-  matrix: { texture: matrixTexture, ornament: matrixOrnament },
-  sao: { texture: saoTexture, ornament: saoOrnament },
-  startrek: { texture: startrekTexture, ornament: startrekOrnament },
-  stone: { texture: stoneTexture, ornament: stoneOrnament },
-  moonsilver: { texture: moonsilverTexture, ornament: moonsilverOrnament },
-  steel: { texture: steelTexture, ornament: steelOrnament },
-  arcane: { texture: arcaneTexture, ornament: arcaneOrnament },
-  rust: { texture: rustTexture, ornament: rustOrnament },
+  basalt: { texture: rasterFor('basalt') ?? basaltTexture, ornament: basaltOrnament },
+  tideglass: { texture: rasterFor('tideglass') ?? tideglassTexture, ornament: tideglassOrnament },
+  wildwood: { texture: rasterFor('wildwood') ?? wildwoodTexture, ornament: wildwoodOrnament },
+  moonstone: { texture: rasterFor('moonstone') ?? moonstoneTexture, ornament: moonstoneOrnament },
+  matrix: { texture: rasterFor('matrix') ?? matrixTexture, ornament: matrixOrnament },
+  sao: { texture: rasterFor('sao') ?? saoTexture, ornament: saoOrnament },
+  startrek: { texture: rasterFor('startrek') ?? startrekTexture, ornament: startrekOrnament },
+  stone: { texture: rasterFor('stone') ?? stoneTexture, ornament: stoneOrnament },
+  moonsilver: { texture: rasterFor('moonsilver') ?? moonsilverTexture, ornament: moonsilverOrnament },
+  steel: { texture: rasterFor('steel') ?? steelTexture, ornament: steelOrnament },
+  arcane: { texture: rasterFor('arcane') ?? arcaneTexture, ornament: arcaneOrnament },
+  rust: { texture: rasterFor('rust') ?? rustTexture, ornament: rustOrnament },
 }
 
 // Inline variables consumed by the skin rules in App.css.
