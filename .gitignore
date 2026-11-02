@@ -29,3 +29,6 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+
+# scratch downloads for skin texture generation
+.skin-gen/

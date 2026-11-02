@@ -1794,10 +1794,11 @@ h1 {
   color: var(--skin-text);
   font-family: var(--skin-font, inherit);
   background-color: #110f16;
-  background-image: var(--skin-texture, none), var(--skin-page-bg);
-  background-size: var(--skin-texture-size, 512px 512px), auto;
-  background-attachment: fixed, fixed;
-  background-blend-mode: var(--skin-texture-blend, soft-light), normal;
+  /* An optional veil sits over the texture so bright raster tiles can be dimmed without touching the palette. */
+  background-image: var(--skin-texture-veil, linear-gradient(transparent, transparent)), var(--skin-texture, none), var(--skin-page-bg);
+  background-size: auto, var(--skin-texture-size, 512px 512px), auto;
+  background-attachment: fixed, fixed, fixed;
+  background-blend-mode: normal, var(--skin-texture-blend, soft-light), normal;
 }
 
 .sheet-shell[data-skin] {
@@ -1950,8 +1951,9 @@ h1 {
   --skin-accent: #75d4cb;
   --skin-accent-strong: #21827f;
   --skin-border: rgba(191, 250, 244, 0.35);
-  --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.45;
+  --skin-texture-blend: multiply;
+  --skin-texture-size: 768px 768px;
+  --skin-panel-texture-opacity: 0.5;
   --skin-radius: 18px;
   --skin-gap: 20px;
   --skin-pad: 16px 20px;
@@ -1977,8 +1979,10 @@ h1 {
   --skin-accent: #c6d982;
   --skin-accent-strong: #6b813a;
   --skin-border: rgba(120, 90, 50, 0.75);
-  --skin-texture-blend: multiply;
-  --skin-panel-texture-opacity: 0.95;
+  --skin-texture-blend: normal;
+  --skin-texture-size: 768px 768px;
+  --skin-texture-veil: linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.38));
+  --skin-panel-texture-opacity: 0.55;
   --skin-radius: 6px;
   --skin-border-w: 3px;
   --skin-border-style: double;
@@ -2002,8 +2006,9 @@ h1 {
   --skin-accent: #c7b8ff;
   --skin-accent-strong: #7c6bd9;
   --skin-border: rgba(199, 184, 255, 0.35);
-  --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.55;
+  --skin-texture-blend: multiply;
+  --skin-texture-size: 768px 768px;
+  --skin-panel-texture-opacity: 0.6;
   --skin-radius: 24px;
   --skin-gap: 22px;
   --skin-pad: 18px 22px;
@@ -2025,7 +2030,9 @@ h1 {
   --skin-accent-strong: #0a7d28;
   --skin-border: rgba(0, 255, 65, 0.45);
   --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.55;
+  --skin-texture-size: 768px 768px;
+  --skin-texture-veil: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45));
+  --skin-panel-texture-opacity: 0.35;
   --skin-radius: 0;
   --skin-border-style: dashed;
   --skin-pad: 12px 12px;
@@ -2060,7 +2067,9 @@ h1 {
   --skin-accent-strong: #1f7fb3;
   --skin-border: rgba(74, 217, 255, 0.45);
   --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.7;
+  --skin-texture-size: 768px 768px;
+  --skin-texture-veil: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3));
+  --skin-panel-texture-opacity: 0.45;
   --skin-radius: 16px;
   --skin-gap: 24px;
   --skin-pad: 18px 22px;
@@ -2101,7 +2110,9 @@ h1 {
   --skin-accent-strong: #cc6699;
   --skin-border: rgba(255, 153, 0, 0.5);
   --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.35;
+  --skin-texture-size: 768px 768px;
+  --skin-texture-veil: linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72));
+  --skin-panel-texture-opacity: 0.18;
   --skin-radius: 0 18px 18px 0;
   --skin-border-w: 1px;
   --skin-pad: 14px 18px 14px 20px;
@@ -2163,7 +2174,8 @@ h1 {
   --skin-accent-strong: #8c5f22;
   --skin-border: rgba(20, 16, 14, 0.9);
   --skin-texture-blend: multiply;
-  --skin-panel-texture-opacity: 1;
+  --skin-texture-size: 768px 768px;
+  --skin-panel-texture-opacity: 0.85;
   --skin-radius: 3px;
   --skin-border-w: 3px;
   --skin-pad: 20px 22px;
@@ -2203,7 +2215,8 @@ h1 {
   --skin-accent: #e6edfb;
   --skin-accent-strong: #7f8ea8;
   --skin-border: rgba(230, 238, 255, 0.6);
-  --skin-texture-blend: soft-light;
+  --skin-texture-blend: multiply;
+  --skin-texture-size: 768px 768px;
   --skin-panel-texture-opacity: 0.9;
   --skin-radius: 14px;
   --skin-gap: 30px;
@@ -2236,8 +2249,9 @@ h1 {
   --skin-accent: #d7e2ee;
   --skin-accent-strong: #6c7f91;
   --skin-border: rgba(230, 236, 242, 0.55);
-  --skin-texture-blend: overlay;
-  --skin-panel-texture-opacity: 1;
+  --skin-texture-blend: multiply;
+  --skin-texture-size: 768px 768px;
+  --skin-panel-texture-opacity: 0.8;
   --skin-radius: 4px;
   --skin-pad: 10px 12px;
   --skin-gap: 8px;
@@ -2281,8 +2295,10 @@ h1 {
   --skin-accent: #5ab4ff;
   --skin-accent-strong: #2a6fd6;
   --skin-border: rgba(90, 180, 255, 0.55);
-  --skin-texture-blend: screen;
-  --skin-panel-texture-opacity: 0.75;
+  --skin-texture-blend: normal;
+  --skin-texture-size: 768px 768px;
+  --skin-texture-veil: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42));
+  --skin-panel-texture-opacity: 0.5;
   --skin-radius: 22px;
   --skin-gap: 22px;
   --skin-pad: 18px 22px;
@@ -2328,7 +2344,8 @@ h1 {
   --skin-accent-strong: #8f4b1b;
   --skin-border: rgba(36, 20, 12, 0.95);
   --skin-texture-blend: multiply;
-  --skin-panel-texture-opacity: 1;
+  --skin-texture-size: 768px 768px;
+  --skin-panel-texture-opacity: 0.85;
   --skin-radius: 5px 3px 6px 2px;
   --skin-border-w: 2px;
   --skin-pad: 16px 18px;
@@ -5659,4 +5676,294 @@ h1 {
 .essence-group-list-row > small:last-child {
   grid-column: 1 / -1;
   opacity: 0.8;
+}
+
+/* ---- Skin motion ----
+   Overlays (modals, the settings popover, the tutorial panel) animate in on mount and out through the inert
+   `.skin-closing` clone that src/skins/motion.ts leaves behind on unmount. Tab panels (DM campaign pages and
+   player sheet tabs) animate in on every switch. Each skin picks its own keyframes, duration, easing and
+   transform origin through these variables; the generic rules below consume them. */
+[data-skin] {
+  --skin-open: skin-fade-up;
+  --skin-open-dur: 0.28s;
+  --skin-open-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --skin-close: skin-fade-down;
+  --skin-close-dur: 0.2s;
+  --skin-close-ease: ease-in;
+  --skin-tab: skin-fade-up;
+  --skin-tab-dur: 0.3s;
+  --skin-tab-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --skin-motion-origin: center;
+}
+
+[data-skin] .dm-modal-backdrop,
+[data-skin] .attribute-modal-backdrop {
+  animation: skin-backdrop-in var(--skin-open-dur) ease-out both;
+}
+
+[data-skin] .dm-character-modal,
+[data-skin] .attribute-modal,
+[data-skin] .settings-menu-panel,
+[data-skin] .tutorial-panel {
+  transform-origin: var(--skin-motion-origin);
+  animation: var(--skin-open) var(--skin-open-dur) var(--skin-open-ease) both;
+}
+
+.skin-closing { pointer-events: none !important; }
+
+[data-skin] .skin-closing.dm-modal-backdrop,
+[data-skin] .skin-closing.attribute-modal-backdrop {
+  animation: skin-backdrop-out var(--skin-close-dur) ease-in both;
+}
+
+[data-skin] .skin-closing .dm-character-modal,
+[data-skin] .skin-closing .attribute-modal,
+[data-skin] .skin-closing.settings-menu-panel,
+[data-skin] .skin-closing.tutorial-panel {
+  animation: var(--skin-close) var(--skin-close-dur) var(--skin-close-ease) both;
+}
+
+[data-skin] .campaign-page > section,
+[data-skin] .sheet-tabs ~ * {
+  transform-origin: var(--skin-motion-origin);
+  animation: var(--skin-tab) var(--skin-tab-dur) var(--skin-tab-ease) both;
+}
+
+/* Arcane panels keep their breathing glow alongside the tab entrance. */
+[data-skin='arcane'] .sheet-tabs ~ .essence-panel {
+  animation: var(--skin-tab) var(--skin-tab-dur) var(--skin-tab-ease) both, arcane-breathe 6s ease-in-out infinite;
+}
+
+@keyframes skin-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes skin-backdrop-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes skin-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes skin-fade-down { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px); } }
+
+/* Basalt: glass snaps into place with a flash of sheen. */
+[data-skin='basalt'] {
+  --skin-open: skin-basalt-open; --skin-open-dur: 0.24s;
+  --skin-close: skin-basalt-close; --skin-close-dur: 0.16s;
+  --skin-tab: skin-basalt-tab; --skin-tab-dur: 0.26s;
+}
+@keyframes skin-basalt-open {
+  0% { opacity: 0; transform: scale(0.94); filter: brightness(1.6); }
+  60% { opacity: 1; filter: brightness(1.15); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+@keyframes skin-basalt-close { to { opacity: 0; transform: scale(0.97); filter: brightness(1.4); } }
+@keyframes skin-basalt-tab { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+
+/* Tideglass: surfaces swim into focus through water. */
+[data-skin='tideglass'] {
+  --skin-open: skin-tideglass-open; --skin-open-dur: 0.5s; --skin-open-ease: ease-out;
+  --skin-close: skin-tideglass-close; --skin-close-dur: 0.32s;
+  --skin-tab: skin-tideglass-tab; --skin-tab-dur: 0.5s; --skin-tab-ease: ease-out;
+}
+@keyframes skin-tideglass-open {
+  from { opacity: 0; transform: scale(1.04); filter: blur(12px) saturate(1.4); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes skin-tideglass-close { to { opacity: 0; transform: scale(1.02); filter: blur(10px); } }
+@keyframes skin-tideglass-tab {
+  0% { opacity: 0; transform: translateY(16px); filter: blur(6px); }
+  60% { transform: translateY(-3px); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+/* Wildwood: panels unfold like a book cover and pages turn. */
+[data-skin='wildwood'] {
+  --skin-open: skin-wildwood-open; --skin-open-dur: 0.42s; --skin-open-ease: cubic-bezier(0.3, 0.9, 0.3, 1);
+  --skin-close: skin-wildwood-close; --skin-close-dur: 0.26s;
+  --skin-tab: skin-wildwood-tab; --skin-tab-dur: 0.4s; --skin-tab-ease: cubic-bezier(0.3, 0.9, 0.3, 1);
+  --skin-motion-origin: top left;
+}
+@keyframes skin-wildwood-open {
+  from { opacity: 0; transform: perspective(1100px) rotateX(-16deg) translateY(-10px); }
+  to { opacity: 1; transform: perspective(1100px) rotateX(0) translateY(0); }
+}
+@keyframes skin-wildwood-close { to { opacity: 0; transform: perspective(1100px) rotateX(10deg) translateY(6px); } }
+@keyframes skin-wildwood-tab {
+  from { opacity: 0; transform: perspective(1400px) rotateY(-12deg); }
+  to { opacity: 1; transform: perspective(1400px) rotateY(0); }
+}
+
+/* Moonstone: a slow pearly bloom. */
+[data-skin='moonstone'] {
+  --skin-open: skin-moonstone-open; --skin-open-dur: 0.6s; --skin-open-ease: ease-out;
+  --skin-close: skin-moonstone-close; --skin-close-dur: 0.4s; --skin-close-ease: ease-out;
+  --skin-tab: skin-moonstone-tab; --skin-tab-dur: 0.6s; --skin-tab-ease: ease-out;
+}
+@keyframes skin-moonstone-open {
+  0% { opacity: 0; transform: scale(0.98); filter: brightness(2) blur(6px); }
+  50% { opacity: 1; filter: brightness(1.3) blur(1px); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+@keyframes skin-moonstone-close { to { opacity: 0; transform: scale(1.01); filter: brightness(1.8) blur(6px); } }
+@keyframes skin-moonstone-tab {
+  0% { opacity: 0; filter: brightness(1.5) blur(3px); }
+  100% { opacity: 1; filter: none; }
+}
+
+/* Matrix: a scanline reveal with phosphor flicker. */
+[data-skin='matrix'] {
+  --skin-open: skin-matrix-open; --skin-open-dur: 0.36s; --skin-open-ease: linear;
+  --skin-close: skin-matrix-close; --skin-close-dur: 0.24s; --skin-close-ease: linear;
+  --skin-tab: skin-matrix-tab; --skin-tab-dur: 0.28s; --skin-tab-ease: steps(5, end);
+}
+@keyframes skin-matrix-open {
+  0% { opacity: 0; clip-path: inset(0 0 100% 0); filter: brightness(2) contrast(1.4); }
+  8% { opacity: 1; }
+  14% { opacity: 0.5; }
+  20% { opacity: 1; }
+  70% { filter: brightness(1.3) contrast(1.1); }
+  100% { opacity: 1; clip-path: inset(0 0 0 0); filter: none; }
+}
+@keyframes skin-matrix-close {
+  0% { clip-path: inset(0 0 0 0); filter: brightness(1.8); }
+  40% { opacity: 0.7; }
+  100% { opacity: 0; clip-path: inset(100% 0 0 0); filter: brightness(2.4) contrast(1.6); }
+}
+@keyframes skin-matrix-tab {
+  0% { opacity: 0; transform: translateX(-8px); filter: brightness(1.8); }
+  40% { opacity: 1; transform: translateX(6px); }
+  70% { transform: translateX(-3px); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+/* Sword Art Online: menu windows expand from a bright line. */
+[data-skin='sao'] {
+  --skin-open: skin-sao-open; --skin-open-dur: 0.4s; --skin-open-ease: cubic-bezier(0.2, 0.9, 0.2, 1);
+  --skin-close: skin-sao-close; --skin-close-dur: 0.28s; --skin-close-ease: cubic-bezier(0.6, 0, 0.8, 0.4);
+  --skin-tab: skin-sao-tab; --skin-tab-dur: 0.24s; --skin-tab-ease: cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@keyframes skin-sao-open {
+  0% { opacity: 0; transform: scale(0.1, 0.02); filter: brightness(4); }
+  45% { opacity: 1; transform: scale(1, 0.02); filter: brightness(3); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+@keyframes skin-sao-close {
+  0% { opacity: 1; transform: none; }
+  55% { opacity: 1; transform: scale(1, 0.02); filter: brightness(3); }
+  100% { opacity: 0; transform: scale(0.1, 0.02); filter: brightness(4); }
+}
+@keyframes skin-sao-tab {
+  from { opacity: 0; transform: translateX(28px); filter: brightness(1.6); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+/* Star Trek: LCARS wipes across in a hard-edged sweep. */
+[data-skin='startrek'] {
+  --skin-open: skin-startrek-open; --skin-open-dur: 0.34s; --skin-open-ease: cubic-bezier(0.1, 0.8, 0.3, 1);
+  --skin-close: skin-startrek-close; --skin-close-dur: 0.24s; --skin-close-ease: ease-in;
+  --skin-tab: skin-startrek-tab; --skin-tab-dur: 0.32s; --skin-tab-ease: steps(6, end);
+}
+@keyframes skin-startrek-open { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes skin-startrek-close { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 0 100%); } }
+@keyframes skin-startrek-tab { from { clip-path: inset(0 0 100% 0); opacity: 0.6; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+
+/* Rough Stone: slabs drop, land heavy and settle. */
+[data-skin='stone'] {
+  --skin-open: skin-stone-open; --skin-open-dur: 0.44s; --skin-open-ease: linear;
+  --skin-close: skin-stone-close; --skin-close-dur: 0.26s; --skin-close-ease: cubic-bezier(0.5, 0, 0.9, 0.6);
+  --skin-tab: skin-stone-tab; --skin-tab-dur: 0.4s; --skin-tab-ease: linear;
+}
+@keyframes skin-stone-open {
+  0% { opacity: 0; transform: translateY(-48px); }
+  55% { opacity: 1; transform: translateY(0); }
+  68% { transform: translateY(6px) scale(1.01, 0.99); }
+  82% { transform: translateY(-3px); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes skin-stone-close { to { opacity: 0; transform: translateY(36px); } }
+@keyframes skin-stone-tab {
+  0% { opacity: 0; transform: scale(1.05); }
+  45% { opacity: 1; transform: scale(1); }
+  58% { transform: translate(-3px, 1px); }
+  70% { transform: translate(3px, -1px); }
+  82% { transform: translate(-1px, 0); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* Moonlit Silver: a soft glint passes over as it fades in. */
+[data-skin='moonsilver'] {
+  --skin-open: skin-moonsilver-open; --skin-open-dur: 0.46s; --skin-open-ease: ease-out;
+  --skin-close: skin-moonsilver-close; --skin-close-dur: 0.3s; --skin-close-ease: ease-out;
+  --skin-tab: skin-moonsilver-tab; --skin-tab-dur: 0.42s; --skin-tab-ease: ease-out;
+}
+@keyframes skin-moonsilver-open {
+  0% { opacity: 0; transform: translateY(8px); filter: brightness(0.6); }
+  55% { opacity: 1; filter: brightness(1.35); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+@keyframes skin-moonsilver-close { to { opacity: 0; transform: scale(1.01); filter: brightness(1.5); } }
+@keyframes skin-moonsilver-tab {
+  0% { opacity: 0; transform: translateY(6px); filter: brightness(0.8); }
+  60% { filter: brightness(1.2); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+/* Polished Steel: drawers slide and lock with a snap. */
+[data-skin='steel'] {
+  --skin-open: skin-steel-open; --skin-open-dur: 0.22s; --skin-open-ease: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --skin-close: skin-steel-close; --skin-close-dur: 0.16s; --skin-close-ease: cubic-bezier(0.6, 0, 1, 0.6);
+  --skin-tab: skin-steel-tab; --skin-tab-dur: 0.2s; --skin-tab-ease: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --skin-motion-origin: left center;
+}
+@keyframes skin-steel-open {
+  0% { opacity: 0; transform: translateX(-44px); }
+  80% { opacity: 1; transform: translateX(3px); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes skin-steel-close { to { opacity: 0; transform: translateX(44px); } }
+@keyframes skin-steel-tab { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+
+/* Arcane Steel: runes charge up, flare and settle. */
+[data-skin='arcane'] {
+  --skin-open: skin-arcane-open; --skin-open-dur: 0.52s; --skin-open-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --skin-close: skin-arcane-close; --skin-close-dur: 0.3s; --skin-close-ease: ease-in;
+  --skin-tab: skin-arcane-tab; --skin-tab-dur: 0.46s; --skin-tab-ease: ease-out;
+}
+@keyframes skin-arcane-open {
+  0% { opacity: 0; transform: scale(0.9); filter: brightness(0.4) hue-rotate(50deg); }
+  60% { opacity: 1; transform: scale(1.01); filter: brightness(1.5) hue-rotate(0deg); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+@keyframes skin-arcane-close { to { opacity: 0; transform: scale(1.04); filter: brightness(2) blur(4px); } }
+@keyframes skin-arcane-tab {
+  0% { opacity: 0; transform: scale(0.985); filter: brightness(1.6) blur(2px); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+
+/* Rusted Iron: hinges creak, plates swing in crooked and settle. */
+[data-skin='rust'] {
+  --skin-open: skin-rust-open; --skin-open-dur: 0.5s; --skin-open-ease: linear;
+  --skin-close: skin-rust-close; --skin-close-dur: 0.3s; --skin-close-ease: cubic-bezier(0.5, 0, 0.8, 0.5);
+  --skin-tab: skin-rust-tab; --skin-tab-dur: 0.4s; --skin-tab-ease: linear;
+  --skin-motion-origin: top left;
+}
+@keyframes skin-rust-open {
+  0% { opacity: 0; transform: rotate(-2.5deg) translateY(-16px); }
+  35% { opacity: 1; transform: rotate(-2.5deg) translateY(-4px); }
+  50% { transform: rotate(0.8deg) translateY(2px); }
+  70% { transform: rotate(-0.4deg) translateY(0); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes skin-rust-close { to { opacity: 0; transform: rotate(1.8deg) translateY(20px); } }
+@keyframes skin-rust-tab {
+  0% { opacity: 0; transform: translateY(-6px) rotate(-0.4deg); }
+  30% { opacity: 1; transform: translateY(3px) rotate(0.3deg); }
+  55% { transform: translateY(-1px) rotate(0); }
+  100% { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin] .dm-modal-backdrop,
+  [data-skin] .attribute-modal-backdrop,
+  [data-skin] .dm-character-modal,
+  [data-skin] .attribute-modal,
+  [data-skin] .settings-menu-panel,
+  [data-skin] .tutorial-panel,
+  [data-skin] .campaign-page > section,
+  [data-skin] .sheet-tabs ~ * { animation: none; }
+  [data-skin='arcane'] .sheet-tabs ~ .essence-panel { animation: none; }
 }
