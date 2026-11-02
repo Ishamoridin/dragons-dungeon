@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { CalendarClock, Flag, GanttChart, Package, Plus, Skull, Swords, Users, type LucideIcon } from 'lucide-react'
 import { loadResources, resourceList, saveResource } from './Api'
 import NewSystemModal from './NewSystemModal'
 import ImportSheetModal from './ImportSheetModal'
@@ -68,6 +68,10 @@ type DMConsoleProps = {
 }
 
 const CAMPAIGN_PAGES = ['Players', 'Factions', 'NPCs', 'Techniques', 'Items', 'Events', 'Timeline'] as const
+// Tabs show these icons instead of their names so all seven fit on one row; the name remains the tooltip and label.
+const CAMPAIGN_PAGE_ICONS: Record<(typeof CAMPAIGN_PAGES)[number], LucideIcon> = {
+  Players: Users, Factions: Flag, NPCs: Skull, Techniques: Swords, Items: Package, Events: CalendarClock, Timeline: GanttChart,
+}
 type CampaignPage = (typeof CAMPAIGN_PAGES)[number]
 
 // Saved records override built-ins with the same Id, e.g. a reassigned Essence system.
@@ -1699,19 +1703,25 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
             </label>
           </header>
 
-          <nav className="campaign-tabs" role="tablist" aria-label={`${selectedCampaign.Name} pages`}>
-            {CAMPAIGN_PAGES.map((page) => (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={campaignPage === page}
-                className={campaignPage === page ? 'active' : ''}
-                key={page}
-                onClick={() => setCampaignPage(page)}
-              >
-                {page}
-              </button>
-            ))}
+          <nav className="campaign-tabs campaign-tabs-icons" role="tablist" aria-label={`${selectedCampaign.Name} pages`}>
+            {CAMPAIGN_PAGES.map((page) => {
+              const Icon = CAMPAIGN_PAGE_ICONS[page]
+              return (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={campaignPage === page}
+                  aria-label={page}
+                  title={page}
+                  className={campaignPage === page ? 'active' : ''}
+                  key={page}
+                  onClick={() => setCampaignPage(page)}
+                >
+                  <Icon size={20} aria-hidden="true" />
+                  <span className="visually-hidden">{page}</span>
+                </button>
+              )
+            })}
           </nav>
 
           <main className="campaign-page" role="tabpanel">

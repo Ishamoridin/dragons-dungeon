@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RotateCcw, Save } from 'lucide-react'
+import { Backpack, Dumbbell, NotebookPen, RotateCcw, Save, Sparkles, Swords, TrendingUp, UserRound, type LucideIcon } from 'lucide-react'
 import PortraitControl from '../PortraitControl'
 import type { Portrait } from '../Portrait'
 import {
@@ -464,14 +464,15 @@ function DevelopmentDialog({
 
 type TabId = Exclude<ArtKind, 'combat'>
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'basic', label: 'Basic Info and Injuries' },
-  { id: 'equipment', label: 'Equipment and Inventory' },
-  { id: 'attributes', label: 'Attributes and Skills' },
-  { id: 'development', label: 'Development' },
-  { id: 'techniques', label: 'Techniques' },
-  { id: 'essence', label: 'Essence' },
-  { id: 'notes', label: 'Other Notes' },
+// Tabs render as icons so every section fits on one row; the name stays as the tooltip and accessible label.
+const TABS: { id: TabId; label: string; Icon: LucideIcon }[] = [
+  { id: 'basic', label: 'Basic Info and Injuries', Icon: UserRound },
+  { id: 'equipment', label: 'Equipment and Inventory', Icon: Backpack },
+  { id: 'attributes', label: 'Attributes and Skills', Icon: Dumbbell },
+  { id: 'development', label: 'Development', Icon: TrendingUp },
+  { id: 'techniques', label: 'Techniques', Icon: Swords },
+  { id: 'essence', label: 'Essence', Icon: Sparkles },
+  { id: 'notes', label: 'Other Notes', Icon: NotebookPen },
 ]
 
 // Always visible above the tabs; opens the combat modal with the action buttons.
@@ -606,10 +607,11 @@ export function EssenceSheetBody({
         onClose={() => setCombatOpen(false)}
       />
 
-      <nav className="sheet-tabs" role="tablist" aria-label="Character sheet sections">
+      <nav className="sheet-tabs sheet-tabs-icons" role="tablist" aria-label="Character sheet sections">
         {TABS.map((item) => (
-          <button type="button" role="tab" key={item.id} aria-selected={tab === item.id} className={tab === item.id ? 'active' : ''} onClick={() => setTab(item.id)}>
-            {item.label}
+          <button type="button" role="tab" key={item.id} aria-selected={tab === item.id} aria-label={item.label} title={item.label} className={tab === item.id ? 'active' : ''} onClick={() => setTab(item.id)}>
+            <item.Icon size={20} aria-hidden="true" />
+            <span className="visually-hidden">{item.label}</span>
           </button>
         ))}
       </nav>

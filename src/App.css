@@ -5162,3 +5162,32 @@ h1 {
 .account-section .new-system-footer {
   justify-content: flex-end;
 }
+
+/* Icon tab rows: equal-width buttons so every section fits on one line */
+.sheet-tabs-icons {
+  flex-wrap: nowrap;
+}
+
+.sheet-tabs-icons button,
+.campaign-tabs-icons button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 6px;
+}
+
+.sheet-tabs-icons button svg,
+.campaign-tabs-icons button svg {
+  flex: 0 0 auto;
+}
+
+.sheet-tabs-icons button.active svg,
+.campaign-tabs-icons button.active svg {
+  color: var(--skin-accent, #b39ef8);
+}
+
+.campaign-tabs-icons {
+  overflow-x: visible;
+}
