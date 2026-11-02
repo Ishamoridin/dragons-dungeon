@@ -148,6 +148,13 @@ export async function syncCharacterSheetWithGoogleSheets(id: string): Promise<Sh
   return result
 }
 
+// DM only: hands the character to another managed account and/or moves it to another campaign.
+export async function transferCharacterSheet(id: string, changes: { ownerId?: string; campaignName?: string }): Promise<CharacterSheetRecord> {
+  const record = await api<CharacterSheetRecord>(`/characters/${encodeURIComponent(id)}/transfer`, 'POST', changes)
+  remember(record)
+  return record
+}
+
 export async function readCharacterSheet(id: string, _user: User): Promise<CharacterSheetRecord | null> {
   const record = await api<CharacterSheetRecord>(`/characters/${encodeURIComponent(id)}`)
   remember(record)

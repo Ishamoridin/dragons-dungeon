@@ -4996,3 +4996,146 @@ h1 {
   background: rgba(255, 120, 120, 0.18);
   outline: none;
 }
+
+/* NPC sheet buttons on the Factions and NPCs tabs */
+.world-entity-row .npc-sheet-button {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+/* Interactive timeline board: time left to right, location lanes top to bottom */
+.timeline-board-wrap {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 18px;
+}
+
+.timeline-board {
+  display: grid;
+  grid-template-columns: minmax(110px, 160px) 1fr;
+  grid-template-rows: auto;
+  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  background: var(--skin-panel-bg, rgba(0, 0, 0, 0.3));
+  overflow: hidden;
+}
+
+.timeline-lane-labels {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1;
+  border-right: 1px solid var(--skin-border, rgba(255, 255, 255, 0.15));
+}
+
+.timeline-lane-label {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  color: var(--skin-muted, #aaa3b4);
+  border-bottom: 1px solid var(--skin-border, rgba(255, 255, 255, 0.08));
+}
+
+.timeline-lanes {
+  position: relative;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1;
+  min-height: 120px;
+  touch-action: none;
+}
+
+.timeline-lane {
+  border-bottom: 1px solid var(--skin-border, rgba(255, 255, 255, 0.08));
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: calc(100% / 6) 100%;
+}
+
+.timeline-now-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--skin-accent, #b39ef8);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.timeline-now-line span {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 0.7rem;
+  color: var(--skin-accent, #b39ef8);
+}
+
+.timeline-chip {
+  position: absolute;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  min-width: 120px;
+  max-width: 200px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.2));
+  background: var(--skin-card-bg, rgba(255, 255, 255, 0.08));
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: grab;
+  user-select: none;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.timeline-chip strong {
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.timeline-chip small {
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.timeline-chip:focus-visible {
+  outline: 2px solid var(--skin-accent, #b39ef8);
+  outline-offset: 2px;
+}
+
+.timeline-chip-dragging {
+  cursor: grabbing;
+  border-color: var(--skin-accent, #b39ef8);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+
+.timeline-chip-completed {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.timeline-ticks {
+  position: relative;
+  grid-column: 2;
+  height: 26px;
+  border-top: 1px solid var(--skin-border, rgba(255, 255, 255, 0.15));
+}
+
+.timeline-ticks span {
+  position: absolute;
+  top: 5px;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--skin-muted, #aaa3b4);
+  white-space: nowrap;
+}
+
+.timeline-ticks span:first-child {
+  transform: none;
+}
+
+.timeline-ticks span:last-child {
+  transform: translateX(-100%);
+}

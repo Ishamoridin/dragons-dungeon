@@ -9,12 +9,15 @@ import SettingsMenu from './SettingsMenu'
 import EssenceAdjustmentModal from './essence/EssenceAdjustmentModal'
 import type { CampaignAction, CampaignEventType, NPCFactionGroup } from './Campaign'
 import type Person from './Person'
-import { PlayerClass } from './PlayerClass'
+import { PlayerClass, PRIMARY_ATTRIBUTE_NAMES } from './PlayerClass'
 import { AUGMENTATION_OPTIONS, EQUIPMENT_OPTIONS, INJURY_OPTIONS, INVENTORY_OPTIONS } from './CharacterOptions'
 import { CAMPAIGN_EVENT_TEMPLATES, Campaign } from './Campaign'
 import {
   refreshCharacterSheets,
   updateCharacterSheet,
+  createCharacterSheet,
+  placeholderAttributes,
+  placeholderGrowth,
   displayName,
   softDeleteCharacterSheet,
   listDeletedCharacterSheets,
@@ -26,12 +29,14 @@ import {
   type CharacterSkillData,
   type SheetSource,
 } from './CharacterSheetDatabase'
+import TransferModal from './TransferModal'
+import TimelineBoard from './TimelineBoard'
 import type { User } from './User'
 import PageSkinSelector from './PageSkinSelector'
 import type { PageSkin } from './PageSkin'
 import { DEFAULT_STAT_SYSTEM_ID, STAT_SYSTEMS, type StatSystem } from './StatSystems'
 import { EssenceActions, EssenceMiniSheet, EssenceSheetBody } from './essence/EssenceViews'
-import { computeEssenceStats, damageLabel, ESSENCE_ZODIACS, RESERO_ORDER, spiritWeaponLabel, toParagraphs, ZODIAC_ACTIVE_COST } from './essence/EssenceSystem'
+import { computeEssenceStats, damageLabel, ESSENCE_ZODIACS, RESERO_ORDER, blankEssenceCharacter, spiritWeaponLabel, toParagraphs, ZODIAC_ACTIVE_COST } from './essence/EssenceSystem'
 import type { EssenceCharacterData, EssenceTechnique } from './essence/EssenceTypes'
 import TechniqueModal from './essence/TechniqueModal'
 import ArmourCatalogModal from './essence/ArmourCatalogModal'
@@ -569,6 +574,7 @@ function CharacterActionModal({
   onApplyEssence,
   onDelete,
   onSyncSheet,
+  onTransfer,
   initialEventType,
 }: {
   record: CharacterSheetRecord
@@ -579,6 +585,7 @@ function CharacterActionModal({
   onDelete: () => void
   onOpenSheet: () => void
   onSyncSheet?: () => Promise<void>
+  onTransfer?: () => void
   onSchedule: (type: CampaignEventType, title: string, description: string, time: Date, actions: CampaignAction[]) => void
   initialEventType?: CampaignEventType
 }) {
@@ -656,6 +663,7 @@ function CharacterActionModal({
             <section className="dm-action-block">
               <h3>Player sheet</h3>
               <button type="button" className="dm-secondary-action" onClick={onOpenSheet}>Open Player sheet</button>
+              {onTransfer && <button type="button" className="dm-secondary-action" onClick={onTransfer}>Transfer</button>}
               {record.SheetSource && <SheetSyncControl source={record.SheetSource} onSync={onSyncSheet} />}
               <DeleteCharacterControl name={displayName(record)} onDelete={onDelete} />
             </section>
@@ -680,6 +688,7 @@ function CharacterActionModal({
 
         <MiniSheet record={record} />
         {record.SheetSource && <SheetSyncControl source={record.SheetSource} onSync={onSyncSheet} />}
+        {onTransfer && <div className="dm-action-block"><button type="button" className="dm-secondary-action" onClick={onTransfer}>Transfer</button></div>}
 
         <div className="dm-action-grid">
           <section className="dm-action-block">
@@ -1296,6 +1305,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
   const [systems, setSystems] = useState<StatSystem[]>(() => mergeSystems(resourceList<StatSystem>('systems')))
   const [newSystemOpen, setNewSystemOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [transferTarget, setTransferTarget] = useState<CharacterSheetRecord | null>(null)
   const [selectedSystemId, setSelectedSystemId] = useState(DEFAULT_STAT_SYSTEM_ID)
   const [selectedCampaignName, setSelectedCampaignName] = useState('')
   const [campaignPage, setCampaignPage] = useState<CampaignPage>('Players')
@@ -1460,6 +1470,17 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
     setCampaigns((items) => items.map((item) => item.Name === campaignName ? next : item))
   }
 
+  // Timeline board drags and keyboard nudges.
+  const moveEvent = (campaignName: string, eventId: string, scheduledAt: Date, location: string) => {
+    const campaign = campaigns.find((item) => item.Name === campaignName)
+    if (!campaign) {
+      throw new Error('Campaign was not found.')
+    }
+    const next = campaign.clone()
+    next.moveEvent(eventId, scheduledAt, location)
+    setCampaigns((items) => items.map((item) => item.Name === campaignName ? next : item))
+  }
+
   const advanceCampaign = async (campaignName: string, timeValue: string) => {
     const campaign = campaigns.find((item) => item.Name === campaignName)
     if (!campaign || !timeValue) {
@@ -1498,6 +1519,38 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
     ? characters.filter((record) => record.CampaignName === selectedCampaign.Name)
     : []
   const selectedFaction = selectedCampaign?.NPCs.find((group) => group.Faction === selectedFactionName) ?? null
+
+  // NPC sheets are ordinary character records owned by the DM, tagged NPC and matched by name within the campaign.
+  const npcSheetFor = (npc: Person): CharacterSheetRecord | null => selectedCampaign
+    ? characters.find((record) => record.CampaignName === selectedCampaign.Name && record.Tags.includes('NPC') && record.Name === npc.Name) ?? null
+    : null
+  const createNpcSheet = async (npc: Person) => {
+    if (!selectedCampaign) return
+    const attributes = placeholderAttributes()
+    for (const attributeName of PRIMARY_ATTRIBUTE_NAMES) attributes[attributeName] = { ...attributes[attributeName], value: npc[attributeName].value }
+    const data: CharacterSheetData = {
+      SystemId: activeSystem.Id,
+      Essence: isEssenceSystem ? blankEssenceCharacter({ PlayerName: user.Username, Alias: npc.Name, Concept: npc.Tags.join(', ') || 'NPC' }) : undefined,
+      Name: npc.Name, Level: npc.Level, XP: npc.XP, CampaignName: selectedCampaign.Name,
+      Tags: [...new Set([...npc.Tags, 'NPC'])], DMId: user.Id, DMName: user.Username,
+      PlayerClass: { Name: isEssenceSystem ? 'NPC' : npc.PlayerClass.Name, AttributeGrowth: placeholderGrowth() },
+      Attributes: attributes, Skills: [],
+    }
+    try {
+      const record = await createCharacterSheet(data, user)
+      await loadCharacters()
+      setStatus(`Created a sheet for ${npc.Name}`)
+      setPreviewCharacterId(record.Id)
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Unable to create the NPC sheet.')
+    }
+  }
+  const npcSheetControl = (npc: Person) => {
+    const sheet = npcSheetFor(npc)
+    return sheet
+      ? <button type="button" className="essence-inline-button npc-sheet-button" onClick={(event) => { event.stopPropagation(); setPreviewCharacterId(sheet.Id) }}>Open sheet</button>
+      : <button type="button" className="essence-inline-button npc-sheet-button" onClick={(event) => { event.stopPropagation(); void createNpcSheet(npc) }}>Create sheet</button>
+  }
 
   useEffect(() => {
     if (!campaignCharacters.some((record) => record.Id === eventTargetCharacterId)) {
@@ -1738,6 +1791,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
                           <div className="world-entity-row" key={npc.Name}>
                             <strong>{npc.Name}</strong><span>{isEssenceSystem ? 'NPC' : `Level ${npc.Level} · ${npc.PlayerClass.Name}`}</span>
                             <div className="character-tags">{npc.Tags.map((tag) => <span className="skill-chip flag-chip" key={tag}>{tag}</span>)}</div>
+                            {npcSheetControl(npc)}
                           </div>
                         ))}
                       </article>
@@ -1760,6 +1814,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
                           <div className="world-entity-row" key={npc.Name}>
                             <strong>{npc.Name}</strong><span>{isEssenceSystem ? 'NPC' : `Level ${npc.Level} · ${npc.PlayerClass.Name}`}</span>
                             <div className="character-tags">{npc.Tags.map((tag) => <span className="skill-chip flag-chip" key={tag}>{tag}</span>)}</div>
+                            {npcSheetControl(npc)}
                           </div>
                         ))}
                       </div>
@@ -1898,6 +1953,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
                     <button type="button" onClick={() => void advanceCampaign(selectedCampaign.Name, timeInputs[selectedCampaign.Name] ?? localDateTime(selectedCampaign.currentTime))}>Advance time</button>
                   </div>
                 </div>
+                <TimelineBoard campaign={selectedCampaign} onMove={(eventId, scheduledAt, location) => moveEvent(selectedCampaign.Name, eventId, scheduledAt, location)} />
                 <ol className="campaign-timeline">
                   <li className="timeline-now"><span className="timeline-marker" /><div><strong>Now</strong><p>{selectedCampaign.currentTime.toLocaleString()}</p></div></li>
                   {[...selectedCampaign.scheduledEvents].sort((left, right) => left.ScheduledAt.getTime() - right.ScheduledAt.getTime()).map((event) => (
@@ -1966,6 +2022,21 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
       )}
       {selectedNpc && <NpcSheetModal npc={selectedNpc} onClose={() => setSelectedNpc(null)} onChange={() => setNpcRevision((revision) => revision + 1)} hideProgression={isEssenceSystem} />}
 
+      {transferTarget && (
+        <TransferModal
+          record={transferTarget}
+          systems={systems}
+          user={user}
+          onClose={() => setTransferTarget(null)}
+          onTransferred={async (record) => {
+            await loadCharacters()
+            setSelectedCampaignName(record.CampaignName)
+            setStatus(`Transferred ${displayName(record)} to ${record.OwnerName} · ${record.CampaignName}`)
+            setTransferTarget(null)
+            setSelectedCharacterId(null)
+          }}
+        />
+      )}
       {selectedCharacter && (
         <CharacterActionModal
           key={`${selectedCharacter.Id}:${eventTemplateType ?? 'character'}`}
@@ -1987,6 +2058,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
             await loadCharacters()
             setStatus(result.changed ? `Pulled sheet changes for ${displayName(result.record)}` : `${displayName(result.record)} already matches the sheet${result.pushed ? ` · pushed ${result.pushed} cells` : ''}`)
           } : undefined}
+          onTransfer={() => setTransferTarget(selectedCharacter)}
           onSchedule={(type, title, description, time, actions) => scheduleEvent(selectedCharacter.CampaignName, type, title, description, time, actions)}
           initialEventType={eventTemplateType ?? undefined}
         />

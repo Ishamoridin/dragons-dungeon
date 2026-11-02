@@ -260,6 +260,23 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     const record = await ownedCharacter(req)
     res.json(await sheets.syncById(record.Id))
   })
+  // Moves a character to another owner the DM manages and/or another campaign; the client restricts campaigns to the
+  // same ruleset family, the server only checks ownership.
+  app.post('/api/characters/:id/transfer', dmOnly, async (req, res) => {
+    const current = await ownedCharacter(req)
+    const input = z.object({ ownerId: z.string().min(1).optional(), campaignName: z.string().trim().min(1).max(100).optional() }).strict().refine((value) => value.ownerId || value.campaignName).parse(req.body)
+    const owner = input.ownerId ? (input.ownerId === req.user.Id ? req.user : await users.findOne({ Id: input.ownerId, CreatedBy: req.user.Id })) : null
+    if (input.ownerId && !owner) throw fail(403, 'Select an account you manage.')
+    const { _id, ...previous } = current
+    const updated = {
+      ...previous,
+      ...(owner ? { OwnerId: owner.Id, OwnerName: owner.Username } : {}),
+      ...(input.campaignName ? { CampaignName: input.campaignName } : {}),
+      Version: (current.Version ?? 0) + 1, UpdatedAt: new Date(Math.max(Date.now(), Date.parse(current.UpdatedAt) + 1)).toISOString(),
+    }
+    await saveRevision(db, { kind: 'characters', before: current, after: updated, actor: req.user })
+    res.json(clean(updated))
+  })
   // The Refresh button in Settings: re-checks every linked character the signed-in user can see.
   app.post('/api/sheet-sync/refresh', rateLimit({ windowMs: 60 * 1000, limit: 6, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Please wait a minute before refreshing again.' } }), async (req, res) => {
     res.json(await sheets.syncAccessible(req.user))
