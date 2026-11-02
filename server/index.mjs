@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { connectDatabase } from './database.mjs'
 import { createApp, initializeDatabase } from './app.mjs'
 import { bootstrap } from './bootstrap.mjs'
+import { createSheetSync, DEFAULT_SYNC_INTERVAL_MS } from './sheet-sync.mjs'
 
 // Serve the built frontend from the API when it is present (Render builds it during npm ci via scripts/render-prepare.mjs),
 // unless SERVE_STATIC_DIR points elsewhere or is explicitly set to "off" to keep the host API-only.
@@ -11,7 +12,9 @@ let client
 try {
   const connection = await connectDatabase()
   client = connection.client
+  const sheetSync = createSheetSync(connection.database)
   const app = createApp(connection.database, {
+    sheetSync,
     key: process.env.ENCRYPTION_KEY,
     origin: process.env.APP_ORIGIN || 'http://localhost:5173',
     secureCookies: process.env.NODE_ENV === 'production',
@@ -25,6 +28,8 @@ try {
   })
   await initializeDatabase(connection.database)
   await bootstrap(connection.database)
+  // Linked characters are pulled from their Google Sheets on an interval; sheet values win over app edits.
+  sheetSync.start(Number(process.env.SHEET_SYNC_INTERVAL_MS) || DEFAULT_SYNC_INTERVAL_MS)
   // Hosting platforms (Render, Railway, Fly.io) inject PORT and route to the container's public interface,
   // not loopback, so bind 0.0.0.0 rather than 127.0.0.1 or the app is unreachable once deployed.
   const port = Number(process.env.PORT || process.env.API_PORT || 3001)

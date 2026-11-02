@@ -73,6 +73,17 @@ GitHub Pages is static hosting and cannot run the Express API, MongoDB access, o
 
 Until `API_ORIGIN` is set, the deployed frontend intentionally shows "Account service unavailable on this static deployment." on the sign-in screen rather than sending credentials nowhere — this is expected, not a bug.
 
+## Importing and syncing characters from Google Sheets
+
+The DM console's Players tab has an **Import from Google Sheets** button. Paste a workbook link, pick the campaign and owning account, and the API downloads the workbook, works out which stat system it belongs to (the Essence rules are recognised from the title and attribute table on the first tab; an unknown ruleset becomes a new system), builds the character, and keeps the record linked to the sheet.
+
+Linked characters stay in step with their workbook:
+
+- The first import is a full sweep of every tab. Afterwards the API re-checks every linked sheet once a day (`SHEET_SYNC_INTERVAL_MS`, default 24 hours), whenever anyone presses **Refresh from Google Sheets** in Settings, and whenever the DM presses **Sync with Google Sheet** on a character. If the workbook has a tab named **Changelog**, the check reads only its last row and re-sweeps the sheet when that row changed; without one, the whole mapped character is compared.
+- The sheet wins: when it changed, its values replace the app's for every mapped field, while app-only data (development log, temporary bars, ability trackers, alias) is kept.
+- When only the app changed, the changed cells are written back to the workbook. This needs `GOOGLE_SERVICE_ACCOUNT_JSON` on the API host: a Google Cloud service account key file (raw JSON or base64), with each linked sheet shared with the account's `client_email` as an Editor. Without it, reading still works for sheets shared as "Anyone with the link can view", but changes made in the app stay in the app.
+- Changes applied on the sheet's behalf appear in history under the actor "Google Sheets".
+
 Locally, `PUBLIC_BASE_PATH` defaults to `./` and `PUBLIC_STATIC_HOST` is false.
 
 ## Current Scope

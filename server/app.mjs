@@ -7,6 +7,7 @@ import { canAccessCharacter, hashPassword, publicUser, sessionDigest, verifyPass
 import { recordConflict, saveRevision, undoLatest } from './character-history.mjs'
 import { resolveCopies } from '../src/character/RevisionMerge.mjs'
 import { mountGoogleAuth } from './google-auth.mjs'
+import { createSheetSync } from './sheet-sync.mjs'
 
 const username = z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/)
 const password = z.string().min(12).max(256)
@@ -53,8 +54,10 @@ export async function initializeDatabase(db) {
   ])
 }
 
-export function createApp(db, { key, origin = 'http://localhost:5173', secureCookies = false, crossSiteCookies = false, staticDir, google, googleProvider } = {}) {
+export function createApp(db, { key, origin = 'http://localhost:5173', secureCookies = false, crossSiteCookies = false, staticDir, google, googleProvider, sheetSync } = {}) {
   if (!key || Buffer.byteLength(key) < 32) throw new Error('ENCRYPTION_KEY must contain at least 32 bytes for session protection.')
+  // Google Sheets import and sync; tests inject a fake, index.mjs shares one instance with the background poller.
+  const sheets = sheetSync ?? createSheetSync(db)
   const app = express()
   app.disable('x-powered-by')
   // Hosts such as Render, Railway, and Fly.io sit behind a reverse proxy; trusting the first hop lets
@@ -246,6 +249,21 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     const rows = await characters.find(scope).sort({ UpdatedAt: -1 }).toArray()
     res.json(rows.map(clean).filter((record) => req.query.deleted === 'true' ? req.user.Role === 'dm' && record.Name.endsWith(' (Deleted)') : !record.Name.endsWith(' (Deleted)')))
   })
+  app.post('/api/characters/import/google-sheets', dmOnly, rateLimit({ windowMs: 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many imports. Please wait a minute.' } }), async (req, res) => {
+    const input = z.object({ url: z.string().trim().min(1).max(2000), campaignName: z.string().trim().min(1).max(100), ownerId: z.string().optional() }).strict().parse(req.body)
+    const owner = input.ownerId && input.ownerId !== req.user.Id ? await users.findOne({ Id: input.ownerId, CreatedBy: req.user.Id }) : req.user
+    if (!owner) throw fail(403, 'Select an account you manage.')
+    const result = await sheets.importCharacter({ url: input.url, campaignName: input.campaignName, owner, dm: req.user, actor: req.user })
+    res.status(201).json(result)
+  })
+  app.post('/api/characters/:id/sheet-sync', async (req, res) => {
+    const record = await ownedCharacter(req)
+    res.json(await sheets.syncById(record.Id))
+  })
+  // The Refresh button in Settings: re-checks every linked character the signed-in user can see.
+  app.post('/api/sheet-sync/refresh', rateLimit({ windowMs: 60 * 1000, limit: 6, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Please wait a minute before refreshing again.' } }), async (req, res) => {
+    res.json(await sheets.syncAccessible(req.user))
+  })
   app.post('/api/characters', async (req, res) => {
     safeData(req.body)
     const input = z.object({ data: z.record(z.string(), z.unknown()), ownerId: z.string().optional() }).parse(req.body)
@@ -268,6 +286,9 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     if (req.user.Role !== 'dm' && (data.DMId !== current.DMId || data.CampaignName !== current.CampaignName || data.Name?.endsWith(' (Deleted)'))) throw fail(403, 'Only your DM can change campaign assignment or delete a character.')
     if (typeof data.Name !== 'string' || !data.Name.trim()) throw fail(400, 'Character name is required.')
     const updated = { ...data, Id: current.Id, OwnerId: current.OwnerId, OwnerName: current.OwnerName, DMId: current.DMId, DMName: current.DMName, CreatedAt: current.CreatedAt, UpdatedAt: new Date(Math.max(Date.now(), Date.parse(current.UpdatedAt) + 1)).toISOString(), Version: (current.Version ?? 0) + 1 }
+    // The sheet link is server-owned metadata; clients cannot forge or drop it through a normal save.
+    if (current.SheetSource) updated.SheetSource = current.SheetSource
+    else delete updated.SheetSource
     if (expectedVersion !== undefined ? expectedVersion !== (current.Version ?? 0) : expectedUpdatedAt !== current.UpdatedAt) {
       const conflict = await recordConflict(db, { kind: 'characters', current, local: { ...updated, Version: expectedVersion ?? base?.Version ?? 0 }, base, actor: req.user })
       return res.status(409).json({ error: 'Conflicting changes saved for DM review.', conflict })
@@ -279,6 +300,7 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
       const conflict = await recordConflict(db, { kind: 'characters', current: latest, local: { ...updated, Version: expectedVersion ?? current.Version ?? 0 }, base: base ?? clean(current), actor: req.user })
       return res.status(409).json({ error: 'Conflicting changes saved for DM review.', conflict })
     }
+    sheets.afterSave(updated)
     res.json(updated)
   })
   app.delete('/api/characters/:id', dmOnly, async (req, res) => {
