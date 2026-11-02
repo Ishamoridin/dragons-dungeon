@@ -44,7 +44,10 @@ test('secondary owners span all records and reserved system ownership applies on
     assert.equal(campaignEdit.status, 200)
     assert.equal((await db.collection('campaigns').findOne({ Id: 'camp-a' })).OwnerId, 'dm-a')
 
-    const registered = await call('/auth/register', 'POST', { email: 'lirril@example.com', username: 'Lirril', password: 'lirril-password-1234', role: 'player' })
+    // Registration completes through the emailed link (returned as a preview here, since no mailer is configured).
+    const requested = await call('/auth/register', 'POST', { email: 'lirril@example.com', username: 'Lirril', password: 'lirril-password-1234', role: 'player' })
+    assert.equal(requested.status, 202)
+    const registered = await call('/auth/register/complete', 'POST', { token: new URL(requested.data.previewLink).searchParams.get('register') })
     assert.equal(registered.status, 201)
     assert.equal(registered.data.Role, 'dm')
     const ownership = await db.collection('systemOwnership').findOne({ SystemId: 'essence' })

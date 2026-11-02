@@ -52,3 +52,12 @@ services:
       # Optional. How often linked characters are re-checked against their sheets, in milliseconds (default 86400000, one day).
       - key: SHEET_SYNC_INTERVAL_MS
         sync: false
+      # Optional but needed for real registration emails and email-change codes: a Resend API key and the sender
+      # address (a domain verified in Resend). Without them the app shows links and codes on screen instead.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # Optional. Full URL emailed links should open (defaults to APP_ORIGIN + "/"); set when the app lives under a sub-path.
+      - key: APP_URL
+        sync: false

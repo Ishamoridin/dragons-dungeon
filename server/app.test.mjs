@@ -61,7 +61,16 @@ test('Atlas account, session, character, and owned-resource CRUD', { skip: proce
     }
     assert.equal((await call('/characters')).status, 401)
     assert.equal((await call('/auth/providers')).data.google, false)
-    const registration = await call('/auth/register', 'POST', { email: ' NewPlayer@Example.com ', username: 'newplayer', password: 'a-strong-password-1234' })
+    // Registration is two steps: the request returns the emailed link (shown as a preview because no mailer is
+    // configured here), and opening it creates the account.
+    const register = async (input) => {
+      const requested = await call('/auth/register', 'POST', input)
+      assert.equal(requested.status, 202)
+      assert.equal(requested.data.delivered, false)
+      const token = new URL(requested.data.previewLink).searchParams.get('register')
+      return call('/auth/register/complete', 'POST', { token })
+    }
+    const registration = await register({ email: ' NewPlayer@Example.com ', username: 'newplayer', password: 'a-strong-password-1234' })
     assert.equal(registration.status, 201)
     assert.equal(registration.data.Role, 'player')
     assert.equal(registration.data.PasswordHash, undefined)
@@ -76,7 +85,7 @@ test('Atlas account, session, character, and owned-resource CRUD', { skip: proce
     const registeredLogin = await call('/auth/login', 'POST', { username: 'newplayer', password: 'a-strong-password-1234' })
     assert.equal(registeredLogin.status, 200)
     assert.equal((await call('/accounts', 'GET', undefined, registeredLogin.cookie)).status, 403)
-    const registeredDM = await call('/auth/register', 'POST', { email: 'newdm@example.com', username: 'newdm', password: 'a-strong-password-1234', role: 'dm' })
+    const registeredDM = await register({ email: 'newdm@example.com', username: 'newdm', password: 'a-strong-password-1234', role: 'dm' })
     assert.equal(registeredDM.status, 201)
     assert.equal(registeredDM.data.Role, 'dm')
     assert.equal((await call('/auth/role', 'POST', { role: 'dm' }, registeredLogin.cookie)).data.Role, 'dm')

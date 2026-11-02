@@ -1,0 +1,90 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { randomUUID } from 'node:crypto'
+import { once } from 'node:events'
+import { connectDatabase } from './database.mjs'
+import { createApp, initializeDatabase } from './app.mjs'
+
+// Captures outgoing mail so the test can follow the links and codes it contains.
+function recordingMailer() {
+  const sent = []
+  return { sent, enabled: true, from: 'test@example.com', async send(message) { sent.push(message); return { delivered: true } } }
+}
+
+test('registration completes through an emailed link and the account dialog changes email and password', { skip: process.env.RUN_DB_INTEGRATION !== '1' }, async () => {
+  const { client } = await connectDatabase()
+  const db = client.db(`dd_account_${randomUUID().replaceAll('-', '').slice(0, 24)}`)
+  let server
+  try {
+    await initializeDatabase(db)
+    const mailer = recordingMailer()
+    server = createApp(db, { key: 'account-test-key-with-at-least-32-bytes!!', mailer, appUrl: 'https://play.example.com/app/' }).listen(0, '127.0.0.1')
+    await once(server, 'listening')
+    const base = `http://127.0.0.1:${server.address().port}/api`
+    const call = async (path, method = 'GET', body, cookie) => {
+      const response = await fetch(`${base}${path}`, { method, headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5173', ...(cookie ? { Cookie: cookie } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) })
+      return { status: response.status, data: await response.json(), cookie: response.headers.get('set-cookie')?.split(';')[0] }
+    }
+
+    // Step 1: the request does not create the account; it emails a single-use link.
+    const requested = await call('/auth/register', 'POST', { email: 'New.Player@Example.com', username: 'newplayer', password: 'a-long-password-1234', role: 'player' })
+    assert.equal(requested.status, 202)
+    assert.equal(requested.data.delivered, true)
+    assert.equal(requested.data.previewLink, undefined, 'no preview when mail is delivered')
+    assert.equal(await db.collection('users').countDocuments({ UsernameKey: 'newplayer' }), 0)
+    assert.equal(mailer.sent.length, 1)
+    assert.equal(mailer.sent[0].to, 'new.player@example.com')
+    const link = /https:\/\/play\.example\.com\/app\/\?register=([A-Za-z0-9_-]+)/.exec(mailer.sent[0].text)
+    assert.ok(link, 'the email carries the app link with the token')
+    assert.equal((await call('/auth/login', 'POST', { username: 'newplayer', password: 'a-long-password-1234' })).status, 401)
+
+    // Step 2: opening the link creates the account, marks the email verified, and signs in.
+    const completed = await call('/auth/register/complete', 'POST', { token: link[1] })
+    assert.equal(completed.status, 201)
+    assert.equal(completed.data.Username, 'newplayer')
+    assert.equal(completed.data.Email, 'new.player@example.com')
+    assert.ok(completed.cookie)
+    assert.equal((await db.collection('users').findOne({ UsernameKey: 'newplayer' })).EmailVerified, true)
+    assert.equal((await call('/auth/me', 'GET', undefined, completed.cookie)).status, 200)
+    // The link is single use.
+    assert.equal((await call('/auth/register/complete', 'POST', { token: link[1] })).status, 410)
+    // A second registration for a taken name is refused up front.
+    assert.equal((await call('/auth/register', 'POST', { email: 'other@example.com', username: 'newplayer', password: 'a-long-password-1234' })).status, 409)
+
+    // Email change: the code goes to the new address; wrong codes are counted; the right one switches the address.
+    const cookie = completed.cookie
+    assert.equal((await call('/account/email/request', 'POST', { email: 'fresh@example.com', currentPassword: 'wrong-password-123' }, cookie)).status, 403)
+    const emailRequest = await call('/account/email/request', 'POST', { email: 'fresh@example.com', currentPassword: 'a-long-password-1234' }, cookie)
+    assert.equal(emailRequest.status, 202)
+    assert.equal(mailer.sent.length, 2)
+    assert.equal(mailer.sent[1].to, 'fresh@example.com')
+    const code = /\b(\d{6})\b/.exec(mailer.sent[1].text)[1]
+    assert.equal((await call('/account/email/confirm', 'POST', { code: code === '000000' ? '000001' : '000000' }, cookie)).status, 400)
+    const confirmed = await call('/account/email/confirm', 'POST', { code }, cookie)
+    assert.equal(confirmed.status, 200)
+    assert.equal(confirmed.data.Email, 'fresh@example.com')
+    assert.equal((await call('/auth/me', 'GET', undefined, cookie)).data.Email, 'fresh@example.com')
+    assert.equal((await call('/account/email/confirm', 'POST', { code }, cookie)).status, 410, 'codes are single use')
+
+    // Password change requires the current password, then signs every session out.
+    const userId = completed.data.Id
+    assert.equal((await call(`/accounts/${userId}`, 'PATCH', { Password: 'another-long-password-5678', CurrentPassword: 'nope-nope-nope-1234' }, cookie)).status, 403)
+    assert.equal((await call(`/accounts/${userId}`, 'PATCH', { Password: 'another-long-password-5678', CurrentPassword: 'a-long-password-1234' }, cookie)).status, 200)
+    assert.equal((await call('/auth/me', 'GET', undefined, cookie)).status, 401)
+    assert.equal((await call('/auth/login', 'POST', { username: 'newplayer', password: 'another-long-password-5678' })).status, 200)
+
+    // Without a mail provider the link is returned so the flow still works.
+    const silent = createApp(db, { key: 'account-test-key-with-at-least-32-bytes!!', mailer: { enabled: false, from: 'x', async send() { return { delivered: false } } } }).listen(0, '127.0.0.1')
+    await once(silent, 'listening')
+    try {
+      const response = await fetch(`http://127.0.0.1:${silent.address().port}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5173' }, body: JSON.stringify({ email: 'quiet@example.com', username: 'quietone', password: 'a-long-password-1234' }) })
+      const data = await response.json()
+      assert.equal(response.status, 202)
+      assert.equal(data.delivered, false)
+      assert.match(data.previewLink, /\?register=/)
+    } finally { silent.closeAllConnections(); await new Promise((resolve) => silent.close(resolve)) }
+  } finally {
+    if (server) { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)) }
+    try { await db.dropDatabase() } finally { await client.close() }
+  }
+})

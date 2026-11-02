@@ -17,6 +17,8 @@ try {
     sheetSync,
     key: process.env.ENCRYPTION_KEY,
     origin: process.env.APP_ORIGIN || 'http://localhost:5173',
+    // Full URL the app is served from, for emailed links; defaults to the origin's root.
+    appUrl: process.env.APP_URL,
     secureCookies: process.env.NODE_ENV === 'production',
     crossSiteCookies: process.env.CROSS_SITE_COOKIES === 'true',
     staticDir,

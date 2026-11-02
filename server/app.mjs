@@ -8,6 +8,7 @@ import { recordConflict, saveRevision, undoLatest } from './character-history.mj
 import { resolveCopies } from '../src/character/RevisionMerge.mjs'
 import { mountGoogleAuth } from './google-auth.mjs'
 import { createSheetSync } from './sheet-sync.mjs'
+import { createMailer, emailChangeEmail, registrationEmail } from './mailer.mjs'
 
 const username = z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/)
 const password = z.string().min(12).max(256)
@@ -50,14 +51,23 @@ export async function initializeDatabase(db) {
     db.collection('characters').createIndex({ OwnerId: 1, DMId: 1 }),
     db.collection('changeHistory').createIndex({ ActorId: 1, Undone: 1, CreatedAt: -1 }),
     db.collection('conflicts').createIndex({ DMId: 1, Resolved: 1 }),
+    // Pending registrations and email changes expire on their own.
+    db.collection('registrations').createIndex({ TokenDigest: 1 }, { unique: true }),
+    db.collection('registrations').createIndex({ ExpiresAt: 1 }, { expireAfterSeconds: 0 }),
+    db.collection('emailChanges').createIndex({ UserId: 1 }, { unique: true }),
+    db.collection('emailChanges').createIndex({ ExpiresAt: 1 }, { expireAfterSeconds: 0 }),
     ...[...resourceKinds].map((kind) => db.collection(kind).createIndex({ OwnerId: 1, Id: 1 }, { unique: true })),
   ])
 }
 
-export function createApp(db, { key, origin = 'http://localhost:5173', secureCookies = false, crossSiteCookies = false, staticDir, google, googleProvider, sheetSync } = {}) {
+export function createApp(db, { key, origin = 'http://localhost:5173', secureCookies = false, crossSiteCookies = false, staticDir, google, googleProvider, sheetSync, mailer, appUrl } = {}) {
   if (!key || Buffer.byteLength(key) < 32) throw new Error('ENCRYPTION_KEY must contain at least 32 bytes for session protection.')
   // Google Sheets import and sync; tests inject a fake, index.mjs shares one instance with the background poller.
   const sheets = sheetSync ?? createSheetSync(db)
+  // Registration links and email-change codes; disabled (preview only) until RESEND_API_KEY is configured.
+  const mail = mailer ?? createMailer()
+  // Where emailed links should open the app; the Pages deployment lives under a sub-path, so this is not always the origin.
+  const appLink = (appUrl || `${origin}/`).replace(/\/?$/, '/')
   const app = express()
   app.disable('x-powered-by')
   // Hosts such as Render, Railway, and Fly.io sit behind a reverse proxy; trusting the first hop lets
@@ -126,13 +136,42 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
 
   app.post('/api/auth/register', rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many registration attempts. Please try again later.' } }), async (req, res) => {
     const input = registrationInput.parse(req.body)
+    const usernameKey = input.username.toLowerCase()
+    if (await users.findOne({ $or: [{ UsernameKey: usernameKey }, { Email: input.email }] })) throw fail(409, 'Username or email is already in use.')
+    // The account is only created when the emailed link is opened; until then the request waits here for 24 hours.
+    const token = randomBytes(32).toString('base64url')
+    const registration = {
+      TokenDigest: sessionDigest(token, key), Username: input.username, UsernameKey: usernameKey, Email: input.email, Role: input.role,
+      PasswordHash: await hashPassword(input.password), CreatedAt: new Date().toISOString(), ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    }
+    await db.collection('registrations').deleteMany({ $or: [{ UsernameKey: usernameKey }, { Email: input.email }] })
+    await db.collection('registrations').insertOne(registration)
+    const link = `${appLink}?register=${token}`
+    const { delivered } = await mail.send({ to: input.email, ...registrationEmail({ username: input.username, link }) })
+    // Without an email provider the link is handed back so the flow can still be completed (development, tests).
+    res.status(202).json({ ok: true, email: input.email, delivered, ...(delivered ? {} : { previewLink: link }) })
+  })
+  app.post('/api/auth/register/complete', rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false }), async (req, res) => {
+    const { token } = z.object({ token: z.string().min(16).max(128) }).strict().parse(req.body)
+    const registration = await db.collection('registrations').findOne({ TokenDigest: sessionDigest(token, key) })
+    if (!registration || new Date(registration.ExpiresAt).getTime() < Date.now()) throw fail(410, 'This registration link has expired or was already used. Register again to get a new one.')
+    if (await users.findOne({ $or: [{ UsernameKey: registration.UsernameKey }, { Email: registration.Email }] })) {
+      await db.collection('registrations').deleteOne({ _id: registration._id })
+      throw fail(409, 'Username or email is already in use.')
+    }
     const user = {
-      Id: randomUUID(), Username: input.username, UsernameKey: input.username.toLowerCase(),
-      Email: input.email, EmailVerified: false, Role: input.role,
-      PasswordHash: await hashPassword(input.password), CreatedAt: new Date().toISOString(),
+      Id: randomUUID(), Username: registration.Username, UsernameKey: registration.UsernameKey,
+      Email: registration.Email, EmailVerified: true, Role: registration.Role,
+      PasswordHash: registration.PasswordHash, CreatedAt: new Date().toISOString(),
     }
     await users.insertOne(user)
-    // Grants reserved for this username, such as system ownership, apply the moment the account exists.
+    await db.collection('registrations').deleteOne({ _id: registration._id })
+    await applyPendingGrants(user)
+    await issueSession(req, res, user)
+    res.status(201).json(publicUser(user))
+  })
+  // Grants reserved for a username, such as system ownership, apply the moment the account exists.
+  async function applyPendingGrants(user) {
     const grants = await db.collection('pendingOwnerships').find({ UsernameKey: user.UsernameKey, Applied: { $ne: true } }).toArray()
     for (const grant of grants) {
       if (grant.Kind === 'system') {
@@ -142,8 +181,7 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
       }
       await db.collection('pendingOwnerships').updateOne({ _id: grant._id }, { $set: { Applied: true, AppliedTo: user.Id, AppliedAt: new Date().toISOString() } })
     }
-    res.status(201).json(publicUser(user))
-  })
+  }
   app.post('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false }), async (req, res) => {
     const input = loginInput.parse(req.body)
     const user = await users.findOne({ UsernameKey: input.username.trim().toLowerCase() })
@@ -159,6 +197,34 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   })
   app.use('/api', authenticate)
   app.get('/api/auth/me', (req, res) => res.json(publicUser(req.user)))
+  // Changing the email address: a code goes to the new address and the change only lands once it is entered.
+  app.post('/api/account/email/request', rateLimit({ windowMs: 60 * 60 * 1000, limit: 6, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many email change requests. Please try again later.' } }), async (req, res) => {
+    const input = z.object({ email: z.string().trim().toLowerCase().email().max(254), currentPassword: z.string().min(1).max(256) }).strict().parse(req.body)
+    if (!await verifyPassword(req.user.PasswordHash ?? dummyHash, input.currentPassword)) throw fail(403, 'Current password is incorrect.')
+    if (input.email === (req.user.Email ?? '').toLowerCase()) throw fail(400, 'That is already your email address.')
+    if (await users.findOne({ Email: input.email })) throw fail(409, 'That email address is already in use.')
+    const code = String(randomBytes(4).readUInt32BE(0) % 1_000_000).padStart(6, '0')
+    await db.collection('emailChanges').replaceOne({ UserId: req.user.Id }, {
+      UserId: req.user.Id, Email: input.email, CodeDigest: sessionDigest(code, key), Attempts: 0,
+      CreatedAt: new Date().toISOString(), ExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    }, { upsert: true })
+    const { delivered } = await mail.send({ to: input.email, ...emailChangeEmail({ username: req.user.Username, code }) })
+    res.status(202).json({ ok: true, email: input.email, delivered, ...(delivered ? {} : { previewCode: code }) })
+  })
+  app.post('/api/account/email/confirm', rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false }), async (req, res) => {
+    const { code } = z.object({ code: z.string().trim().regex(/^\d{6}$/) }).strict().parse(req.body)
+    const pending = await db.collection('emailChanges').findOne({ UserId: req.user.Id })
+    if (!pending || new Date(pending.ExpiresAt).getTime() < Date.now()) throw fail(410, 'No email change is waiting, or the code has expired. Request a new code.')
+    if (pending.Attempts >= 5) { await db.collection('emailChanges').deleteOne({ _id: pending._id }); throw fail(429, 'Too many wrong codes. Request a new code.') }
+    if (pending.CodeDigest !== sessionDigest(code, key)) {
+      await db.collection('emailChanges').updateOne({ _id: pending._id }, { $inc: { Attempts: 1 } })
+      throw fail(400, 'That code is not right. Check the email sent to your new address.')
+    }
+    if (await users.findOne({ Email: pending.Email, Id: { $ne: req.user.Id } })) throw fail(409, 'That email address is already in use.')
+    await users.updateOne({ Id: req.user.Id }, { $set: { Email: pending.Email, EmailVerified: true } })
+    await db.collection('emailChanges').deleteOne({ _id: pending._id })
+    res.json(publicUser({ ...req.user, Email: pending.Email }))
+  })
   app.post('/api/auth/role', async (req, res) => {
     const { role } = z.object({ role: z.enum(['player', 'dm']) }).strict().parse(req.body)
     await users.updateOne({ Id: req.user.Id }, { $set: { Role: role } })
