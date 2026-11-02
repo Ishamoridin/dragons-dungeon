@@ -18,6 +18,9 @@ services:
         value: 'true'
       - key: MONGODB_URI
         sync: false
+      # Render's outbound IPs are not fixed on the free plan, so the Atlas cluster's Network Access list must allow
+      # 0.0.0.0/0 (or Render's published static IPs on paid plans). Otherwise the API exits on boot with a
+      # server selection timeout after about 15 seconds.
       - key: MONGODB_DB_NAME
         value: dragons_dungeon
       # Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
