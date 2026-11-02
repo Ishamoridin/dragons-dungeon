@@ -3,7 +3,7 @@ import test from 'node:test'
 import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { connectDatabase } from './database.mjs'
-import { createApp, initializeDatabase } from './app.mjs'
+import { createApp, initializeDatabase, sweepIdleSessionLogs } from './app.mjs'
 
 // Captures outgoing mail so the test can follow the links and codes it contains.
 function recordingMailer() {
@@ -67,6 +67,28 @@ test('registration completes through an emailed link and the account dialog chan
     assert.ok(closedLog.EndedAt instanceof Date)
     assert.equal((await call('/auth/me', 'GET', undefined, completed.cookie)).status, 401)
     // Sign back in for the rest of the checks.
+    completed.cookie = (await call('/auth/login', 'POST', { username: 'newplayer', password: 'a-long-password-1234' })).cookie
+
+    // Thirty idle minutes end the session: its log closes as inactivity and the next request auto-logs in to a fresh
+    // token, session, and log, carrying the remembered screen along.
+    await call('/auth/screen', 'PUT', { screen: { dmPage: 'Events' } }, completed.cookie)
+    const staleDigest = (await db.collection('sessions').findOne({ UserId: completed.data.Id })).Digest
+    await db.collection('sessions').updateOne({ Digest: staleDigest }, { $set: { LastActivityAt: new Date(Date.now() - 31 * 60 * 1000) } })
+    await db.collection('sessionLogs').updateOne({ SessionDigest: staleDigest }, { $set: { LastSeenAt: new Date(Date.now() - 31 * 60 * 1000) } })
+    const returned = await call('/auth/me', 'GET', undefined, completed.cookie)
+    assert.equal(returned.status, 200)
+    assert.ok(returned.cookie && returned.cookie !== completed.cookie, 'a new session cookie is issued on return')
+    assert.deepEqual(returned.data.Screen, { dmPage: 'Events' }, 'the open screen survives the new session')
+    const idleLog = await db.collection('sessionLogs').findOne({ SessionDigest: staleDigest })
+    assert.equal(idleLog.EndReason, 'inactivity')
+    assert.equal(await db.collection('sessionLogs').countDocuments({ UserId: completed.data.Id, EndedAt: null }), 1, 'exactly one open log for the new session')
+    assert.equal((await call('/auth/me', 'GET', undefined, completed.cookie)).status, 401, 'the old token no longer works')
+    completed.cookie = returned.cookie
+    // The sweeper closes logs for sessions whose users never return.
+    const abandonedDigest = (await db.collection('sessions').findOne({ UserId: completed.data.Id })).Digest
+    await db.collection('sessionLogs').updateOne({ SessionDigest: abandonedDigest }, { $set: { LastSeenAt: new Date(Date.now() - 40 * 60 * 1000) } })
+    assert.equal(await sweepIdleSessionLogs(db), 1)
+    assert.equal((await db.collection('sessionLogs').findOne({ SessionDigest: abandonedDigest })).EndReason, 'inactivity')
     completed.cookie = (await call('/auth/login', 'POST', { username: 'newplayer', password: 'a-long-password-1234' })).cookie
     // The link is single use.
     assert.equal((await call('/auth/register/complete', 'POST', { token: link[1] })).status, 410)

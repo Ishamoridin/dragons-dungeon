@@ -37,6 +37,20 @@ function safeData(value, depth = 0) {
   }
 }
 
+// A session ends after this long without a request; the cookie still auto-logs the user into a new session.
+export const SESSION_IDLE_MS = 30 * 60 * 1000
+// How often an active session has its last-activity time written (avoids a write on every request).
+const ACTIVITY_TOUCH_MS = 60 * 1000
+
+// Closes the logs of sessions whose users never came back: run periodically from the server entry point.
+export async function sweepIdleSessionLogs(db, now = new Date()) {
+  const cutoff = new Date(now.getTime() - SESSION_IDLE_MS)
+  const idle = await db.collection('sessionLogs').find({ EndedAt: null, LastSeenAt: { $lt: cutoff } }, { projection: { SessionDigest: 1, LastSeenAt: 1 } }).toArray()
+  for (const log of idle) {
+    await db.collection('sessionLogs').updateOne({ _id: log._id, EndedAt: null }, { $set: { EndedAt: new Date(new Date(log.LastSeenAt).getTime() + SESSION_IDLE_MS), EndReason: 'inactivity' } })
+  }
+  return idle.length
+}
 export async function initializeDatabase(db) {
   await Promise.all([
     db.collection('users').createIndex({ UsernameKey: 1 }, { unique: true }),
@@ -107,6 +121,8 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   // Cross-site cookies require SameSite=None with Secure for an API hosted apart from the frontend.
   const cookieOptions = { httpOnly: true, secure: secureCookies || crossSiteCookies, sameSite: crossSiteCookies ? 'none' : 'strict', path: '/' }
   const digestFor = (req) => {
+    // A session rotated during this request (idle timeout) replaces the cookie's digest for later handlers.
+    if (req.sessionDigest) return req.sessionDigest
     const raw = req.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1)
     return raw ? sessionDigest(raw, key) : null
   }
@@ -115,9 +131,23 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     const session = Digest && await sessions.findOne({ Digest, ExpiresAt: { $gt: new Date() } })
     return session && await users.findOne({ Id: session.UserId })
   }
+  // Sessions time out after 30 minutes without activity. The cookie itself lives on for auto-login: when the user
+  // returns, the idle session's log is closed and a fresh token, session, and log start, keeping the open screen.
   const authenticate = async (req, res, next) => {
-    const user = await findCurrentUser(req)
+    const Digest = digestFor(req)
+    const now = new Date()
+    const session = Digest && await sessions.findOne({ Digest, ExpiresAt: { $gt: now } })
+    const user = session && await users.findOne({ Id: session.UserId })
     if (!user) return next(fail(401, 'Please sign in.'))
+    const lastActivity = new Date(session.LastActivityAt ?? session.CreatedAt ?? now).getTime()
+    const idleFor = now.getTime() - lastActivity
+    if (idleFor > SESSION_IDLE_MS) {
+      await endSessionLog({ SessionDigest: Digest }, 'inactivity', new Date(lastActivity + SESSION_IDLE_MS))
+      await issueSession(req, res, user, { Screen: session.Screen ?? null })
+    } else if (idleFor > ACTIVITY_TOUCH_MS) {
+      await sessions.updateOne({ Digest }, { $set: { LastActivityAt: now } })
+      await sessionLogs.updateOne({ SessionDigest: Digest }, { $set: { LastSeenAt: now } })
+    }
     req.user = user
     next()
   }
@@ -127,15 +157,17 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     if (!record || !canAccessCharacter(record, req.user)) throw fail(404, 'Character not found.')
     return record
   }
-  const issueSession = async (req, res, user) => {
+  const issueSession = async (req, res, user, { Screen = null } = {}) => {
     const oldDigest = digestFor(req)
     if (oldDigest) { await sessions.deleteOne({ Digest: oldDigest }); await endSessionLog({ SessionDigest: oldDigest }, 'replaced') }
     const token = randomBytes(32).toString('base64url')
-    const ExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    const now = new Date()
+    const ExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
     const Digest = sessionDigest(token, key)
-    await sessions.insertOne({ Digest, UserId: user.Id, ExpiresAt })
+    await sessions.insertOne({ Digest, UserId: user.Id, CreatedAt: now, LastActivityAt: now, ExpiresAt, ...(Screen ? { Screen } : {}) })
     // Every session keeps an activity log; the client appends to it and it is finalised when the session ends.
-    await sessionLogs.insertOne({ SessionDigest: Digest, UserId: user.Id, Username: user.Username, Role: user.Role, StartedAt: new Date(), LastSeenAt: new Date(), EndedAt: null, EndReason: null, Events: [] })
+    await sessionLogs.insertOne({ SessionDigest: Digest, UserId: user.Id, Username: user.Username, Role: user.Role, StartedAt: now, LastSeenAt: now, EndedAt: null, EndReason: null, Events: [] })
+    req.sessionDigest = Digest
     res.cookie(cookieName, token, { ...cookieOptions, expires: ExpiresAt })
   }
   const sessionLogs = db.collection('sessionLogs')
@@ -148,7 +180,7 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     if (events.length) update.$push = { Events: { $each: events.map((event) => ({ ...event, at: now })), $slice: -5000 } }
     await sessionLogs.updateOne({ SessionDigest: digest }, update)
   }
-  const endSessionLog = (filter, reason) => sessionLogs.updateMany({ ...filter, EndedAt: null }, { $set: { EndedAt: new Date(), EndReason: reason } })
+  const endSessionLog = (filter, reason, endedAt = new Date()) => sessionLogs.updateMany({ ...filter, EndedAt: null }, { $set: { EndedAt: endedAt, EndReason: reason } })
   mountGoogleAuth(app, db, { key, origin, secureCookies, google, providerOverride: googleProvider, issueSession, findCurrentUser })
 
   app.post('/api/auth/register', rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many registration attempts. Please try again later.' } }), async (req, res) => {

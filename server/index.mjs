@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { connectDatabase } from './database.mjs'
-import { createApp, initializeDatabase } from './app.mjs'
+import { createApp, initializeDatabase, sweepIdleSessionLogs } from './app.mjs'
 import { bootstrap } from './bootstrap.mjs'
 import { createSheetSync, DEFAULT_SYNC_INTERVAL_MS } from './sheet-sync.mjs'
 
@@ -32,6 +32,9 @@ try {
   await bootstrap(connection.database)
   // Linked characters are pulled from their Google Sheets on an interval; sheet values win over app edits.
   sheetSync.start(Number(process.env.SHEET_SYNC_INTERVAL_MS) || DEFAULT_SYNC_INTERVAL_MS)
+  // Sessions idle for 30 minutes have their activity logs closed even if the user never returns.
+  const sweeper = setInterval(() => { sweepIdleSessionLogs(connection.database).catch((error) => console.warn(`Session log sweep failed: ${error.message}`)) }, 5 * 60 * 1000)
+  sweeper.unref()
   // Hosting platforms (Render, Railway, Fly.io) inject PORT and route to the container's public interface,
   // not loopback, so bind 0.0.0.0 rather than 127.0.0.1 or the app is unreachable once deployed.
   const port = Number(process.env.PORT || process.env.API_PORT || 3001)
