@@ -17,7 +17,8 @@ import {
   type ReseroStage,
   type AttributeGroupId,
 } from './EssenceSystem'
-import type { EssenceCharacterData } from './EssenceTypes'
+import type { EssenceCharacterData, EssenceTechnique } from './EssenceTypes'
+import { collateTempering, isTempering, temperingSource } from './EssenceTempering'
 import { bucketFor, isUsesKind, validateDevelopmentRequest, validateSheetChange, type DevelopmentRequest, type EssenceChange, type SheetChange, type SheetRole, type StepKind } from './EssenceChanges'
 import { addDevelopmentType, getDevelopmentTypes } from '../CharacterSheetDatabase'
 import { SheetArt, SheetEmblem, type ArtKind } from './SheetArt'
@@ -624,6 +625,24 @@ export function EssenceSheetBody({
   const spiritWeaponUses = data.Development.Metaphysical.spiritWeapon ?? 0
   const kido = data.Spells.filter((spell) => spell.Path === 'Kido')
   const hado = data.Spells.filter((spell) => spell.Path === 'Hado')
+  // Temperings get their own collated panel on the Techniques tab.
+  const temperings = data.Techniques.filter(isTempering)
+  const otherTechniques = data.Techniques.filter((technique) => !isTempering(technique))
+  const renderTechnique = (technique: EssenceTechnique) => (
+    <details className="essence-detail" key={technique.Name}>
+      <summary><strong>{technique.Name}</strong> <small>{damageLabel(technique.Damage)}</small></summary>
+      <div className="essence-facts">
+        <span>Reiryoku <strong>{technique.MinReiryoku}–{technique.MaxReiryoku}</strong></span>
+        <span>Min skill <strong>{technique.MinSkill}</strong></span>
+        <span>DC <strong>{technique.DC}</strong></span>
+        <span>Action <strong>{technique.Action}</strong></span>
+        <span>Range <strong>{technique.Range}</strong></span>
+        {toRoll(technique.Name, 'Damage', technique.Damage) && <span>Damage <strong>{technique.Damage}</strong> <RollButton roll={toRoll(technique.Name, 'Damage', technique.Damage)!} /></span>}
+      </div>
+      <p>{technique.Details}</p>
+      <AbilityTrackers abilityKey={`technique:${technique.Name}`} sourceText={technique.Details} trackers={data.AbilityTrackers?.[`technique:${technique.Name}`]} onEdit={isDm ? onEditData : undefined} />
+    </details>
+  )
 
   return (
     <div className="essence-sheet">
@@ -836,23 +855,31 @@ export function EssenceSheetBody({
         ))}
       </section>
 
-      <section className="essence-panel">
-        <h2>Known techniques <span className="essence-sub">{data.Techniques.length}</span></h2>
-        {data.Techniques.map((technique) => (
-          <details className="essence-detail" key={technique.Name}>
-            <summary><strong>{technique.Name}</strong> <small>{damageLabel(technique.Damage)}</small></summary>
-            <div className="essence-facts">
-              <span>Reiryoku <strong>{technique.MinReiryoku}–{technique.MaxReiryoku}</strong></span>
-              <span>Min skill <strong>{technique.MinSkill}</strong></span>
-              <span>DC <strong>{technique.DC}</strong></span>
-              <span>Action <strong>{technique.Action}</strong></span>
-              <span>Range <strong>{technique.Range}</strong></span>
-              {toRoll(technique.Name, 'Damage', technique.Damage) && <span>Damage <strong>{technique.Damage}</strong> <RollButton roll={toRoll(technique.Name, 'Damage', technique.Damage)!} /></span>}
+      {temperings.length > 0 && (
+        <section className="essence-panel tempering-panel">
+          <h2>Tempering <span className="essence-sub">{temperings.length}</span></h2>
+          <p className="essence-note">Every effect from this character's temperings, grouped by how it is used. Open a tempering below for its full text.</p>
+          {collateTempering(data.Techniques).map(({ group, effects }) => (
+            <div key={group}>
+              <h3>{group}</h3>
+              <ul className="tempering-effects">
+                {effects.map((effect, index) => (
+                  <li key={`${effect.source}-${index}`}>
+                    <span className="tempering-source" title={effect.source}>{temperingSource(effect.source)}</span>
+                    <span>{effect.text}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p>{technique.Details}</p>
-            <AbilityTrackers abilityKey={`technique:${technique.Name}`} sourceText={technique.Details} trackers={data.AbilityTrackers?.[`technique:${technique.Name}`]} onEdit={isDm ? onEditData : undefined} />
-          </details>
-        ))}
+          ))}
+          <h3>Temperings</h3>
+          {temperings.map(renderTechnique)}
+        </section>
+      )}
+
+      <section className="essence-panel">
+        <h2>Known techniques <span className="essence-sub">{otherTechniques.length}</span></h2>
+        {otherTechniques.map(renderTechnique)}
       </section>
         </>
       )}
@@ -873,7 +900,7 @@ export function EssenceSheetBody({
         </div>
       </section>
 
-      <EssenceTree holdings={data.Essences} techniques={data.Techniques} role={role} onChange={onEssenceChange} />
+      <EssenceTree data={data} role={role} onChange={onEssenceChange} />
         </>
       )}
 

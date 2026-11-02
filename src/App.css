@@ -5974,3 +5974,68 @@ h1 {
   [data-skin] .sheet-tabs ~ * { animation: none; }
   [data-skin='arcane'] .sheet-tabs ~ .essence-panel { animation: none; }
 }
+
+/* ---- Essence refinement and tempering ---- */
+.essence-refine-actions {
+  margin-top: 8px;
+}
+
+.essence-recipe-form {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--skin-border, rgba(255, 255, 255, 0.2));
+}
+
+.essence-recipe-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--skin-muted, #c7c0cf);
+}
+
+.essence-recipe-form input[type='number'] {
+  width: 96px;
+}
+
+.tempering-panel h3 {
+  margin: 14px 0 6px;
+  font-size: 0.92rem;
+  color: var(--skin-accent, #c9b6ff);
+}
+
+.tempering-effects {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tempering-effects li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 6px 8px;
+  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.12));
+  border-radius: calc(var(--skin-radius, 8px) / 2);
+  background: var(--skin-control-bg, rgba(255, 255, 255, 0.03));
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.tempering-source {
+  display: inline-block;
+  max-width: 150px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--skin-accent, #c9b6ff) 22%, transparent);
+  color: var(--skin-text, #eee);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
