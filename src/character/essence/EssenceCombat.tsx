@@ -298,6 +298,10 @@ export function EssenceCombatModule({
       return
     }
     const definition = data.Resero.find((item) => item.Stage === stage)
+    if (reseroBlocked) {
+      setMessage(`${wielded!.Name} is an anti-Resero form; dismiss it before entering ${stage} Resero.`)
+      return
+    }
     if (!definition || !pay(definition.CostToTrigger, 0, `${stage} Resero`)) return
     onReseroChange(stage)
     setMessage(`${stage} Resero active: -${definition.CostToTrigger} Reiryoku.`)
@@ -329,20 +333,26 @@ export function EssenceCombatModule({
   // Resero stages are named after the weapon they belong to ("Snowball - Overrun"); that weapon is the Resero weapon.
   const reseroWeapon = data.SpiritWeapons.find((weapon) => data.Resero.some((stage) => stage.Name.toLowerCase().startsWith(weapon.Name.toLowerCase())))
   const extraMinor = stats.weaponForms.reduce((total, form) => total + form.extraMinorActions, 0)
+  // Only one spirit weapon is wielded at a time. A weapon other than the Resero weapon (Stick, for instance) is an
+  // anti-Resero form: while it is out, Partial, First and True Resero cannot be entered.
+  const wielded = data.SpiritWeapons.find((weapon) => activeWeapons.includes(weapon.Name))
+  const reseroBlocked = Boolean(wielded && wielded !== reseroWeapon)
 
   const toggleWeapon = (weapon: EssenceCharacterData['SpiritWeapons'][number]) => {
-    if (activeWeapons.includes(weapon.Name)) {
-      onWeaponsChange(activeWeapons.filter((name) => name !== weapon.Name))
+    if (wielded === weapon) {
+      onWeaponsChange([])
       if (weapon === reseroWeapon && reseroStage) onReseroChange(null)
       setMessage(`${weapon.Name} dismissed${weapon === reseroWeapon && reseroStage ? '; Resero ended' : ''}.`)
       return
     }
     const cost = parseCost(weapon.CostToSummon) ?? 0
     if (!pay(cost, 0, `summoning ${weapon.Name}`)) return
-    onWeaponsChange([...activeWeapons, weapon.Name])
+    onWeaponsChange([weapon.Name])
+    const endedResero = weapon !== reseroWeapon && reseroStage !== null
+    if (endedResero) onReseroChange(null)
     const form = weaponFormBonus(weapon)
     const effects = [form.armour && `${signed(form.armour)} armour`, form.hp && `${signed(form.hp)} max HP`, form.reiryoku && `${signed(form.reiryoku)} max Reiryoku`, form.extraMinorActions && `${form.extraMinorActions} extra minor action`].filter(Boolean).join(', ')
-    setMessage(`${weapon.Name} summoned: -${cost} Reiryoku${effects ? ` · ${effects}` : ''}.`)
+    setMessage(`${weapon.Name} summoned${wielded ? `, ${wielded.Name} dismissed` : ''}: -${cost} Reiryoku${effects ? ` · ${effects}` : ''}${endedResero ? ' · Resero ended' : ''}.`)
   }
 
   // State above stays alive while closed, so messages and used actions persist.
@@ -399,14 +409,16 @@ export function EssenceCombatModule({
         <span className="essence-sub">Resero{reseroWeapon ? ` · ${reseroWeapon.Name}` : ''}</span>
         {stages.map((stage) => {
           const definition = data.Resero.find((item) => item.Stage === stage)
-          const locked = definition ? !isReseroUnlocked(data, definition) : false
+          const locked = definition ? !isReseroUnlocked(data, definition) || reseroBlocked : false
           return (
             <button
               type="button"
               key={stage ?? 'off'}
               aria-pressed={reseroStage === stage}
               disabled={locked}
-              title={definition ? `${definition.Name}: costs ${definition.CostToTrigger} Reiryoku, then ${definition.CostToMaintain} per turn` : 'End Resero'}
+              title={definition
+                ? reseroBlocked ? `${wielded!.Name} is an anti-Resero form; dismiss it to enter ${stage} Resero` : `${definition.Name}: costs ${definition.CostToTrigger} Reiryoku, then ${definition.CostToMaintain} per turn`
+                : 'End Resero'}
               onClick={() => selectResero(stage)}
             >
               {stage ?? 'Off'}
@@ -414,6 +426,7 @@ export function EssenceCombatModule({
           )
         })}
         <button type="button" onClick={endTurn}>End turn</button>
+        {reseroBlocked && <small className="essence-note">{wielded!.Name} blocks Resero.</small>}
       </div>
 
       <div className="essence-stat-grid">
