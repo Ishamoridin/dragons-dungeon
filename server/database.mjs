@@ -26,9 +26,11 @@ export async function connectDatabase(env = process.env) {
     const database = client.db(name)
     await database.command({ ping: 1 })
     return { client, database }
-  } catch {
+  } catch (error) {
     await client.close()
-    throw new Error('MongoDB connection failed. Check credentials, Atlas network access, and connectivity.')
+    // Surface the driver's reason (DNS failure, server selection timeout, auth rejection) so hosted deploy logs are actionable.
+    const detail = error instanceof Error && error.message ? ` (${error.message})` : ''
+    throw new Error(`MongoDB connection failed${detail}. Check credentials, Atlas Network Access (hosts such as Render need 0.0.0.0/0 allowed), and connectivity.`, { cause: error })
   }
 }
 
