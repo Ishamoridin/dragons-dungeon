@@ -4905,3 +4905,94 @@ h1 {
   object-fit: cover;
   border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.2));
 }
+
+/* Injury paperdoll: selected body part, location chips, and remembered entries */
+.ragdoll-part-selected {
+  border-color: var(--skin-accent, #b39ef8);
+  border-style: solid;
+  opacity: 1;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--skin-accent, #b39ef8) 40%, transparent);
+}
+
+.injury-location-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.injury-location-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.2));
+  background: var(--skin-control-bg, rgba(255, 255, 255, 0.06));
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.injury-location-chip:hover,
+.injury-location-chip:focus-visible {
+  border-color: var(--skin-accent, #b39ef8);
+  outline: none;
+}
+
+.injury-location-chip-active {
+  border-color: var(--skin-accent, #b39ef8);
+  background: color-mix(in srgb, var(--skin-accent, #b39ef8) 22%, transparent);
+}
+
+.injury-presets {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.injury-preset {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--skin-border, rgba(255, 255, 255, 0.2));
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--skin-control-bg, rgba(255, 255, 255, 0.06));
+}
+
+.injury-preset-use {
+  display: grid;
+  gap: 1px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.injury-preset-use small {
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.injury-preset-use:hover,
+.injury-preset-use:focus-visible {
+  background: color-mix(in srgb, var(--skin-accent, #b39ef8) 16%, transparent);
+  outline: none;
+}
+
+.injury-preset-delete {
+  padding: 0 10px;
+  border: 0;
+  border-left: 1px solid var(--skin-border, rgba(255, 255, 255, 0.2));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.injury-preset-delete:hover,
+.injury-preset-delete:focus-visible {
+  background: rgba(255, 120, 120, 0.18);
+  outline: none;
+}

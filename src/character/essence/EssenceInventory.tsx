@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
-import type { EssenceArmourPiece, EssenceCharacterData } from './EssenceTypes'
+import type { EssenceArmourPiece, EssenceCharacterData, EssenceInjury } from './EssenceTypes'
 import { ESSENCE_WOUND_TARGETS } from './EssenceSystem'
 import { interpretWoundResult } from './WoundEffects'
 import { listItemCatalog, type ArmourCatalogEntry } from './EssenceItemCatalog'
@@ -56,32 +56,36 @@ const RAGDOLL_LAYOUT: { area: RagdollArea; label: string }[] = [
   { area: 'rfoot', label: 'R. Foot' },
 ]
 
-function Ragdoll({ parts, onSelect, onEquip, titles, hideArms = false }: {
+function Ragdoll({ parts, onSelect, onEquip, titles, hideArms = false, selectable = false, selected = null, emptyLabel = 'Bare' }: {
   parts: Partial<Record<RagdollArea, ReactNode[]>>
   onSelect?: (area: RagdollArea) => void
   onEquip?: (area: RagdollArea) => void
   titles?: Partial<Record<RagdollArea, string>>
   hideArms?: boolean
+  // When selectable, every part is a button (used as a location picker) and the selected one is highlighted.
+  selectable?: boolean
+  selected?: RagdollArea | null
+  emptyLabel?: string
 }) {
   return (
     <div className="ragdoll">
       {RAGDOLL_LAYOUT.map(({ area, label }) => {
         if (hideArms && (area === 'larm' || area === 'rarm')) return null
         const content = parts[area] ?? []
-        const className = `ragdoll-part ragdoll-${area} ${content.length ? 'ragdoll-part-filled' : 'ragdoll-part-empty'}`
+        const className = `ragdoll-part ragdoll-${area} ${content.length ? 'ragdoll-part-filled' : 'ragdoll-part-empty'}${selected === area ? ' ragdoll-part-selected' : ''}`
         const contextMenu = onEquip
           // Deferred via setTimeout so the browser's own post-contextmenu "auxclick" (fired for the
           // right mouse button at the same screen position) lands before the picker modal mounts,
           // instead of immediately selecting whatever row happens to render under the cursor.
           ? (event: React.MouseEvent) => { event.preventDefault(); setTimeout(() => onEquip(area), 0) }
           : undefined
-        if (onSelect && content.length > 0) {
+        if (onSelect && (selectable || content.length > 0)) {
           return (
             <button type="button" className={`${className} ragdoll-slot-button`} key={area}
-              title={titles?.[area]} aria-label={`${label}: ${titles?.[area] ?? 'Equipment'}`}
+              title={titles?.[area]} aria-label={`${label}: ${titles?.[area] ?? (content.length ? 'Equipment' : emptyLabel)}`} aria-pressed={selectable ? selected === area : undefined}
               onClick={() => onSelect(area)} onContextMenu={contextMenu}>
               <span className="ragdoll-part-label">{label}</span>
-              {content}
+              {content.length > 0 ? content : <small className="essence-note">{emptyLabel}</small>}
             </button>
           )
         }
@@ -89,7 +93,7 @@ function Ragdoll({ parts, onSelect, onEquip, titles, hideArms = false }: {
           <div className={className} key={area} onContextMenu={contextMenu}
             title={onEquip ? `Right-click to equip ${label}` : undefined}>
             <span className="ragdoll-part-label">{label}</span>
-            {content.length > 0 ? content : <small className="essence-note">Bare</small>}
+            {content.length > 0 ? content : <small className="essence-note">{emptyLabel}</small>}
           </div>
         )
       })}
@@ -120,6 +124,9 @@ const INJURY_AREA: Record<string, RagdollArea | 'general'> = {
   'Left Leg': 'lleg', 'Right Leg': 'rleg',
   Muscle: 'general', Skin: 'general', Aura: 'general', Essence: 'general', Soul: 'general',
 }
+
+// The injury table has no hand or foot entries, so clicks on those paperdoll parts select the limb instead.
+const AREA_FALLBACK: Partial<Record<RagdollArea, RagdollArea>> = { lhand: 'larm', rhand: 'rarm', lfoot: 'lleg', rfoot: 'rleg' }
 
 // A small outline-icon per ragdoll area, so equipped armour reads as silhouette pieces on a
 // paperdoll rather than text, no matter what the DM named the underlying slot.
@@ -347,6 +354,7 @@ function WoundResultEffects({ text, preview = false }: { text: string; preview?:
 export function InjuriesPanel({ data, onEdit }: { data: EssenceCharacterData; onEdit?: Edit }) {
   const injuries = data.Injuries ?? []
   const statuses = data.Statuses ?? []
+  const presets = data.InjuryPresets ?? []
   const [location, setLocation] = useState(INJURY_LOCATIONS[0])
   const [name, setName] = useState('')
   const [duration, setDuration] = useState('')
@@ -362,35 +370,59 @@ export function InjuriesPanel({ data, onEdit }: { data: EssenceCharacterData; on
     const node = (
       <div className="ragdoll-item" key={`${injury.Location}-${injury.Name}-${index}`}>
         <strong>{injury.Name}</strong>
-        <small>{injury.Duration || 'No duration set'}</small>
+        <small>{injury.Location}{injury.Duration ? ` · ${injury.Duration}` : ''}</small>
       </div>
     )
     if (!area || area === 'general') { general.push(injury); return }
     ;(parts[area] ??= []).push(node)
   })
 
+  // The picker: clicking a body part selects its first location; chips refine it (e.g. Brain vs Skull vs Eyes).
+  const selectedArea = INJURY_AREA[location] ?? 'general'
+  const areaLocations = INJURY_LOCATIONS.filter((item) => INJURY_AREA[item] === selectedArea)
+  const pickArea = (area: RagdollArea) => {
+    const target = AREA_FALLBACK[area] ?? area
+    const options = INJURY_LOCATIONS.filter((item) => INJURY_AREA[item] === target)
+    if (options.length && !options.includes(location)) setLocation(options[0])
+  }
+  const applyPreset = (preset: EssenceInjury) => {
+    setLocation(INJURY_LOCATIONS.includes(preset.Location) ? preset.Location : location)
+    setName(preset.Name); setDuration(preset.Duration); setResult(preset.Result)
+  }
+  const samePreset = (a: EssenceInjury, b: EssenceInjury) =>
+    a.Name.toLowerCase() === b.Name.toLowerCase() && a.Duration.toLowerCase() === b.Duration.toLowerCase() && a.Result.toLowerCase() === b.Result.toLowerCase()
+
   return (
     <section className="essence-panel">
       <h2>Injuries</h2>
       <h3>Long-term injuries</h3>
-      {injuries.length === 0 && <p className="essence-note">No long-term injuries.</p>}
-      {injuries.length > 0 && (
-        <div className="ragdoll-panel">
-          <Ragdoll parts={parts} />
-          {general.length > 0 && (
-            <>
-              <h3>Systemic effects</h3>
-              <div className="essence-chips">
-                {general.map((injury, index) => (
-                  <span className="essence-record" key={`${injury.Location}-${injury.Name}-${index}`}>
-                    <strong>{injury.Location}: {injury.Name}</strong>
-                  </span>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      {injuries.length === 0 && !onEdit && <p className="essence-note">No long-term injuries.</p>}
+      <div className="ragdoll-panel">
+        <Ragdoll
+          parts={parts}
+          emptyLabel="Unhurt"
+          selectable={Boolean(onEdit)}
+          selected={onEdit && selectedArea !== 'general' ? selectedArea : null}
+          onSelect={onEdit ? pickArea : undefined}
+          titles={onEdit ? Object.fromEntries(RAGDOLL_LAYOUT.map(({ area, label }) => [area, `Record an injury to the ${label.toLowerCase()}`])) : undefined}
+        />
+        {(general.length > 0 || onEdit) && (
+          <>
+            <h3>Systemic effects</h3>
+            <div className="essence-chips">
+              {general.map((injury, index) => (
+                <span className="essence-record" key={`${injury.Location}-${injury.Name}-${index}`}>
+                  <strong>{injury.Location}: {injury.Name}</strong>
+                </span>
+              ))}
+              {onEdit && INJURY_LOCATIONS.filter((item) => INJURY_AREA[item] === 'general').map((item) => (
+                <button type="button" key={item} className={`injury-location-chip${location === item ? ' injury-location-chip-active' : ''}`} aria-pressed={location === item} onClick={() => setLocation(item)}>{item}</button>
+              ))}
+              {general.length === 0 && !onEdit && <span className="essence-note">None</span>}
+            </div>
+          </>
+        )}
+      </div>
       {injuries.map((injury, index) => (
         <div className="essence-record" key={`${injury.Location}-${index}`}>
           <strong>{injury.Location}: {injury.Name}</strong>
@@ -402,12 +434,16 @@ export function InjuriesPanel({ data, onEdit }: { data: EssenceCharacterData; on
       ))}
       {onEdit && (
         <div className="essence-record-form">
-          <label className="essence-field">
+          <div className="essence-field">
             <span className="essence-field-label">Injury location</span>
-            <select aria-label="Injury location" value={location} onChange={(event) => setLocation(event.currentTarget.value)}>
-              {INJURY_LOCATIONS.map((item) => <option key={item}>{item}</option>)}
-            </select>
-          </label>
+            <p className="essence-note">Click a body part above, then refine:</p>
+            <div className="injury-location-chips" role="group" aria-label="Injury location">
+              {(selectedArea === 'general' ? [] : areaLocations).map((item) => (
+                <button type="button" key={item} className={`injury-location-chip${location === item ? ' injury-location-chip-active' : ''}`} aria-pressed={location === item} onClick={() => setLocation(item)}>{item}</button>
+              ))}
+              {selectedArea === 'general' && <span className="injury-location-chip injury-location-chip-active">{location}</span>}
+            </div>
+          </div>
           <LabeledField label="Injury name" value={name} set={setName} />
           <LabeledField label="Duration" value={duration} set={setDuration} />
           <LabeledField label="Wound result" value={result} set={setResult} />
@@ -416,13 +452,32 @@ export function InjuriesPanel({ data, onEdit }: { data: EssenceCharacterData; on
             type="button"
             disabled={!name.trim()}
             onClick={() => {
-              const injury = { Location: location, Name: name.trim(), Duration: duration.trim(), Result: result.trim() }
-              onEdit((draft) => { draft.Injuries = [...(draft.Injuries ?? []), injury] })
+              const injury: EssenceInjury = { Location: location, Name: name.trim(), Duration: duration.trim(), Result: result.trim() }
+              onEdit((draft) => {
+                draft.Injuries = [...(draft.Injuries ?? []), injury]
+                // Remember the entry for reuse; newest first, duplicates collapsed, capped so the list stays scannable.
+                draft.InjuryPresets = [injury, ...(draft.InjuryPresets ?? []).filter((preset) => !samePreset(preset, injury))].slice(0, 30)
+              })
               setName(''); setDuration(''); setResult('')
             }}
           >
             Add injury
           </button>
+          {presets.length > 0 && (
+            <div className="injury-presets">
+              <span className="essence-field-label">Previous entries</span>
+              <div className="essence-chips">
+                {presets.map((preset, index) => (
+                  <span className="injury-preset" key={`${preset.Name}-${index}`}>
+                    <button type="button" className="injury-preset-use" title={`${preset.Location}${preset.Duration ? ` · ${preset.Duration}` : ''}${preset.Result ? ` · ${preset.Result}` : ''}`} onClick={() => applyPreset(preset)}>
+                      <strong>{preset.Name}</strong><small>{preset.Location}{preset.Duration ? ` · ${preset.Duration}` : ''}</small>
+                    </button>
+                    <button type="button" className="injury-preset-delete" aria-label={`Forget ${preset.Name}`} title="Forget this entry" onClick={() => onEdit((draft) => { draft.InjuryPresets = (draft.InjuryPresets ?? []).filter((_, i) => i !== index) })}>×</button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

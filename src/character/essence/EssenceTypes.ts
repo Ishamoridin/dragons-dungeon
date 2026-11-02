@@ -147,6 +147,8 @@ export type EssenceCharacterData = {
   // Spell paths this character cannot cast; they stay listed but cannot be used.
   DisabledSpellPaths?: EssenceSpell['Path'][]
   Injuries?: EssenceInjury[]
+  // Previously entered injuries kept for quick reuse from the injury paperdoll; deletable by the editor.
+  InjuryPresets?: EssenceInjury[]
   Statuses?: EssenceStatus[]
   Inventory?: EssenceInventoryItem[]
   DevelopmentLog?: DevelopmentLogEntry[]
