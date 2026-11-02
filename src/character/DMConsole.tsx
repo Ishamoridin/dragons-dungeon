@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { resourceList, saveResource } from './Api'
+import { loadResources, resourceList, saveResource } from './Api'
 import NewSystemModal from './NewSystemModal'
+import ImportSheetModal from './ImportSheetModal'
+import PortraitControl from './PortraitControl'
+import { portraitShellClass, portraitStyle, type Portrait } from './Portrait'
 import SettingsMenu from './SettingsMenu'
 import EssenceAdjustmentModal from './essence/EssenceAdjustmentModal'
 import type { CampaignAction, CampaignEventType, NPCFactionGroup } from './Campaign'
@@ -16,10 +19,12 @@ import {
   softDeleteCharacterSheet,
   listDeletedCharacterSheets,
   restoreCharacterSheet,
+  syncCharacterSheetWithGoogleSheets,
   type CharacterAttributeData,
   type CharacterSheetData,
   type CharacterSheetRecord,
   type CharacterSkillData,
+  type SheetSource,
 } from './CharacterSheetDatabase'
 import type { User } from './User'
 import PageSkinSelector from './PageSkinSelector'
@@ -410,6 +415,7 @@ function PlayerSheetView({
   onEssenceChange,
   onEssenceEdit,
   onEssenceAmount,
+  onPortraitChange,
 }: {
   record: CharacterSheetRecord
   onBack: () => void
@@ -418,13 +424,15 @@ function PlayerSheetView({
   onEssenceChange?: (change: SheetChange) => Promise<void>
   onEssenceEdit?: (mutate: (draft: EssenceCharacterData) => void) => Promise<void>
   onEssenceAmount?: (change: EssenceChange) => Promise<void>
+  onPortraitChange?: (portrait: Portrait | null) => Promise<void>
 }) {
   const attributeEntries = Object.entries(record.Attributes)
   const resources = getResources(record)
+  const shellStyle = portraitStyle(record.Portrait)
 
   if (record.Essence) {
     return (
-      <div className="sheet-shell player-preview-shell" data-skin={skin}>
+      <div className={portraitShellClass('sheet-shell player-preview-shell', record.Portrait)} data-skin={skin} style={shellStyle}>
         <header className="sheet-topbar">
           <div>
             <p className="eyebrow">{record.CampaignName} · Essence · Player sheet</p>
@@ -436,13 +444,13 @@ function PlayerSheetView({
             <button type="button" className="sign-out-button" onClick={onBack}>Back to campaign desk</button>
           </div>
         </header>
-        <EssenceSheetBody data={record.Essence} role="dm" onChange={onEssenceChange ? (change) => void onEssenceChange(change) : undefined} onEditData={onEssenceEdit ? (mutate) => void onEssenceEdit(mutate) : undefined} onEssenceChange={onEssenceAmount ? (change) => void onEssenceAmount(change) : undefined} />
+        <EssenceSheetBody data={record.Essence} role="dm" onChange={onEssenceChange ? (change) => void onEssenceChange(change) : undefined} onEditData={onEssenceEdit ? (mutate) => void onEssenceEdit(mutate) : undefined} onEssenceChange={onEssenceAmount ? (change) => void onEssenceAmount(change) : undefined} portrait={record.Portrait} onPortraitChange={onPortraitChange ? (portrait) => void onPortraitChange(portrait) : undefined} />
       </div>
     )
   }
 
   return (
-    <div className="sheet-shell player-preview-shell" data-skin={skin}>
+    <div className={portraitShellClass('sheet-shell player-preview-shell', record.Portrait)} data-skin={skin} style={shellStyle}>
       <header className="sheet-topbar">
         <div>
           <p className="eyebrow">{record.CampaignName} · Player sheet</p>
@@ -465,6 +473,7 @@ function PlayerSheetView({
 
       <main className="sheet-grid">
         <section className="identity-panel">
+          <PortraitControl portrait={record.Portrait} name={record.Name} onChange={onPortraitChange ? (portrait) => void onPortraitChange(portrait) : undefined} />
           <h2>Resources</h2>
           <div className="resource-bars">
             {resources.map((resource) => (
@@ -527,6 +536,29 @@ function DeleteCharacterControl({ name, onDelete }: { name: string; onDelete: ()
   )
 }
 
+// Shows where a linked character came from and lets the DM pull the workbook on demand.
+function SheetSyncControl({ source, onSync }: { source: SheetSource; onSync?: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const synced = new Date(source.SyncedAt)
+  return (
+    <div className="sheet-sync-control">
+      <small>
+        Linked to <a href={source.Url} target="_blank" rel="noreferrer">Google Sheet{source.Title ? `: ${source.Title}` : ''}</a>
+        {' · '}synced {Number.isNaN(synced.getTime()) ? 'never' : synced.toLocaleString()}
+        {source.LastError ? ` · last error: ${source.LastError}` : ''}
+      </small>
+      {onSync && (
+        <button type="button" className="dm-secondary-action" disabled={busy} onClick={() => {
+          setBusy(true); setMessage('')
+          onSync().then(() => setMessage('Synced with the sheet.')).catch((failure) => setMessage(failure instanceof Error ? failure.message : 'Sync failed.')).finally(() => setBusy(false))
+        }}>{busy ? 'Syncing...' : 'Sync with Google Sheet'}</button>
+      )}
+      {message && <small role="status">{message}</small>}
+    </div>
+  )
+}
+
 function CharacterActionModal({
   record,
   campaign,
@@ -536,6 +568,7 @@ function CharacterActionModal({
   onSchedule,
   onApplyEssence,
   onDelete,
+  onSyncSheet,
   initialEventType,
 }: {
   record: CharacterSheetRecord
@@ -545,6 +578,7 @@ function CharacterActionModal({
   onApplyEssence: (mutate: (draft: EssenceCharacterData) => void) => Promise<void>
   onDelete: () => void
   onOpenSheet: () => void
+  onSyncSheet?: () => Promise<void>
   onSchedule: (type: CampaignEventType, title: string, description: string, time: Date, actions: CampaignAction[]) => void
   initialEventType?: CampaignEventType
 }) {
@@ -622,6 +656,7 @@ function CharacterActionModal({
             <section className="dm-action-block">
               <h3>Player sheet</h3>
               <button type="button" className="dm-secondary-action" onClick={onOpenSheet}>Open Player sheet</button>
+              {record.SheetSource && <SheetSyncControl source={record.SheetSource} onSync={onSyncSheet} />}
               <DeleteCharacterControl name={displayName(record)} onDelete={onDelete} />
             </section>
           </div>
@@ -644,6 +679,7 @@ function CharacterActionModal({
         </header>
 
         <MiniSheet record={record} />
+        {record.SheetSource && <SheetSyncControl source={record.SheetSource} onSync={onSyncSheet} />}
 
         <div className="dm-action-grid">
           <section className="dm-action-block">
@@ -1259,6 +1295,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [systems, setSystems] = useState<StatSystem[]>(() => mergeSystems(resourceList<StatSystem>('systems')))
   const [newSystemOpen, setNewSystemOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [selectedSystemId, setSelectedSystemId] = useState(DEFAULT_STAT_SYSTEM_ID)
   const [selectedCampaignName, setSelectedCampaignName] = useState('')
   const [campaignPage, setCampaignPage] = useState<CampaignPage>('Players')
@@ -1394,6 +1431,17 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
     setError('')
   }
 
+  // Portraits live on the record (not the Essence block) so any ruleset's sheet can carry one.
+  const updatePortrait = async (characterId: string, portrait: Portrait | null) => {
+    const current = characters.find((record) => record.Id === characterId)
+    if (!current) { setError('Character sheet not found.'); return }
+    const saved = await updateCharacterSheet(characterId, { ...toCharacterSheetData(current), Portrait: portrait }, user)
+    if (!saved) { setError('This character is not assigned to your campaign or you no longer have access.'); return }
+    setCharacters((records) => records.map((record) => record.Id === saved.Id ? saved : record))
+    setStatus(`${portrait ? 'Updated' : 'Removed'} portrait for ${displayName(saved)} · ${new Date().toLocaleTimeString()}`)
+    setError('')
+  }
+
   const scheduleEvent = (
     campaignName: string,
     type: CampaignEventType,
@@ -1458,7 +1506,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
   }, [selectedCampaign?.Name, characters])
 
   if (previewCharacter) {
-    return <PlayerSheetView record={previewCharacter} onBack={() => setPreviewCharacterId(null)} skin={skin} onSkinChange={onSkinChange} onEssenceChange={(change) => updateEssence(previewCharacter.Id, (draft) => applySheetChange(draft, change, { name: user.Username, role: 'dm' }))} onEssenceEdit={(mutate) => updateEssence(previewCharacter.Id, mutate)} onEssenceAmount={(change) => updateEssence(previewCharacter.Id, (draft) => applyEssenceChange(draft, change, { name: user.Username, role: 'dm' }))} />
+    return <PlayerSheetView record={previewCharacter} onBack={() => setPreviewCharacterId(null)} skin={skin} onSkinChange={onSkinChange} onEssenceChange={(change) => updateEssence(previewCharacter.Id, (draft) => applySheetChange(draft, change, { name: user.Username, role: 'dm' }))} onEssenceEdit={(mutate) => updateEssence(previewCharacter.Id, mutate)} onEssenceAmount={(change) => updateEssence(previewCharacter.Id, (draft) => applyEssenceChange(draft, change, { name: user.Username, role: 'dm' }))} onPortraitChange={(portrait) => updatePortrait(previewCharacter.Id, portrait)} />
   }
 
   const techniqueEntries: TechniqueEntry[] = [
@@ -1558,6 +1606,25 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
         setStatus(`Created ${system.Name}`)
         setNewSystemOpen(false)
       }} />}
+      {importOpen && <ImportSheetModal
+        user={user}
+        systems={systems}
+        campaignName={selectedCampaignName}
+        campaignNames={[...new Set([...systems.flatMap((system) => system.CampaignNames), ...campaigns.map((campaign) => campaign.Name)])]}
+        onClose={() => setImportOpen(false)}
+        onImported={async (result) => {
+          // A newly created system lives in the resource cache, which loadCharacters merges from.
+          if (result.system.created) await loadResources('dm')
+          await loadCharacters()
+          setSelectedSystemId(result.system.Id)
+          setSelectedCampaignName(result.record.CampaignName)
+          setCampaignPage('Players')
+          setSelectedCharacterId(result.record.Id)
+          const warnings = result.warnings.length ? ` · ${result.warnings.length} warning${result.warnings.length === 1 ? '' : 's'}: ${result.warnings.slice(0, 3).join('; ')}` : ''
+          setStatus(`Imported ${displayName(result.record)}${result.system.created ? ` and created ${result.system.Name}` : ''}${warnings}`)
+          setImportOpen(false)
+        }}
+      />}
       {error && <p className="dm-console-error" role="alert">{error}</p>}
       {systemCampaigns.length === 0 && (
         <div className="dm-empty-state"><h2>No campaigns in the {activeSystem.Name} stat system</h2></div>
@@ -1600,6 +1667,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
                 <div className="campaign-page-heading">
                   <div><p className="eyebrow">Roster</p><h3>Players</h3></div>
                   <span>{campaignCharacters.length} characters</span>
+                  <button type="button" className="essence-inline-button" onClick={() => setImportOpen(true)}>Import from Google Sheets</button>
                   <button type="button" className="essence-inline-button" onClick={() => void listDeletedCharacterSheets(user).then(setDeletedList)}>Deleted characters</button>
                 </div>
                 <div className="dm-character-grid">
@@ -1609,6 +1677,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
                     <div className="dm-character-card-wrap" key={record.Id}>
                     <button className="dm-character-card" type="button" onClick={() => setSelectedCharacterId(record.Id)}>
                       <div className="dm-character-card-heading">
+                        {record.Portrait && <img className="dm-character-card-portrait" src={record.Portrait.DataUrl} alt="" />}
                         <strong>{displayName(record)}</strong>
                         <span>{record.Essence ? record.Essence.Race : `Level ${record.Level}`}</span>
                       </div>
@@ -1913,6 +1982,11 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
             setPreviewCharacterId(selectedCharacter.Id)
             setSelectedCharacterId(null)
           }}
+          onSyncSheet={selectedCharacter.SheetSource ? async () => {
+            const result = await syncCharacterSheetWithGoogleSheets(selectedCharacter.Id)
+            await loadCharacters()
+            setStatus(result.changed ? `Pulled sheet changes for ${displayName(result.record)}` : `${displayName(result.record)} already matches the sheet${result.pushed ? ` · pushed ${result.pushed} cells` : ''}`)
+          } : undefined}
           onSchedule={(type, title, description, time, actions) => scheduleEvent(selectedCharacter.CampaignName, type, title, description, time, actions)}
           initialEventType={eventTemplateType ?? undefined}
         />

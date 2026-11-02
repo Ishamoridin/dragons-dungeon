@@ -58,6 +58,8 @@ export type SheetSource = {
   Title?: string
   SyncedAt: string
   Fingerprint: string
+  // Last entry of the workbook's Changelog tab at the previous sync; null when the workbook has no such tab.
+  ChangelogMarker?: string | null
   LastError?: string
   LastErrorAt?: string
 }
