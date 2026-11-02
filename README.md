@@ -75,7 +75,7 @@ Until `API_ORIGIN` is set, the deployed frontend intentionally shows "Account se
 
 ## Importing and syncing characters from Google Sheets
 
-The DM console's Players tab has an **Import from Google Sheets** button. Paste a workbook link, pick the campaign and owning account, and the API downloads the workbook, works out which stat system it belongs to (the Essence rules are recognised from the title and attribute table on the first tab; an unknown ruleset becomes a new system), builds the character, and keeps the record linked to the sheet.
+The DM console's Players tab has an **Import from Google Sheets** button. Paste a workbook link and pick the owning account; the API downloads the workbook, reads the campaign from its "Campaign:" cell, works out which stat system it belongs to (the Essence rules are recognised from the title and attribute table on the first tab; an unknown ruleset becomes a new system), builds the character, and keeps the record linked to the sheet.
 
 Linked characters stay in step with their workbook:
 

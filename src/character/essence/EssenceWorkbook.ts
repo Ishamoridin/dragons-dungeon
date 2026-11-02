@@ -103,10 +103,27 @@ class SheetReader {
 
 // ---------- detection ----------
 
-export type WorkbookDetection = { ruleset: 'essence' | 'private' | null; title: string; fullTitle: string; characterName: string; warnings: string[] }
+export type WorkbookDetection = { ruleset: 'essence' | 'private' | null; title: string; fullTitle: string; characterName: string; campaignName: string; warnings: string[] }
+
+// The campaign comes from the workbook: a "Campaign:" label on any tab with the name in the next cell to the right
+// (or directly below it).
+function campaignNameFrom(workbook: Workbook): string {
+  for (const sheet of workbook.sheets) {
+    for (let r = 0; r < sheet.rows.length; r++) {
+      const row = sheet.rows[r] ?? []
+      const c = row.findIndex((value) => /^campaign(\s*name)?:?$/i.test(text(value)))
+      if (c < 0) continue
+      const right = text(row.slice(c + 1).find((value) => text(value)) ?? null)
+      const below = text(sheet.rows[r + 1]?.[c] ?? null)
+      return right || below
+    }
+  }
+  return ''
+}
 
 export function detectWorkbookSystem(workbook: Workbook): WorkbookDetection {
   const warnings: string[] = []
+  const campaignName = campaignNameFrom(workbook)
   const first = workbook.sheets.find((sheet) => /character/i.test(sheet.name)) ?? workbook.sheets[0]
   const flat = (sheet?: WorkbookSheet) => (sheet?.rows ?? []).flatMap((row, r) => row.map((value, c) => ({ value: text(value), r, c })).filter((cell) => cell.value))
   const cells = flat(first)
@@ -118,12 +135,12 @@ export function detectWorkbookSystem(workbook: Workbook): WorkbookDetection {
   const characterName = nameLabel ? text(first?.rows[nameLabel.r]?.slice(nameLabel.c + 1).find((value) => text(value)) ?? null) : ''
   if (hasEssenceAttributes || /^essence\b/i.test(fullTitle)) {
     if (!hasEssenceAttributes) warnings.push('The title says Essence but the attribute table was not found where expected; values may be incomplete.')
-    return { ruleset: 'essence', title: 'Essence', fullTitle: fullTitle || 'Essence', characterName, warnings }
+    return { ruleset: 'essence', title: 'Essence', fullTitle: fullTitle || 'Essence', characterName, campaignName, warnings }
   }
   if (labels.has('playername') || labels.has('charactername')) {
-    return { ruleset: 'private', title: fullTitle || 'Imported system', fullTitle, characterName, warnings }
+    return { ruleset: 'private', title: fullTitle || 'Imported system', fullTitle, characterName, campaignName, warnings }
   }
-  return { ruleset: null, title: fullTitle, fullTitle, characterName, warnings }
+  return { ruleset: null, title: fullTitle, fullTitle, characterName, campaignName, warnings }
 }
 
 // ---------- import ----------

@@ -16,6 +16,7 @@ import LoginScreen from './character/LoginScreen'
 import { DM, type User } from './character/User'
 import DMConsole from './character/DMConsole'
 import SettingsMenu from './character/SettingsMenu'
+import ImportSheetModal from './character/ImportSheetModal'
 import { api } from './character/Api'
 import { DEFAULT_PAGE_SKIN, type PageSkin } from './character/PageSkin'
 import { savePreferredSkin } from './character/UserPreferences'
@@ -176,6 +177,7 @@ function App() {
   const [, setCharacterRevision] = useState(0)
   const [essenceSheets, setEssenceSheets] = useState<CharacterSheetRecord[]>([])
   const [viewedEssenceId, setViewedEssenceId] = useState<string | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
   const lastRefreshAt = useRef(0)
 
   useEffect(() => {
@@ -391,9 +393,30 @@ function App() {
   )
   const viewedEssence = essenceSheets.find((sheet) => sheet.Id === viewedEssenceId)
 
+  // Players bring their own Google Sheets characters in; the import lands under their managing DM.
+  const importButton = currentUser.Role === 'player' && (
+    <button type="button" className="essence-inline-button" onClick={() => setImportOpen(true)}>Import character</button>
+  )
+  const importModal = importOpen && (
+    <ImportSheetModal
+      user={currentUser}
+      systems={[]}
+      onClose={() => setImportOpen(false)}
+      onImported={async (result) => {
+        const sheets = await refreshCharacterSheets(currentUser)
+        setSavedSheetCount(sheets.length)
+        setEssenceSheets(sheets.filter((sheet) => sheet.Essence))
+        setViewedEssenceId(result.record.Id)
+        rememberScreen({ viewedEssenceId: result.record.Id })
+        setImportOpen(false)
+      }}
+    />
+  )
+
   if (viewedEssence?.Essence) {
     return (
       <div className={portraitShellClass('sheet-shell', viewedEssence.Portrait)} data-skin={pageSkin} style={{ ...skinArtStyle(pageSkin), ...portraitStyle(viewedEssence.Portrait) }}>
+        {importModal}
         <header className="sheet-topbar">
           <div>
             <p className="eyebrow">{viewedEssence.CampaignName} · Essence</p>
@@ -401,6 +424,7 @@ function App() {
           </div>
           <div className="topbar-actions">
             {sheetPicker}
+            {importButton}
             <div className="summary-pill"><span>{viewedEssence.Essence.Race}</span><span>{spiritWeaponLabel(viewedEssence.Essence)}</span></div>
             <span className="signed-in-user">{currentUser.Username} · {currentUser.Role.toUpperCase()}</span>
             <SettingsMenu user={currentUser} pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} onUserChange={activateUser} />
@@ -461,6 +485,7 @@ function App() {
 
   return (
     <div className="sheet-shell" data-skin={pageSkin} style={skinArtStyle(pageSkin)}>
+      {importModal}
       <header className="sheet-topbar">
         <div>
           <p className="eyebrow">Campaign ledger</p>
@@ -468,6 +493,7 @@ function App() {
         </div>
         <div className="topbar-actions">
           {sheetPicker}
+          {importButton}
           <span className="database-status" role="status" aria-live="polite">
             DB · {savedSheetCount} sheets · {databaseRefreshStatus}
           </span>

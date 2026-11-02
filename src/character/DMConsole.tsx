@@ -1674,8 +1674,6 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
       {importOpen && <ImportSheetModal
         user={user}
         systems={systems}
-        campaignName={selectedCampaignName}
-        campaignNames={[...new Set([...systems.flatMap((system) => system.CampaignNames), ...campaigns.map((campaign) => campaign.Name)])]}
         onClose={() => setImportOpen(false)}
         onImported={async (result) => {
           // A newly created system lives in the resource cache, which loadCharacters merges from.

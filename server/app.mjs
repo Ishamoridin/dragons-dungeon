@@ -387,11 +387,16 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     const rows = await characters.find(scope).sort({ UpdatedAt: -1 }).toArray()
     res.json(rows.map(clean).filter((record) => req.query.deleted === 'true' ? req.user.Role === 'dm' && record.Name.endsWith(' (Deleted)') : !record.Name.endsWith(' (Deleted)')))
   })
-  app.post('/api/characters/import/google-sheets', dmOnly, rateLimit({ windowMs: 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many imports. Please wait a minute.' } }), async (req, res) => {
-    const input = z.object({ url: z.string().trim().min(1).max(2000), campaignName: z.string().trim().min(1).max(100), ownerId: z.string().optional() }).strict().parse(req.body)
-    const owner = input.ownerId && input.ownerId !== req.user.Id ? await users.findOne({ Id: input.ownerId, CreatedBy: req.user.Id }) : req.user
+  // DMs import for themselves or an account they manage; players import for themselves under their managing DM.
+  // The campaign comes from the workbook's "Campaign:" cell.
+  app.post('/api/characters/import/google-sheets', rateLimit({ windowMs: 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many imports. Please wait a minute.' } }), async (req, res) => {
+    const input = z.object({ url: z.string().trim().min(1).max(2000), ownerId: z.string().optional() }).strict().parse(req.body)
+    const isDm = req.user.Role === 'dm'
+    const owner = isDm && input.ownerId && input.ownerId !== req.user.Id ? await users.findOne({ Id: input.ownerId, CreatedBy: req.user.Id }) : req.user
     if (!owner) throw fail(403, 'Select an account you manage.')
-    const result = await sheets.importCharacter({ url: input.url, campaignName: input.campaignName, owner, dm: req.user, actor: req.user })
+    const dm = isDm ? req.user : await users.findOne({ Id: req.user.CreatedBy, Role: 'dm' })
+    if (!dm) throw fail(403, 'A managing DM is required.')
+    const result = await sheets.importCharacter({ url: input.url, owner, dm, actor: req.user })
     res.status(201).json(result)
   })
   app.post('/api/characters/:id/sheet-sync', async (req, res) => {

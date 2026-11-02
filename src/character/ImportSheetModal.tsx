@@ -7,23 +7,21 @@ import { importCharacterSheetFromGoogleSheets, type SheetImportResult } from './
 
 type Account = Pick<User, 'Id' | 'Username' | 'Role'>
 
-// Lets the DM paste a Google Sheets link; the API downloads the workbook, detects (or creates) the stat system,
-// builds the character, and keeps it linked for ongoing sync.
-export default function ImportSheetModal({ user, systems, campaignName, campaignNames, onImported, onClose }: {
+// Paste a Google Sheets link; the API downloads the workbook, detects (or creates) the stat system, reads the
+// campaign from the sheet's "Campaign:" cell, builds the character, and keeps it linked for ongoing sync.
+export default function ImportSheetModal({ user, systems, onImported, onClose }: {
   user: User
   systems: StatSystem[]
-  campaignName: string
-  campaignNames: string[]
   onImported: (result: SheetImportResult) => Promise<void> | void
   onClose: () => void
 }) {
   const [url, setUrl] = useState('')
-  const [campaign, setCampaign] = useState(campaignName)
   const [ownerId, setOwnerId] = useState(user.Id)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const urlRef = useRef<HTMLInputElement>(null)
+  const isDm = user.Role === 'dm'
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
@@ -31,21 +29,21 @@ export default function ImportSheetModal({ user, systems, campaignName, campaign
     return () => previous?.focus()
   }, [])
 
+  // Only DMs can import on behalf of other accounts; players always import for themselves.
   useEffect(() => {
+    if (!isDm) return
     let cancelled = false
     api<Account[]>('/accounts').then((rows) => { if (!cancelled) setAccounts(rows) }).catch(() => { /* owner picker falls back to the DM */ })
     return () => { cancelled = true }
-  }, [])
+  }, [isDm])
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     const link = url.trim()
-    const campaignValue = campaign.trim()
     if (!/docs\.google\.com\/spreadsheets\/d\//.test(link)) { setError('Paste a Google Sheets link (docs.google.com/spreadsheets/d/...).'); return }
-    if (!campaignValue) { setError('Choose or enter a campaign for the character.'); return }
     setBusy(true); setError('')
     try {
-      const result = await importCharacterSheetFromGoogleSheets({ url: link, campaignName: campaignValue, ownerId: ownerId === user.Id ? undefined : ownerId })
+      const result = await importCharacterSheetFromGoogleSheets({ url: link, ownerId: ownerId === user.Id ? undefined : ownerId })
       await onImported(result)
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Unable to import the character.')
@@ -77,19 +75,17 @@ export default function ImportSheetModal({ user, systems, campaignName, campaign
             <label>Google Sheets link
               <input ref={urlRef} required type="url" inputMode="url" placeholder="https://docs.google.com/spreadsheets/d/..." value={url} onChange={(event) => setUrl(event.currentTarget.value)} />
             </label>
-            <label>Campaign
-              <input required list="import-sheet-campaigns" maxLength={100} value={campaign} onChange={(event) => setCampaign(event.currentTarget.value)} />
-              <datalist id="import-sheet-campaigns">{campaignNames.map((name) => <option key={name} value={name} />)}</datalist>
-            </label>
-            <label>Owner account
+            {isDm && <label>Owner account
               <select value={ownerId} onChange={(event) => setOwnerId(event.currentTarget.value)}>
                 <option value={user.Id}>{user.Username} (you)</option>
                 {accounts.filter((account) => account.Id !== user.Id).map((account) => <option key={account.Id} value={account.Id}>{account.Username} · {account.Role}</option>)}
               </select>
-            </label>
+            </label>}
           </fieldset>
           <p className="essence-note">
-            The sheet must be shared as "Anyone with the link can view" (or with the API's service account). The workbook's rules are matched against your systems{knownSystems ? ` (${knownSystems})` : ''}; an unknown ruleset becomes a new system. The character stays linked, so later edits in the sheet flow into the app.
+            The sheet must be shared as "Anyone with the link can view" (or with the API's service account). The campaign is read from a cell labelled "Campaign:" in the workbook. {isDm
+              ? <>The workbook's rules are matched against your systems{knownSystems ? ` (${knownSystems})` : ''}; an unknown ruleset becomes a new system.</>
+              : <>The character is added to your account under your DM's systems.</>} The character stays linked, so later edits in the sheet flow into the app.
           </p>
           {error && <p className="dm-console-error" role="alert">{error}</p>}
           <footer className="new-system-footer">

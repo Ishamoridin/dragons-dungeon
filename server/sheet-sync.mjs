@@ -70,20 +70,27 @@ export function createSheetSync(db, { sheets = createSheetsClient(), now = () =>
     return [...builtIns, ...stored.map((row) => ({ ...row, builtIn: false }))]
   }
 
+  // The campaign is read from the workbook's "Campaign:" cell. A workbook without one still imports when the DM has a
+  // single matching system with a single campaign; otherwise the DM is told what to add to the sheet.
   async function matchOrCreateSystem({ dm, detection, campaignName, actor }) {
     const candidates = (await ownedSystems(dm)).filter((entry) => entry.Data.Ruleset === detection.ruleset)
     const titleKey = detection.title.trim().toLowerCase()
-    const match = candidates.find((entry) => entry.Data.CampaignNames.includes(campaignName))
+    const match = (campaignName ? candidates.find((entry) => entry.Data.CampaignNames.includes(campaignName)) : null)
       ?? candidates.find((entry) => entry.Data.Name.trim().toLowerCase() === titleKey)
       ?? candidates[0]
+    if (!campaignName) {
+      if (match && match.Data.CampaignNames.length === 1) return { ...match.Data, created: false, campaignName: match.Data.CampaignNames[0] }
+      const options = match ? ` Campaigns of the ${match.Data.Name} system: ${match.Data.CampaignNames.join(', ')}.` : ''
+      throw fail(400, `The workbook does not say which campaign the character belongs to. Add a cell labelled "Campaign:" with the campaign name in the next cell.${options}`)
+    }
     if (match) {
       if (!match.Data.CampaignNames.includes(campaignName)) {
         if (match.builtIn) throw fail(400, `"${campaignName}" is not a campaign of the ${match.Data.Name} system. Pick one of: ${match.Data.CampaignNames.join(', ')}.`)
         const after = { ...withoutMongoId(match), Data: { ...match.Data, CampaignNames: [...match.Data.CampaignNames, campaignName] }, Version: (match.Version ?? 0) + 1, UpdatedAt: now().toISOString() }
         await saveRevision(db, { kind: 'systems', before: match, after, actor })
-        return { ...after.Data, created: false }
+        return { ...after.Data, created: false, campaignName }
       }
-      return { ...match.Data, created: false }
+      return { ...match.Data, created: false, campaignName }
     }
     const name = (detection.title.trim() || 'Imported system').slice(0, 80)
     const taken = new Set((await ownedSystems(dm)).map((entry) => entry.Data.Name.trim().toLowerCase()))
@@ -91,7 +98,7 @@ export function createSheetSync(db, { sheets = createSheetsClient(), now = () =>
     const data = { Id: `system-${randomUUID()}`, Name, description: `Imported from the Google Sheets workbook "${detection.fullTitle?.trim() || detection.title.trim() || 'untitled'}".`.slice(0, 2000), CampaignNames: [campaignName], Ruleset: detection.ruleset }
     const record = { Id: data.Id, OwnerId: dm.Id, Data: data, Version: 1, UpdatedAt: now().toISOString() }
     await saveRevision(db, { kind: 'systems', before: null, after: record, actor })
-    return { ...data, created: true }
+    return { ...data, created: true, campaignName }
   }
 
   function sourceFor(spreadsheetId, workbook, title, essenceForPrint, marker, stamp, appOnlyFields) {
@@ -103,13 +110,13 @@ export function createSheetSync(db, { sheets = createSheetsClient(), now = () =>
   }
 
   // Builds and stores a new character from a workbook link: the full first sweep.
-  async function importCharacter({ url, campaignName, owner, dm, actor }) {
+  async function importCharacter({ url, campaignName: requestedCampaign, owner, dm, actor }) {
     const m = await modules()
     const spreadsheetId = spreadsheetIdFromUrl(url)
     const workbook = await sheets.readWorkbook(spreadsheetId)
     const detection = m.detectWorkbookSystem(workbook)
     if (!detection.ruleset) throw fail(400, 'That workbook does not look like a character sheet this app understands. The first tab should hold the system title, attributes, and skills.')
-    const system = await matchOrCreateSystem({ dm, detection, campaignName, actor })
+    const { campaignName, ...system } = await matchOrCreateSystem({ dm, detection, campaignName: (requestedCampaign ?? detection.campaignName ?? '').trim().slice(0, 100), actor })
     const warnings = [...detection.warnings]
     const stamp = now().toISOString()
     const marker = m.changelogMarker(workbook)

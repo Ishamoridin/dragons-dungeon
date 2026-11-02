@@ -135,7 +135,7 @@ export async function createCharacterSheet(
 }
 
 // The API downloads the workbook, matches or creates the stat system, and links the record for ongoing sync.
-export async function importCharacterSheetFromGoogleSheets(input: { url: string; campaignName: string; ownerId?: string }): Promise<SheetImportResult> {
+export async function importCharacterSheetFromGoogleSheets(input: { url: string; ownerId?: string }): Promise<SheetImportResult> {
   const result = await api<SheetImportResult>('/characters/import/google-sheets', 'POST', input)
   remember(result.record)
   return result
