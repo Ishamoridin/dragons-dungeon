@@ -1,4 +1,10 @@
 import { randomUUID } from 'node:crypto'
+import { EventEmitter } from 'node:events'
+
+// Fires 'change' with { kind, before, after, actor } after every committed write, for live updates.
+export const revisionEvents = new EventEmitter()
+revisionEvents.setMaxListeners(50)
+export const announceChange = (change) => { try { revisionEvents.emit('change', change) } catch { /* listeners must not break writes */ } }
 
 export const withoutMongoId = (document) => {
   if (!document) return null
@@ -36,6 +42,7 @@ export async function saveRevision(db, { kind, before, after, actor, conflictId 
       }
     })
   } finally { await session.endSession() }
+  announceChange({ kind, before, after, actor })
 }
 
 export async function recordConflict(db, { kind, current, local, base, actor }) {
@@ -77,5 +84,6 @@ export async function undoLatest(db, actor) {
       if (!result.matchedCount) throw Object.assign(new Error('Change already undone.'), { status: 409 })
     })
   } finally { await session.endSession() }
+  announceChange({ kind: history.Kind, before: history.After ?? history.Before, after: restored, actor })
   return { kind: history.Kind, id: history.TargetId, record: restored }
 }

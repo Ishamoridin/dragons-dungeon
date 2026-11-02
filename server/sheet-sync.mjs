@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { tsImport } from 'tsx/esm/api'
 import { createSheetsClient, editUrl, spreadsheetIdFromUrl } from './google-sheets.mjs'
-import { saveRevision } from './character-history.mjs'
+import { announceChange, saveRevision } from './character-history.mjs'
 
 // Keeps characters that were imported from a Google Sheets workbook in step with it.
 //
@@ -147,7 +147,9 @@ export function createSheetSync(db, { sheets = createSheetsClient(), now = () =>
   // Marks sync metadata without creating a revision, so players mid-edit do not hit version conflicts.
   async function touch(record, patch) {
     await characters.updateOne({ Id: record.Id, Version: record.Version }, { $set: Object.fromEntries(Object.entries(patch).map(([key, value]) => [`SheetSource.${key}`, value])) })
-    return { ...record, SheetSource: { ...record.SheetSource, ...patch } }
+    const updated = { ...record, SheetSource: { ...record.SheetSource, ...patch } }
+    announceChange({ kind: 'characters', before: record, after: updated, actor: SHEET_ACTOR })
+    return updated
   }
 
   // Reconciles one stored character with its workbook. Returns the latest record and what happened.

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Undo2, GitCompareArrows, X } from 'lucide-react'
 import { api, loadResources } from './Api'
+import { onDataChanged } from './Realtime'
 import type { User } from './User'
 import { mergeCopies } from './RevisionMerge.mjs'
 
@@ -100,9 +101,10 @@ export default function HistoryControls() {
     window.addEventListener('data-saved', refreshSafely)
     window.addEventListener('api-error', apiError)
     window.addEventListener('api-conflict', conflict)
+    const stopLive = onDataChanged(refreshSafely)
     const interval = window.setInterval(refreshSafely, 15000)
     return () => {
-      window.removeEventListener('data-saved', refreshSafely); window.removeEventListener('api-error', apiError); window.removeEventListener('api-conflict', conflict); window.clearInterval(interval)
+      stopLive(); window.removeEventListener('data-saved', refreshSafely); window.removeEventListener('api-error', apiError); window.removeEventListener('api-conflict', conflict); window.clearInterval(interval)
     }
   }, [user])
   const reloadData = async () => {

@@ -20,6 +20,7 @@ import ImportSheetModal from './character/ImportSheetModal'
 import { api } from './character/Api'
 import { DEFAULT_PAGE_SKIN, type PageSkin } from './character/PageSkin'
 import { savePreferredSkin } from './character/UserPreferences'
+import { connectRealtime, disconnectRealtime, onDataChanged } from './character/Realtime'
 
 type SubStat = {
   label: string
@@ -218,8 +219,13 @@ function App() {
     })
     const restored = () => { lastRefreshAt.current = 0; refreshOnInteraction() }
     window.addEventListener('data-restored', restored)
+    // Live updates: any committed write on the API re-fetches straight away, bypassing the interaction throttle.
+    connectRealtime()
+    const stopLive = onDataChanged(() => { lastRefreshAt.current = 0; refreshOnInteraction() })
 
     return () => {
+      stopLive()
+      disconnectRealtime()
       window.removeEventListener('data-restored', restored)
       interactionEvents.forEach((eventName) => {
         document.removeEventListener(eventName, refreshOnInteraction)

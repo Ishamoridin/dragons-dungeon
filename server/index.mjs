@@ -40,8 +40,9 @@ try {
   const port = Number(process.env.PORT || process.env.API_PORT || 3001)
   const host = '0.0.0.0'
   const server = app.listen(port, host, () => console.log(`Dragon's Dungeon API: http://${host}:${port}${staticDir ? ` (serving frontend from ${staticDir})` : ' (API only)'}`))
+  app.attachRealtime(server)
   server.on('error', async () => { console.error('Unable to listen on the configured port.'); await client.close(); process.exitCode = 1 })
-  const close = () => server.close(async () => { await client.close(); process.exit(0) })
+  const close = () => { app.closeRealtime(); server.close(async () => { await client.close(); process.exit(0) }) }
   process.once('SIGINT', close)
   process.once('SIGTERM', close)
 } catch (error) {

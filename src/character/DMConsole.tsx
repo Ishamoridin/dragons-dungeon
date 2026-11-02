@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CalendarClock, Flag, GanttChart, Package, Plus, Skull, Swords, Users, type LucideIcon } from 'lucide-react'
 import { loadResources, resourceList, saveResource } from './Api'
+import { onDataChanged } from './Realtime'
 import NewSystemModal from './NewSystemModal'
 import ImportSheetModal from './ImportSheetModal'
 import PortraitControl from './PortraitControl'
@@ -1361,7 +1362,12 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
     void loadCharacters()
     const restored = () => { void loadCharacters() }
     window.addEventListener('data-restored', restored)
-    return () => window.removeEventListener('data-restored', restored)
+    // Live updates: resource changes reload the resource cache first so systems and campaigns stay current.
+    const stopLive = onDataChanged((changes) => {
+      const resources = changes.some((change) => change.kind !== 'characters')
+      void (resources ? loadResources('dm').catch(() => undefined) : Promise.resolve()).then(() => loadCharacters())
+    })
+    return () => { stopLive(); window.removeEventListener('data-restored', restored) }
   }, [user.Id])
 
   // Remember the open screen on the session so a reload returns to the same page, campaign, and character.

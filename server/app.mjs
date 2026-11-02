@@ -4,7 +4,8 @@ import { rateLimit } from 'express-rate-limit'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { canAccessCharacter, hashPassword, publicUser, sessionDigest, verifyPassword } from './security.mjs'
-import { recordConflict, saveRevision, undoLatest } from './character-history.mjs'
+import { recordConflict, revisionEvents, saveRevision, undoLatest } from './character-history.mjs'
+import { createRealtime, describeChange } from './realtime.mjs'
 import { resolveCopies } from '../src/character/RevisionMerge.mjs'
 import { mountGoogleAuth } from './google-auth.mjs'
 import { createSheetSync } from './sheet-sync.mjs'
@@ -131,6 +132,12 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     const session = Digest && await sessions.findOne({ Digest, ExpiresAt: { $gt: new Date() } })
     return session && await users.findOne({ Id: session.UserId })
   }
+  // Live updates over WebSocket at /api/events; index.mjs attaches it to the listening server.
+  const realtime = createRealtime()
+  const onChange = (change) => realtime.publish(describeChange(change))
+  revisionEvents.on('change', onChange)
+  app.attachRealtime = (server) => realtime.attach(server, { authenticate: findCurrentUser })
+  app.closeRealtime = () => { revisionEvents.off('change', onChange); realtime.close() }
   // Sessions time out after 30 minutes without activity. The cookie itself lives on for auto-login: when the user
   // returns, the idle session's log is closed and a fresh token, session, and log start, keeping the open screen.
   const authenticate = async (req, res, next) => {
