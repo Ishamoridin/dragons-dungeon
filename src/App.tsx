@@ -180,6 +180,9 @@ function App() {
   const [expandedSkills, setExpandedSkills] = useState<string[]>([])
   const [savedSheetCount, setSavedSheetCount] = useState(0)
   const [databaseRefreshStatus, setDatabaseRefreshStatus] = useState('Signed out')
+  // Why an emailed registration link did not sign the user in (expired, tampered, account already created).
+  const [registrationNotice, setRegistrationNotice] = useState('')
+  const registeredRef = useRef<string | null>(null)
   const [, setCharacterRevision] = useState(0)
   const [essenceSheets, setEssenceSheets] = useState<CharacterSheetRecord[]>([])
   const [viewedEssenceId, setViewedEssenceId] = useState<string | null>(null)
@@ -292,14 +295,21 @@ function App() {
       window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`)
     }
     const restore = registrationToken
-      ? completeRegistration(registrationToken).catch((failure) => { if (active) setDatabaseRefreshStatus(failure instanceof Error ? failure.message : 'Registration link failed.'); return restoreSession() })
+      ? completeRegistration(registrationToken)
+        .then((user) => { registeredRef.current = user.Username; return user })
+        .catch((failure) => { if (active) setRegistrationNotice(failure instanceof Error ? failure.message : 'This registration link could not be used.'); return restoreSession() })
       : restoreSession()
     // A Google-signed browser renews an expired session silently instead of showing the login screen.
     const marker = consumeGoogleAuthMarkers()
     if (marker === 'signed-in') clearSilentGoogleSignInAttempt()
     void restore.then(async (user) => {
       if (!active) return
-      if (user) { clearSilentGoogleSignInAttempt(); await activateUser(user); return }
+      if (user) {
+        clearSilentGoogleSignInAttempt()
+        await activateUser(user)
+        if (registeredRef.current && active) setDatabaseRefreshStatus(`Welcome, ${registeredRef.current}. Your email is verified.`)
+        return
+      }
       if (marker !== 'silent-failed' && !silentGoogleSignInAttempted() && shouldTrySilentGoogleSignIn()) { startSilentGoogleSignIn(); return }
       clearSilentGoogleSignInAttempt()
     })
@@ -347,7 +357,7 @@ function App() {
   if (restoring) return <main className="login-shell"><section className="login-panel"><p role="status">Restoring session...</p></section></main>
 
   if (!currentUser || !character) {
-    return <LoginScreen onLogin={handleLogin} />
+    return <LoginScreen onLogin={handleLogin} initialNotice={registrationNotice} />
   }
 
   if (currentUser.Role === 'dm') {

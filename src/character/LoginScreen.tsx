@@ -6,9 +6,11 @@ import '../App.css'
 
 type LoginScreenProps = {
   onLogin: (username: string, password: string) => Promise<boolean>
+  // Shown on arrival, e.g. why an emailed registration link could not be completed.
+  initialNotice?: string
 }
 
-export default function LoginScreen({ onLogin }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, initialNotice = '' }: LoginScreenProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(() => {
@@ -25,7 +27,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [registerOpen, setRegisterOpen] = useState(false)
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useState(initialNotice)
+  useEffect(() => { if (initialNotice) setNotice(initialNotice) }, [initialNotice])
   const [previewLink, setPreviewLink] = useState('')
   useEffect(() => {
     const url = new URL(window.location.href)
