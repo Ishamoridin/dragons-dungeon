@@ -317,13 +317,31 @@ function importEssences(r: SheetReader, warnings: string[]): EssenceHolding[] {
   return holdings
 }
 
-// Blocks of 20 rows starting at row 5: pact (B/C), weapon (G/I), curse (N/O).
+// Each block holds a pact (B/C), a weapon (G/I) and a curse (N/O) with the same row offsets. Blocks are located by
+// their header labels ("Pact name:", "Spirit Weapon Name:", "Curse name:") rather than a fixed stride, so a sheet
+// with inserted rows or extra blocks still imports every weapon. A block is kept when any of the three names is
+// filled in, so a pact or curse granted before its weapon is not lost. Sheets without labels fall back to the
+// template layout of 20-row blocks from row 5.
+const SPIRIT_BLOCK_LABELS: { column: string; pattern: RegExp }[] = [
+  { column: 'B', pattern: /^pact\s*name:?$/i }, { column: 'G', pattern: /^spirit\s*weapon\s*name:?$/i }, { column: 'N', pattern: /^curse\s*name:?$/i },
+]
+function spiritBlockRows(r: SheetReader, tab: string): number[] {
+  const tops: number[] = []
+  for (let row = 1; row <= r.rowCount(tab); row++) {
+    if (!SPIRIT_BLOCK_LABELS.some(({ column, pattern }) => pattern.test(text(r.raw(tab, ref(column, row)))))) continue
+    if (tops.length && row - tops[tops.length - 1] < 10) continue
+    tops.push(row)
+  }
+  if (tops.length) return tops
+  for (let top = 5; top <= r.rowCount(tab); top += 20) tops.push(top)
+  return tops
+}
 function importSpiritWeapons(r: SheetReader): EssenceSpiritWeapon[] {
   const tab = TABS.spiritWeapons
   const weapons: EssenceSpiritWeapon[] = []
   if (!r.sheet(tab)) return weapons
-  for (let top = 5; top + 9 <= r.rowCount(tab); top += 20) {
-    if (!text(r.raw(tab, ref('I', top)))) continue
+  for (const top of spiritBlockRows(r, tab)) {
+    if (!text(r.raw(tab, ref('I', top))) && !text(r.raw(tab, ref('C', top))) && !text(r.raw(tab, ref('O', top)))) continue
     const i = weapons.length
     const p = `SpiritWeapons.${i}`
     weapons.push({

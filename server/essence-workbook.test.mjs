@@ -45,7 +45,7 @@ function essenceWorkbook(overrides = {}) {
     sheets: [
       sheet('Character Sheet', character),
       sheet('Development', { E15: 72, I15: 581, M15: 53, G17: 0, K17: 0, E19: 66, I19: 56, M19: 13, C27: 'Intelligence', E27: 24, G27: 'Strength', I27: 38, K27: 'Presence', M27: 10, C30: 'Reiryoku', E30: 61, G30: 'Reiatsu', I30: 79, K30: 'Reishi', M30: 70, C31: 'Academics (Int/Wis)', E31: 78, G36: 'Brawl (Str/Con)', I36: 117, K40: 'Politics (Pre/Man)', M40: 3, E47: 190, I47: 118, M47: 191, G49: 229, K49: 299 }),
-      sheet('Spirit Weapon + Pacts', { C5: "Realm's Resurrection", I5: 'Snowball', I6: 'Spirit Body', I7: '25 Reiryoku', I8: 'Not Applicable', I9: 'Brawl of 15+', I10: 'Active Passive', I11: 'Personal', I12: '1d50+75', B7: 'What does not kill you', B14: 'Pact text', G14: 'Weapon text', O5: 'Tabula Rasa', N7: 'Curse desc', N14: 'Curse text', I25: 'Stick', I26: 'Spirit Blade', I27: '50 Reiryoku', I28: 'Not Applicable', I29: 'Weaponry of 18+', I30: 'Minor', I31: '3 tiles', I32: '1d150+100', G34: 'Stick text' }),
+      sheet('Spirit Weapon + Pacts', { B5: 'Pact name:', G5: 'Spirit Weapon Name:', N5: 'Curse name:', C5: "Realm's Resurrection", I5: 'Snowball', I6: 'Spirit Body', I7: '25 Reiryoku', I8: 'Not Applicable', I9: 'Brawl of 15+', I10: 'Active Passive', I11: 'Personal', I12: '1d50+75', B7: 'What does not kill you', B14: 'Pact text', G14: 'Weapon text', O5: 'Tabula Rasa', N7: 'Curse desc', N14: 'Curse text', B25: 'Pact name:', G25: 'Spirit Weapon Name:', N25: 'Curse name:', I25: 'Stick', I26: 'Spirit Blade', I27: '50 Reiryoku', I28: 'Not Applicable', I29: 'Weaponry of 18+', I30: 'Minor', I31: '3 tiles', I32: '1d150+100', G34: 'Stick text' }),
       sheet('Known Techniques', { D6: 'Reishi Beam (Evil)', D7: 30, D8: 200, D9: 'Reiatsu Release (7+)', D10: '18+', D11: 'Major Action', D12: 'Line of Sight', D13: '1d100', B15: 'Beam text', K6: 'Reiryoku Density (3/3)', K7: 0, K8: 0, K9: 'N/A', K10: 'N/A', K11: 'Passive', I15: 'Density text', D25: 'Tempered by the Barrens', D26: 'Not Applicable', D27: 'Not Applicable', B34: 'Barrens text' }),
       sheet('Essences', { F12: 'Zodiac Font (Weasel - Ambition)', C30: 'Tier 1', F30: 'TIer 2', C32: 'Fire (T)', D32: 50000, E33: '100 > 1', F33: 'Steel', G33: 107584, C34: 'Earth (T)', D34: 50000, F46: 'v', G46: '200:1', I31: 'Magma (T)', J31: 5000 }),
       sheet('Other Notes', { E1: 'Zodiac of Ambition - Passive', A2: 'Passive text', Q1: 'Zodiac of Ambition - Active', M2: 'Active text', E8: 'Realm Boons', A9: 'Boon text', Q8: 'Half-Human, Half-Construct', M9: 'Construct text', E15: 'Label goes here', A16: 'Please double click a cell to begin writing in it.' }),
@@ -157,6 +157,43 @@ test('write-back emits only the cells that differ from the workbook', () => {
     { sheet: 'KidoHado', cell: 'E27', value: 4 },
     { sheet: 'Known Techniques', cell: 'D6', value: 'Reishi Beam (Evil) II' },
   ])
+})
+
+test('spirit weapon blocks are found by their labels, so shifted rows, extra blocks, and pact-only blocks all import', () => {
+  const workbook = essenceWorkbook()
+  const tabIndex = workbook.sheets.findIndex((entry) => entry.name === 'Spirit Weapon + Pacts')
+  // Second block pushed down two rows; a third block holds a pact and curse but no weapon yet; a fourth block is empty.
+  workbook.sheets[tabIndex] = sheet('Spirit Weapon + Pacts', {
+    B5: 'Pact name:', G5: 'Spirit Weapon Name:', N5: 'Curse name:', C5: "Realm's Resurrection", I5: 'Snowball', I6: 'Spirit Body', I12: '1d50+75', B14: 'Pact text', G14: 'Weapon text', O5: 'Tabula Rasa', N14: 'Curse text',
+    B27: 'Pact name:', G27: 'Spirit Weapon Name:', N27: 'Curse name:', I27: 'Stick', I28: 'Spirit Blade', I34: '1d150+100', G36: 'Stick text',
+    B47: 'Pact name:', G47: 'Spirit Weapon Name:', N47: 'Curse name:', C47: 'Second Oath', B49: 'Oath desc', B56: 'Oath text', O47: 'Hollow Mark', N56: 'Mark text',
+    B67: 'Pact name:', G67: 'Spirit Weapon Name:', N67: 'Curse name:',
+  })
+  const { essence } = importEssenceFromWorkbook(workbook)
+  assert.deepEqual(essence.SpiritWeapons.map((weapon) => [weapon.Name, weapon.Category, weapon.Damage, weapon.Pact.Name, weapon.Curse.Name]), [
+    ['Snowball', 'Spirit Body', '1d50+75', "Realm's Resurrection", 'Tabula Rasa'],
+    ['Stick', 'Spirit Blade', '1d150+100', '', ''],
+    ['', '', '', 'Second Oath', 'Hollow Mark'],
+  ])
+  assert.equal(essence.SpiritWeapons[1].Details, 'Stick text')
+  assert.equal(essence.SpiritWeapons[2].Pact.Description, 'Oath desc')
+  assert.equal(essence.SpiritWeapons[2].Curse.Effect, 'Mark text')
+  // Write-back follows the shifted rows.
+  const edited = structuredClone(essence)
+  edited.SpiritWeapons[1].Damage = '1d200+100'
+  edited.SpiritWeapons[2].Pact.Effect = 'Oath text II'
+  assert.deepEqual(essenceCellUpdates(workbook, edited).sort((a, b) => a.cell.localeCompare(b.cell)), [
+    { sheet: 'Spirit Weapon + Pacts', cell: 'B56', value: 'Oath text II' },
+    { sheet: 'Spirit Weapon + Pacts', cell: 'I34', value: '1d200+100' },
+  ])
+})
+
+test('spirit weapon tabs without labels fall back to the template stride', () => {
+  const workbook = essenceWorkbook()
+  const tabIndex = workbook.sheets.findIndex((entry) => entry.name === 'Spirit Weapon + Pacts')
+  workbook.sheets[tabIndex] = sheet('Spirit Weapon + Pacts', { I5: 'Snowball', I6: 'Spirit Body', I25: 'Stick', I26: 'Spirit Blade', I45: 'Lantern', I46: 'Spirit Aura' })
+  const { essence } = importEssenceFromWorkbook(workbook)
+  assert.deepEqual(essence.SpiritWeapons.map((weapon) => weapon.Name), ['Snowball', 'Stick', 'Lantern'], 'a trailing block shorter than its template height still imports')
 })
 
 test('changelog marker is the last filled row of a Changelog tab, or null without one', () => {
