@@ -5,8 +5,8 @@ import type { User } from './User'
 import { DEMO_DM, DEMO_PLAYER } from './MockAuth'
 import type { EssenceCharacterData } from './essence/EssenceTypes'
 import type { Portrait } from './Portrait'
-import { ESSENCE_SYSTEM_ID } from './essence/EssenceSystem'
-import { GILES_YAVIN_MEGATRON, GILES_YAVIN_MEGATRON_NAME } from './essence/EssenceCharacters'
+import { ESSENCE_SYSTEM_ID, spiritWeaponLabel } from './essence/EssenceSystem'
+import { EXAMPLE_ESSENCE_CHARACTERS } from './essence/EssenceExampleCharacters'
 import { api, resourceList, saveResource } from './Api'
 
 export type CharacterAttributeData = {
@@ -333,20 +333,20 @@ function seedDemoCharacterSheets(): void {
         demoSkill('Sneak', 14, 15, 'Move quietly while avoiding attention.', ['Dexterity', 'Mental'], ['stealth']),
       ],
     },
-    {
+    ...EXAMPLE_ESSENCE_CHARACTERS.map((example): CharacterSheetData => ({
       SystemId: ESSENCE_SYSTEM_ID,
-      Essence: { ...structuredClone(GILES_YAVIN_MEGATRON), Alias: 'Gym', DisabledSpellPaths: ['Kido', 'Hado'] },
-      Name: GILES_YAVIN_MEGATRON_NAME,
+      Essence: { ...structuredClone(example.Essence), Alias: example.Alias, DisabledSpellPaths: ['Kido', 'Hado'] },
+      Name: example.Name,
       Level: 0,
       XP: 0,
       CampaignName: 'Welcome to the Sprawl',
-      Tags: ['Half-Construct', 'Zodiac of Ambition'],
+      Tags: example.Tags,
       DMId: DEMO_DM.Id,
       DMName: DEMO_DM.Username,
-      PlayerClass: { Name: GILES_YAVIN_MEGATRON.SpiritWeaponCategory, AttributeGrowth: commonGrowth },
+      PlayerClass: { Name: spiritWeaponLabel(example.Essence), AttributeGrowth: commonGrowth },
       Attributes: demoAttributes(0),
       Skills: [],
-    },
+    })),
   ]
 
   demoSheets.forEach((sheet, index) => {
