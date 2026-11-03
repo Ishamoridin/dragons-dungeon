@@ -4,6 +4,9 @@ import { loadResources, resourceList, saveResource } from './Api'
 import { onDataChanged, onEventNotification } from './Realtime'
 import EventCard from './EventCard'
 import EventComposerModal, { type EventDraft } from './EventComposerModal'
+import D20Button from './dice/D20Button'
+import DiceRollerModal from './dice/DiceRollerModal'
+import RollToasts from './dice/RollToasts'
 import NewSystemModal from './NewSystemModal'
 import ImportSheetModal from './ImportSheetModal'
 import PortraitControl from './PortraitControl'
@@ -1195,6 +1198,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(getScreen<string>('dmCharacterId') ?? null)
   const [previewCharacterId, setPreviewCharacterId] = useState<string | null>(getScreen<string>('dmPreviewId') ?? null)
   const [composer, setComposer] = useState<{ targetIds?: string[]; type?: CampaignEventType } | null>(null)
+  const [rollerOpen, setRollerOpen] = useState(false)
   const [eventLogEntries, setEventLogEntries] = useState<EventLogEntry[]>([])
   const [openLogEntry, setOpenLogEntry] = useState<EventLogEntry | null>(null)
   const [selectedFactionName, setSelectedFactionName] = useState<string | null>(null)
@@ -1577,6 +1581,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
 
   return (
     <div className="dm-console-shell" data-skin={skin} style={skinArtStyle(skin)}>
+      <RollToasts ownUserId={user.Id} />
       <header className="dm-console-header">
         <div>
           <p className="eyebrow">Dragon's Dungeon · Dungeon master</p>
@@ -1652,6 +1657,17 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
               </select>
             </label>
           </header>
+
+          <div className="dice-roller-launch">
+            <D20Button onClick={() => setRollerOpen(true)} />
+          </div>
+          {rollerOpen && (
+            <DiceRollerModal
+              campaignName={selectedCampaign.Name}
+              characters={campaignCharacters.filter((record) => record.Essence).map((record) => ({ id: record.Id, name: displayName(record), essence: record.Essence! }))}
+              onClose={() => setRollerOpen(false)}
+            />
+          )}
 
           <nav className="campaign-tabs campaign-tabs-icons" role="tablist" aria-label={`${selectedCampaign.Name} pages`}>
             {CAMPAIGN_PAGES.map((page) => {

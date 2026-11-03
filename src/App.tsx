@@ -24,6 +24,7 @@ import { connectRealtime, disconnectRealtime, onDataChanged, onEventNotification
 import { fetchEventLog, type EventLogEntry } from './character/EventLogApi'
 import EventNotificationModal from './character/EventNotificationModal'
 import EventLogModal from './character/EventLogModal'
+import RollToasts from './character/dice/RollToasts'
 import { BellRing } from 'lucide-react'
 import { clearSilentGoogleSignInAttempt, consumeGoogleAuthMarkers, forgetGoogleSignIn, shouldTrySilentGoogleSignIn, silentGoogleSignInAttempted, startSilentGoogleSignIn } from './character/GoogleSession'
 
@@ -498,7 +499,8 @@ function App() {
             <SettingsMenu user={currentUser} pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} onUserChange={activateUser} />
           </div>
         </header>
-        <EssenceSheetBody data={viewedEssence.Essence} role="player" initialTab={getScreen<TabId>('sheetTab')} onTabChange={(sheetTab) => rememberScreen({ sheetTab })} onChange={(change) => void editEssence(viewedEssence.Id, change)} onEssenceChange={(change) => void changeEssence(viewedEssence.Id, change)} development={{ campaignName: viewedEssence.CampaignName, onRequest: (request) => void requestDevelopment(viewedEssence.Id, request) }} portrait={viewedEssence.Portrait} onPortraitChange={(portrait) => void setPortrait(viewedEssence.Id, portrait)} />
+        <EssenceSheetBody data={viewedEssence.Essence} role="player" initialTab={getScreen<TabId>('sheetTab')} onTabChange={(sheetTab) => rememberScreen({ sheetTab })} onChange={(change) => void editEssence(viewedEssence.Id, change)} onEssenceChange={(change) => void changeEssence(viewedEssence.Id, change)} development={{ campaignName: viewedEssence.CampaignName, onRequest: (request) => void requestDevelopment(viewedEssence.Id, request) }} portrait={viewedEssence.Portrait} onPortraitChange={(portrait) => void setPortrait(viewedEssence.Id, portrait)} roller={{ campaignName: viewedEssence.CampaignName, characterId: viewedEssence.Id, characterName: displayName(viewedEssence) }} />
+        <RollToasts ownUserId={currentUser.Id} />
       </div>
     )
   }

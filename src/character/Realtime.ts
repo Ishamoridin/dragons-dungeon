@@ -7,6 +7,10 @@ import { apiOrigin } from './Api'
 export type DataChange = { type: 'change'; kind: string; id: string; action: 'create' | 'update' | 'delete'; version: number; actorId: string | null }
 // A fired event addressed to this user; the entry itself is fetched from /api/event-log.
 export type EventNotification = { type: 'event-notification'; id: string; campaignName: string; title: string }
+// A dice roll this user may see; the entry itself is fetched from /api/rolls.
+export type RollNotification = { type: 'roll'; id: string; campaignName: string }
+// Someone reacted to a natural 20 or 1; the updated entry is fetched from /api/rolls.
+export type RollReactionNotification = { type: 'roll-reaction'; id: string; campaignName: string }
 
 const MAX_BACKOFF_MS = 30_000
 
@@ -32,6 +36,10 @@ function open() {
       window.dispatchEvent(new CustomEvent<DataChange>('data-changed', { detail: message as DataChange }))
     } else if (message?.type === 'event-notification' && message.id) {
       window.dispatchEvent(new CustomEvent<EventNotification>('event-notification', { detail: message as EventNotification }))
+    } else if (message?.type === 'roll' && message.id) {
+      window.dispatchEvent(new CustomEvent<RollNotification>('roll-notification', { detail: message as RollNotification }))
+    } else if (message?.type === 'roll-reaction' && message.id) {
+      window.dispatchEvent(new CustomEvent<RollReactionNotification>('roll-reaction-notification', { detail: message as RollReactionNotification }))
     }
   }
   ws.onerror = () => ws.close()
@@ -74,4 +82,16 @@ export function onEventNotification(handler: (notification: EventNotification) =
   const listener = (event: Event) => handler((event as CustomEvent<EventNotification>).detail)
   window.addEventListener('event-notification', listener)
   return () => window.removeEventListener('event-notification', listener)
+}
+
+export function onRollNotification(handler: (notification: RollNotification) => void): () => void {
+  const listener = (event: Event) => handler((event as CustomEvent<RollNotification>).detail)
+  window.addEventListener('roll-notification', listener)
+  return () => window.removeEventListener('roll-notification', listener)
+}
+
+export function onRollReactionNotification(handler: (notification: RollReactionNotification) => void): () => void {
+  const listener = (event: Event) => handler((event as CustomEvent<RollReactionNotification>).detail)
+  window.addEventListener('roll-reaction-notification', listener)
+  return () => window.removeEventListener('roll-reaction-notification', listener)
 }

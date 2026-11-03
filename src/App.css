@@ -6569,3 +6569,471 @@ h1 {
     position: static;
   }
 }
+
+/* --- Dice roller ------------------------------------------------------------------------------------------- */
+
+.dice-roller-launch {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 4px;
+}
+
+.d20-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 26px 12px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.d20-button svg {
+  width: 96px;
+  height: 96px;
+  overflow: visible;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.d20-button:hover svg,
+.d20-button:focus-visible svg {
+  transform: scale(1.08) rotate(-6deg);
+  filter: drop-shadow(0 0 18px var(--skin-accent, rgba(164, 146, 220, 0.75)));
+}
+
+.d20-button:active svg {
+  transform: scale(0.96) rotate(8deg);
+}
+
+.d20-outline {
+  fill: rgba(21, 19, 25, 0.92);
+  stroke: var(--skin-accent, #a492dc);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.d20-face {
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: var(--skin-accent, #a492dc);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.d20-edges {
+  fill: none;
+  stroke: var(--skin-accent, #a492dc);
+  stroke-width: 1.2;
+  opacity: 0.65;
+}
+
+.d20-number {
+  fill: #fff;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 3px;
+}
+
+.d20-button-caption {
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* Modal */
+
+.dice-roller-modal {
+  width: min(760px, 100%);
+}
+
+.dice-roller-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.dice-roller-input-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 600;
+}
+
+.dice-roller-input-label small {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.dice-roller-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.dice-roller-input-row input {
+  flex: 1;
+  padding: 12px 14px;
+  font-size: 1.05rem;
+  border-radius: 10px;
+  border: 1px solid rgba(164, 146, 220, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+}
+
+.dice-roller-submit {
+  padding: 0 26px;
+  border-radius: 10px;
+  border: 1px solid var(--skin-accent, #a492dc);
+  background: var(--skin-accent, #a492dc);
+  color: #121016;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.dice-roller-submit:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.dice-roller-preview {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.dice-roller-preview code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dice-roller-error {
+  color: #ff9d9d;
+  opacity: 1;
+}
+
+.dice-roller-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.dice-roller-options label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.dice-roller-options select {
+  min-width: 170px;
+}
+
+.dice-roller-secret {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.dice-roller-secret span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dice-roller-secret small {
+  opacity: 0.65;
+}
+
+.dice-roller-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.dice-roller-chip-group h4 {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.dice-roller-chip-group > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dice-chip {
+  cursor: pointer;
+  border: 1px solid rgba(164, 146, 220, 0.35);
+  background: rgba(164, 146, 220, 0.12);
+}
+
+.dice-chip:hover {
+  background: rgba(164, 146, 220, 0.3);
+}
+
+.dice-chip small {
+  opacity: 0.7;
+  margin-left: 4px;
+}
+
+.dice-roller-result {
+  margin-top: 14px;
+}
+
+.dice-roller-history {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.dice-roller-history h3 {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* Roll cards */
+
+.roll-card {
+  --roll-accent: var(--skin-accent, #a492dc);
+  --roll-glow: rgba(164, 146, 220, 0.45);
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--roll-accent) 45%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--roll-accent) 14%, rgba(16, 14, 20, 0.95)), rgba(16, 14, 20, 0.95));
+  text-align: left;
+}
+
+.roll-card[data-roll-theme='fire'] { --roll-accent: #ff7a3c; --roll-glow: rgba(255, 110, 46, 0.55); }
+.roll-card[data-roll-theme='ice'] { --roll-accent: #6fd3ff; --roll-glow: rgba(111, 211, 255, 0.5); }
+.roll-card[data-roll-theme='lightning'] { --roll-accent: #ffe14d; --roll-glow: rgba(255, 225, 77, 0.55); }
+.roll-card[data-roll-theme='poison'] { --roll-accent: #7ddf5a; --roll-glow: rgba(125, 223, 90, 0.5); }
+.roll-card[data-roll-theme='heal'] { --roll-accent: #6effc0; --roll-glow: rgba(110, 255, 192, 0.5); }
+.roll-card[data-roll-theme='shadow'] { --roll-accent: #a06bff; --roll-glow: rgba(120, 70, 220, 0.6); }
+.roll-card[data-roll-theme='holy'] { --roll-accent: #ffe9a8; --roll-glow: rgba(255, 233, 168, 0.55); }
+
+.roll-card-total {
+  min-width: 64px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: calc(1.5rem + 0.9rem * var(--roll-intensity, 0.5));
+  font-weight: 800;
+  line-height: 1;
+  color: var(--roll-accent);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid color-mix(in srgb, var(--roll-accent) 55%, transparent);
+  text-shadow: 0 0 calc(18px * var(--roll-intensity, 0.5)) var(--roll-glow);
+}
+
+.roll-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.roll-card-label {
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.roll-card-flag {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--roll-accent) 25%, transparent);
+  border: 1px solid var(--roll-accent);
+}
+
+.roll-card-crit .roll-card-total { color: #ffd76e; border-color: #ffd76e; text-shadow: 0 0 20px rgba(255, 215, 110, 0.8); }
+.roll-card-fumble .roll-card-total { color: #ff6e6e; border-color: #ff6e6e; }
+
+.roll-card-meta {
+  font-size: 0.82rem;
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.roll-card-secret {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.roll-card-detail {
+  font-size: 0.74rem;
+  opacity: 0.6;
+  overflow-wrap: anywhere;
+}
+
+/* Entrance animation: speed, overshoot, glow and shake all scale with how close the roll came to its maximum. */
+
+.roll-card-enter {
+  animation: roll-card-in calc(0.9s - 0.45s * var(--roll-intensity, 0.5)) cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.roll-card-dramatic {
+  animation:
+    roll-card-in calc(0.9s - 0.45s * var(--roll-intensity, 0.5)) cubic-bezier(0.2, 1.4, 0.4, 1) both,
+    roll-card-shake 0.5s calc(0.35s - 0.2s * var(--roll-intensity, 0.5)) ease-in-out both,
+    roll-card-flare 1.2s ease-out both;
+}
+
+@keyframes roll-card-in {
+  from { opacity: 0; transform: scale(calc(0.8 - 0.2 * var(--roll-intensity, 0.5))) translateY(14px); filter: brightness(2); }
+  60% { opacity: 1; transform: scale(calc(1 + 0.12 * var(--roll-intensity, 0.5))); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes roll-card-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(calc(-7px * var(--roll-intensity, 0.5))) rotate(calc(-0.6deg * var(--roll-intensity, 0.5))); }
+  40% { transform: translateX(calc(6px * var(--roll-intensity, 0.5))) rotate(calc(0.5deg * var(--roll-intensity, 0.5))); }
+  60% { transform: translateX(calc(-4px * var(--roll-intensity, 0.5))); }
+  80% { transform: translateX(calc(3px * var(--roll-intensity, 0.5))); }
+}
+
+@keyframes roll-card-flare {
+  from { box-shadow: 0 0 calc(50px * var(--roll-intensity, 0.5)) var(--roll-glow); }
+  to { box-shadow: 0 0 0 transparent; }
+}
+
+/* Live toasts */
+
+.roll-toasts {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(380px, calc(100vw - 36px));
+}
+
+.roll-toast {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.roll-toast .roll-card {
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Reactions to natural 20s and 1s */
+
+.roll-toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  justify-content: flex-end;
+}
+
+.roll-reaction-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(16, 14, 20, 0.92);
+  color: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.roll-reaction-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.roll-toast-dismiss {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(16, 14, 20, 0.92);
+  color: inherit;
+  cursor: pointer;
+}
+
+.roll-reaction-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(16, 14, 20, 0.95);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  font-size: 0.88rem;
+}
+
+.roll-reaction-toast-emoji {
+  font-size: 1.3rem;
+}
+
+.roll-card-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.roll-reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 0.72rem;
+}

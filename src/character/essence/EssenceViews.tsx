@@ -29,6 +29,8 @@ import { EssenceCombatModule, clampCurrent, type CurrentValues, type ResourceKey
 import AbilityTrackers from './AbilityTrackers'
 import RollButton from './RollButton'
 import { d20Roll, toRoll } from './Roll20'
+import D20Button from '../dice/D20Button'
+import DiceRollerModal from '../dice/DiceRollerModal'
 
 const fmt = (value: number): string => Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, '')
 const signed = (value: number): string => (value > 0 ? `+${fmt(value)}` : fmt(value))
@@ -568,6 +570,7 @@ export function EssenceSheetBody({
   onPortraitChange,
   initialTab,
   onTabChange,
+  roller,
 }: {
   data: EssenceCharacterData
   role?: SheetRole
@@ -584,10 +587,13 @@ export function EssenceSheetBody({
   // The open tab can be restored from the remembered screen and reported back when it changes.
   initialTab?: TabId
   onTabChange?: (tab: TabId) => void
+  // Present when the sheet should offer the big d20 dice roller; rolls land in the campaign's shared roll log.
+  roller?: { campaignName: string; characterId: string; characterName: string }
 }) {
   const [tab, setTabState] = useState<TabId>(initialTab && TABS.some((item) => item.id === initialTab) ? initialTab : 'basic')
   const setTab = (next: TabId) => { setTabState(next); onTabChange?.(next) }
   const [combatOpen, setCombatOpen] = useState(false)
+  const [rollerOpen, setRollerOpen] = useState(false)
   const [developmentOpen, setDevelopmentOpen] = useState(false)
   const [pending, setPending] = useState<PendingChange | null>(null)
   const open = onChange
@@ -701,6 +707,21 @@ export function EssenceSheetBody({
         open={combatOpen}
         onClose={() => setCombatOpen(false)}
       />
+
+      {roller && (
+        <div className="dice-roller-launch">
+          <D20Button onClick={() => setRollerOpen(true)} />
+        </div>
+      )}
+      {roller && rollerOpen && (
+        <DiceRollerModal
+          campaignName={roller.campaignName}
+          characters={[{ id: roller.characterId, name: roller.characterName, essence: data }]}
+          initialCharacterId={roller.characterId}
+          initialReseroStage={reseroStage}
+          onClose={() => setRollerOpen(false)}
+        />
+      )}
 
       <nav className="sheet-tabs sheet-tabs-icons" role="tablist" aria-label="Character sheet sections">
         {TABS.map((item) => (
