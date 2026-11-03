@@ -5,6 +5,8 @@ import { apiOrigin } from './Api'
 // carrying { kind, id, action, version, actorId }. Views listen for that and re-fetch through the usual routes.
 
 export type DataChange = { type: 'change'; kind: string; id: string; action: 'create' | 'update' | 'delete'; version: number; actorId: string | null }
+// A fired event addressed to this user; the entry itself is fetched from /api/event-log.
+export type EventNotification = { type: 'event-notification'; id: string; campaignName: string; title: string }
 
 const MAX_BACKOFF_MS = 30_000
 
@@ -24,10 +26,12 @@ function open() {
   socket = ws
   ws.onopen = () => { attempts = 0; window.dispatchEvent(new Event('realtime-connected')) }
   ws.onmessage = (event) => {
-    let message: Partial<DataChange> | null = null
+    let message: { type?: string; kind?: string; id?: string } | null = null
     try { message = JSON.parse(String(event.data)) } catch { return }
     if (message?.type === 'change' && message.kind && message.id) {
       window.dispatchEvent(new CustomEvent<DataChange>('data-changed', { detail: message as DataChange }))
+    } else if (message?.type === 'event-notification' && message.id) {
+      window.dispatchEvent(new CustomEvent<EventNotification>('event-notification', { detail: message as EventNotification }))
     }
   }
   ws.onerror = () => ws.close()
@@ -64,4 +68,10 @@ export function onDataChanged(handler: (changes: DataChange[]) => void, delayMs 
   }
   window.addEventListener('data-changed', listener)
   return () => { window.removeEventListener('data-changed', listener); if (timer !== null) window.clearTimeout(timer) }
+}
+
+export function onEventNotification(handler: (notification: EventNotification) => void): () => void {
+  const listener = (event: Event) => handler((event as CustomEvent<EventNotification>).detail)
+  window.addEventListener('event-notification', listener)
+  return () => window.removeEventListener('event-notification', listener)
 }

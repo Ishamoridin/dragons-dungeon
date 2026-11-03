@@ -12,6 +12,7 @@ import SettingsMenu from './SettingsMenu'
 import EssenceAdjustmentModal from './essence/EssenceAdjustmentModal'
 import type { CampaignAction, CampaignData, CampaignEventType, NPCFactionGroup } from './Campaign'
 import { actionToEffect, applyEventEffect, describeEffect, flattenSkills, type AppliedEffect, type EventEffect, type EventTargetResult } from './EventEffects'
+import { recordEvent } from './EventLogApi'
 import type Person from './Person'
 import { PlayerClass, PRIMARY_ATTRIBUTE_NAMES } from './PlayerClass'
 import { AUGMENTATION_OPTIONS, EQUIPMENT_OPTIONS, INJURY_OPTIONS, INVENTORY_OPTIONS } from './CharacterOptions'
@@ -1538,8 +1539,19 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
       : `Campaign time advanced · ${next.currentTime.toLocaleString()}`)
   }
 
-  // Event-log recording lands with the server routes; until then fired events only update sheets.
-  const recordFiredEvent = async (_campaignName: string, _event: CampaignEvent, _targets: EventTargetResult[], _campaignTime: Date) => {}
+  // A fired event becomes a log entry: the server announces it to the DM and every targeted owner.
+  const recordFiredEvent = async (campaignName: string, event: CampaignEvent, targets: EventTargetResult[], campaignTime: Date) => {
+    if (targets.length === 0) return
+    try {
+      await recordEvent({
+        CampaignName: campaignName, Title: event.Title, Description: event.Description, Skin: event.Skin, Source: 'scheduled',
+        CampaignTime: campaignTime.toISOString(), ScheduledEventId: event.Id,
+        Targets: targets.map((target) => ({ CharacterId: target.CharacterId, Effects: target.Effects, ...(target.Error ? { Error: target.Error } : {}) })),
+      })
+    } catch (failure) {
+      setError(failure instanceof Error ? `Event applied but not logged: ${failure.message}` : 'Event applied but not logged.')
+    }
+  }
 
   const selectedCharacter = characters.find((record) => record.Id === selectedCharacterId) ?? null
   const previewCharacter = characters.find((record) => record.Id === previewCharacterId) ?? null
