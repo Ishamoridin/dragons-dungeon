@@ -46,6 +46,7 @@ test('the DM sees the whole entry with acknowledgement counts', () => {
   assert.equal(seen.Unread, false)
   assert.equal('AcknowledgedBy' in seen, false)
   assert.equal('_id' in seen, false)
+  assert.equal('GenerationCost' in visibleEntryFor({ Id: 'dm', Role: 'dm' }, { ...entry, GenerationCost: { TotalTokens: 1 } }), false, 'seed bookkeeping never reaches a client')
   assert.equal(visibleEntryFor({ Id: 'other-dm', Role: 'dm' }, entry), null, 'another DM sees nothing')
   assert.equal(visibleEntryFor({ Id: 'x', Role: 'player', SecondaryOwner: true }, entry).Targets.length, 3)
 })

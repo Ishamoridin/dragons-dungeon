@@ -59,7 +59,8 @@ export const eventRecipients = (entry) => [...new Set([entry.DMId, ...entry.Targ
 export function visibleEntryFor(user, entry, sharerIds = new Set()) {
   if (!user) return null
   const acknowledged = entry.AcknowledgedBy ?? []
-  const { AcknowledgedBy, _id, ...record } = entry
+  // GenerationCost is bookkeeping on seeded journal entries; no client ever receives it.
+  const { AcknowledgedBy, GenerationCost, _id, ...record } = entry
   if (user.SecondaryOwner || (user.Role === 'dm' && entry.DMId === user.Id)) {
     return { ...record, Acknowledgements: acknowledged.length, Unread: false }
   }

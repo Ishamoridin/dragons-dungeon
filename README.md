@@ -55,6 +55,10 @@ Every fired event is written to the `eventLog` collection with each target's app
 
 Routes: `POST /api/event-log` (DM), `GET /api/event-log?campaign=`, `POST /api/event-log/:id/ack`, `GET`/`PUT /api/event-log/sharing`. Descriptions are limited to 20,000 characters.
 
+### Session journal
+
+`docs/journal/welcome-to-the-sprawl/` holds the campaign's narrative history, one Markdown file per play session with one `## [Sxx.y]` block per scene (cast, calendar convention and format are in its README). `npm run seed:journal` upserts every scene into the event log as a manual event addressed to the characters present, with the invented in-game clock in `CampaignTime`; `--dry-run` prints without writing. Ids derive from scene ids, so re-running updates text in place.
+
 ## Wound Results and Burden
 
 Burden counts carried inventory only; equipped armour and other equipped items do not contribute. Each inventory entry retains its recorded burden total.
