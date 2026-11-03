@@ -20,7 +20,11 @@ import ImportSheetModal from './character/ImportSheetModal'
 import { api } from './character/Api'
 import { DEFAULT_PAGE_SKIN, type PageSkin } from './character/PageSkin'
 import { savePreferredSkin } from './character/UserPreferences'
-import { connectRealtime, disconnectRealtime, onDataChanged } from './character/Realtime'
+import { connectRealtime, disconnectRealtime, onDataChanged, onEventNotification } from './character/Realtime'
+import { fetchEventLog, type EventLogEntry } from './character/EventLogApi'
+import EventNotificationModal from './character/EventNotificationModal'
+import EventLogModal from './character/EventLogModal'
+import { BellRing } from 'lucide-react'
 import { clearSilentGoogleSignInAttempt, consumeGoogleAuthMarkers, forgetGoogleSignIn, shouldTrySilentGoogleSignIn, silentGoogleSignInAttempted, startSilentGoogleSignIn } from './character/GoogleSession'
 
 type SubStat = {
@@ -180,7 +184,21 @@ function App() {
   const [essenceSheets, setEssenceSheets] = useState<CharacterSheetRecord[]>([])
   const [viewedEssenceId, setViewedEssenceId] = useState<string | null>(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [eventEntries, setEventEntries] = useState<EventLogEntry[]>([])
+  const [campaignNames, setCampaignNames] = useState<string[]>([])
+  const [eventLogOpen, setEventLogOpen] = useState(false)
+  // Unread events pop up once per sign-in or arrival; "Later" hides them until the next one lands.
+  const [popupDismissed, setPopupDismissed] = useState(false)
   const lastRefreshAt = useRef(0)
+
+  const loadEvents = async () => {
+    try {
+      const { entries } = await fetchEventLog()
+      setEventEntries(entries)
+      if (entries.some((entry) => entry.Unread)) setPopupDismissed(false)
+    } catch { /* the sheet works without the log */ }
+  }
+  const markAcknowledged = (id: string) => setEventEntries((entries) => entries.map((entry) => entry.Id === id ? { ...entry, Unread: false } : entry))
 
   useEffect(() => {
     document.documentElement.dataset.skin = pageSkin
@@ -223,9 +241,11 @@ function App() {
     // Live updates: any committed write on the API re-fetches straight away, bypassing the interaction throttle.
     connectRealtime()
     const stopLive = onDataChanged(() => { lastRefreshAt.current = 0; refreshOnInteraction() })
+    const stopEvents = onEventNotification(() => { void loadEvents() })
 
     return () => {
       stopLive()
+      stopEvents()
       disconnectRealtime()
       window.removeEventListener('data-restored', restored)
       interactionEvents.forEach((eventName) => {
@@ -249,6 +269,7 @@ function App() {
     try {
       const sheets = await refreshCharacterSheets(authenticatedUser)
       setSavedSheetCount(sheets.length)
+      setCampaignNames([...new Set(sheets.map((sheet) => sheet.CampaignName))])
       const essence = sheets.filter((sheet) => sheet.Essence)
       setEssenceSheets(essence)
       const remembered = getScreen<string>('viewedEssenceId')
@@ -258,7 +279,7 @@ function App() {
       setSavedSheetCount(0)
       setDatabaseRefreshStatus('Refresh failed')
     }
-
+    if (authenticatedUser.Role !== 'dm') void loadEvents()
   }
 
   useEffect(() => {
@@ -314,6 +335,9 @@ function App() {
     setSavedSheetCount(0)
     setEssenceSheets([])
     setViewedEssenceId(null)
+    setEventEntries([])
+    setCampaignNames([])
+    setEventLogOpen(false)
     setDatabaseRefreshStatus('Signed out')
     setIsDevMode(false)
     setIsModifyStatsEnabled(false)
@@ -422,6 +446,7 @@ function App() {
       onImported={async (result) => {
         const sheets = await refreshCharacterSheets(currentUser)
         setSavedSheetCount(sheets.length)
+        setCampaignNames([...new Set(sheets.map((sheet) => sheet.CampaignName))])
         setEssenceSheets(sheets.filter((sheet) => sheet.Essence))
         setViewedEssenceId(result.record.Id)
         rememberScreen({ viewedEssenceId: result.record.Id })
@@ -429,11 +454,26 @@ function App() {
       }}
     />
   )
+  const unreadEvents = eventEntries.filter((entry) => entry.Unread)
+  const eventsButton = (
+    <button type="button" className="essence-inline-button event-log-button" onClick={() => setEventLogOpen(true)} aria-label={`Events${unreadEvents.length ? `, ${unreadEvents.length} unread` : ''}`}>
+      <BellRing size={14} aria-hidden="true" />Events{unreadEvents.length > 0 && <span className="dm-log-flag" aria-hidden="true">{unreadEvents.length}</span>}
+    </button>
+  )
+  const eventModals = (
+    <>
+      {!popupDismissed && !eventLogOpen && unreadEvents.length > 0 && (
+        <EventNotificationModal entries={unreadEvents} userId={currentUser.Id} onAcknowledged={markAcknowledged} onLater={() => setPopupDismissed(true)} />
+      )}
+      {eventLogOpen && <EventLogModal entries={eventEntries} userId={currentUser.Id} campaigns={campaignNames} onClose={() => setEventLogOpen(false)} onAcknowledged={markAcknowledged} />}
+    </>
+  )
 
   if (viewedEssence?.Essence) {
     return (
       <div className={portraitShellClass('sheet-shell', viewedEssence.Portrait)} data-skin={pageSkin} style={{ ...skinArtStyle(pageSkin), ...portraitStyle(viewedEssence.Portrait) }}>
         {importModal}
+        {eventModals}
         <header className="sheet-topbar">
           <div>
             <p className="eyebrow">{viewedEssence.CampaignName} · Essence</p>
@@ -442,6 +482,7 @@ function App() {
           <div className="topbar-actions">
             {sheetPicker}
             {importButton}
+            {eventsButton}
             <div className="summary-pill"><span>{viewedEssence.Essence.Race}</span><span>{spiritWeaponLabel(viewedEssence.Essence)}</span></div>
             <span className="signed-in-user">{currentUser.Username} · {currentUser.Role.toUpperCase()}</span>
             <SettingsMenu user={currentUser} pageSkin={pageSkin} onSkinChange={handleSkinChange} onLogout={handleLogout} onUserChange={activateUser} />
@@ -503,6 +544,7 @@ function App() {
   return (
     <div className="sheet-shell" data-skin={pageSkin} style={skinArtStyle(pageSkin)}>
       {importModal}
+      {eventModals}
       <header className="sheet-topbar">
         <div>
           <p className="eyebrow">Campaign ledger</p>
@@ -511,6 +553,7 @@ function App() {
         <div className="topbar-actions">
           {sheetPicker}
           {importButton}
+          {eventsButton}
           <span className="database-status" role="status" aria-live="polite">
             DB · {savedSheetCount} sheets · {databaseRefreshStatus}
           </span>
