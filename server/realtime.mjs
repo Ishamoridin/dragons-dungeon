@@ -23,6 +23,8 @@ export function describeChange({ kind, before, after, actor }) {
 
 export function canSeeChange(user, event) {
   if (!user) return false
+  // Addressed messages (event notifications) go to the listed users only.
+  if (Array.isArray(event.recipients)) return Boolean(user.SecondaryOwner) || event.recipients.includes(user.Id)
   if (event.kind === 'characters') return event.record ? canAccessCharacter(event.record, user) : true
   // Resources belong to a DM; that DM and the players they manage share them.
   if (user.SecondaryOwner || user.Role !== 'dm') return true
@@ -34,7 +36,7 @@ export function createRealtime() {
   let heartbeat = null
 
   function publish(event) {
-    const { record, ...wire } = event
+    const { record, recipients, ...wire } = event
     const payload = JSON.stringify(wire)
     for (const client of clients) {
       if (client.socket.readyState !== 1 || !canSeeChange(client.user, event)) continue

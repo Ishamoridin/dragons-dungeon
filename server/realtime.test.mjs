@@ -35,6 +35,10 @@ test('changes only reach users who can see the record', () => {
   assert.equal(canSeeChange(otherDm, resource), false)
   assert.equal(canSeeChange(player, resource), true)
   assert.equal(canSeeChange(null, resource), false)
+  const addressed = { type: 'event-notification', recipients: ['p-1'] }
+  assert.equal(canSeeChange(player, addressed), true)
+  assert.equal(canSeeChange(dm, addressed), false)
+  assert.equal(canSeeChange({ ...stranger, SecondaryOwner: true }, addressed), true)
 })
 
 test('authenticated sockets receive announced writes; others are refused', async () => {
@@ -67,6 +71,14 @@ test('authenticated sockets receive announced writes; others are refused', async
     assert.deepEqual(change, { type: 'change', kind: 'characters', id: 'c-1', action: 'update', version: 4, actorId: 'p-1' })
     await new Promise((resolve) => setTimeout(resolve, 50))
     assert.equal(strangerMessages.filter((message) => message.type === 'change').length, 0)
+
+    // Addressed messages reach the listed users only, and the address list stays server-side.
+    const addressed = once(strangerSocket, 'message')
+    realtime.publish({ type: 'event-notification', id: 'e-1', campaignName: 'Ashen Vale', title: 'Night raid', recipients: ['p-2'] })
+    await addressed
+    assert.deepEqual(strangerMessages.find((message) => message.type === 'event-notification'), { type: 'event-notification', id: 'e-1', campaignName: 'Ashen Vale', title: 'Night raid' })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    assert.equal(dmMessages.filter((message) => message.type === 'event-notification').length, 0)
     dmSocket.close(); strangerSocket.close()
   } finally {
     revisionEvents.off('change', onChange)

@@ -10,6 +10,7 @@ import { resolveCopies } from '../src/character/RevisionMerge.mjs'
 import { mountGoogleAuth } from './google-auth.mjs'
 import { createSheetSync } from './sheet-sync.mjs'
 import { createMailer, emailChangeEmail, registrationEmail } from './mailer.mjs'
+import { applySharingToggle, eventLogInput, eventRecipients, isSharing, sharingInput, visibleEntryFor } from './event-log.mjs'
 
 const username = z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/)
 const password = z.string().min(12).max(256)
@@ -74,6 +75,11 @@ export async function initializeDatabase(db) {
     // One activity log per session, kept after the session ends.
     db.collection('sessionLogs').createIndex({ SessionDigest: 1 }, { unique: true }),
     db.collection('sessionLogs').createIndex({ UserId: 1, StartedAt: -1 }),
+    // Fired events, read by the DM per campaign and by players through the characters they own.
+    db.collection('eventLog').createIndex({ Id: 1 }, { unique: true }),
+    db.collection('eventLog').createIndex({ DMId: 1, CampaignName: 1, CreatedAt: -1 }),
+    db.collection('eventLog').createIndex({ 'Targets.OwnerId': 1, CreatedAt: -1 }),
+    db.collection('eventSharing').createIndex({ DMId: 1, CampaignName: 1, UserId: 1 }, { unique: true }),
     ...[...resourceKinds].map((kind) => db.collection(kind).createIndex({ OwnerId: 1, Id: 1 }, { unique: true })),
   ])
 }
@@ -538,6 +544,89 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     if (!current) throw fail(409, 'Record changed or is not accessible.')
     await saveRevision(db, { kind: req.params.kind, before: current, after: null, actor: req.user })
     res.json({ ok: true })
+  })
+  // Event log. The DM applies an event's effects to each sheet through the normal character saves, then records
+  // the outcome here; the entry is announced to the DM and every targeted owner over the live socket.
+  const eventLog = db.collection('eventLog')
+  const eventSharing = db.collection('eventSharing')
+  // Sharing rows for a campaign: user ids currently in the pool.
+  const sharersFor = async (DMId, CampaignName) => new Set((await eventSharing.find({ DMId, CampaignName, Sharing: true }, { projection: { UserId: 1 } }).toArray()).map((row) => row.UserId))
+  // A player's campaign is known through a character they own in it; the DM of that character runs the pool.
+  const playerCampaign = async (user, CampaignName) => {
+    const record = await characters.findOne({ OwnerId: user.Id, CampaignName }, { projection: { DMId: 1 } })
+    if (!record) throw fail(404, 'You have no character in that campaign.')
+    return record.DMId
+  }
+  app.post('/api/event-log', dmOnly, async (req, res) => {
+    safeData(req.body)
+    const input = eventLogInput.parse(req.body)
+    const ids = [...new Set(input.Targets.map((target) => target.CharacterId))]
+    const scope = req.user.SecondaryOwner ? { Id: { $in: ids }, CampaignName: input.CampaignName } : { Id: { $in: ids }, DMId: req.user.Id, CampaignName: input.CampaignName }
+    const records = await characters.find(scope, { projection: { Id: 1, Name: 1, OwnerId: 1, Essence: { Alias: 1 } } }).toArray()
+    if (records.length !== ids.length) throw fail(403, 'Every target must be a character in your campaign.')
+    const byId = new Map(records.map((record) => [record.Id, record]))
+    const now = new Date().toISOString()
+    const entry = {
+      Id: randomUUID(), DMId: req.user.Id, DMName: req.user.Username, CampaignName: input.CampaignName,
+      Title: input.Title, Description: input.Description, Skin: input.Skin, Source: input.Source,
+      ...(input.CampaignTime ? { CampaignTime: input.CampaignTime } : {}), ...(input.ScheduledEventId ? { ScheduledEventId: input.ScheduledEventId } : {}),
+      CreatedAt: now, CreatedBy: req.user.Id,
+      Targets: input.Targets.map((target) => {
+        const record = byId.get(target.CharacterId)
+        return { CharacterId: target.CharacterId, CharacterName: record.Essence?.Alias || record.Name, OwnerId: record.OwnerId, Effects: target.Effects, ...(target.Error ? { Error: target.Error } : {}) }
+      }),
+      AcknowledgedBy: [req.user.Id],
+    }
+    await eventLog.insertOne({ ...entry })
+    realtime.publish({ type: 'event-notification', id: entry.Id, campaignName: entry.CampaignName, title: entry.Title, recipients: eventRecipients(entry) })
+    res.status(201).json(visibleEntryFor(req.user, entry))
+  })
+  app.get('/api/event-log', async (req, res) => {
+    const campaign = typeof req.query.campaign === 'string' && req.query.campaign ? req.query.campaign : null
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100))
+    const isDm = req.user.Role === 'dm' || req.user.SecondaryOwner
+    const filter = req.user.SecondaryOwner ? {} : isDm ? { DMId: req.user.Id } : { 'Targets.OwnerId': req.user.Id }
+    if (campaign) filter.CampaignName = campaign
+    const rows = await eventLog.find(filter).sort({ CreatedAt: -1 }).limit(limit).toArray()
+    // One sharer lookup per campaign the player's entries span.
+    const pools = new Map()
+    if (!isDm) {
+      for (const row of rows) {
+        const key = `${row.DMId}\n${row.CampaignName}`
+        if (!pools.has(key)) pools.set(key, await sharersFor(row.DMId, row.CampaignName))
+      }
+    }
+    const entries = rows.map((row) => visibleEntryFor(req.user, row, pools.get(`${row.DMId}\n${row.CampaignName}`))).filter(Boolean)
+    res.json({ entries, unread: entries.filter((entry) => entry.Unread).length })
+  })
+  app.post('/api/event-log/:id/ack', async (req, res) => {
+    const result = await eventLog.updateOne({ Id: req.params.id, $or: [{ DMId: req.user.Id }, { 'Targets.OwnerId': req.user.Id }] }, { $addToSet: { AcknowledgedBy: req.user.Id } })
+    if (!result.matchedCount) throw fail(404, 'Event not found.')
+    res.json({ ok: true })
+  })
+  app.get('/api/event-log/sharing', async (req, res) => {
+    const campaign = z.string().trim().min(1).max(100).parse(req.query.campaign)
+    const isDm = req.user.Role === 'dm'
+    const DMId = isDm ? req.user.Id : await playerCampaign(req.user, campaign)
+    const rows = await eventSharing.find({ DMId, CampaignName: campaign, Sharing: true }).toArray()
+    const own = isDm ? null : rows.find((row) => row.UserId === req.user.Id) ?? await eventSharing.findOne({ DMId, CampaignName: campaign, UserId: req.user.Id })
+    const sharing = isSharing(own)
+    const names = new Map((await users.find({ Id: { $in: rows.map((row) => row.UserId) } }, { projection: { Id: 1, Username: 1 } }).toArray()).map((user) => [user.Id, user.Username]))
+    const sharers = isDm || sharing ? rows.map((row) => ({ UserId: row.UserId, Username: names.get(row.UserId) ?? 'Unknown' })) : []
+    res.json({ sharing, lockedUntil: sharing && own?.LockedUntil ? new Date(own.LockedUntil).toISOString() : null, sharers })
+  })
+  app.put('/api/event-log/sharing', async (req, res) => {
+    if (req.user.Role === 'dm') throw fail(403, 'Only players join a sharing pool.')
+    const input = sharingInput.parse(req.body)
+    const DMId = await playerCampaign(req.user, input.campaign)
+    const key = { DMId, CampaignName: input.campaign, UserId: req.user.Id }
+    const current = await eventSharing.findOne(key)
+    const outcome = applySharingToggle(current, input.sharing)
+    if (!outcome.ok) {
+      return res.status(409).json({ error: `Sharing stays on until ${outcome.lockedUntil.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`, lockedUntil: outcome.lockedUntil.toISOString() })
+    }
+    await eventSharing.updateOne(key, { $set: { ...outcome.next, UpdatedAt: new Date() } }, { upsert: true })
+    res.json({ sharing: outcome.next.Sharing, lockedUntil: outcome.next.LockedUntil ? outcome.next.LockedUntil.toISOString() : null })
   })
   app.use('/api', (req, res) => res.status(404).json({ error: 'Endpoint not found.' }))
   if (staticDir) {
