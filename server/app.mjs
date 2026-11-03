@@ -11,6 +11,7 @@ import { mountGoogleAuth } from './google-auth.mjs'
 import { createSheetSync } from './sheet-sync.mjs'
 import { createMailer, emailChangeEmail, registrationEmail } from './mailer.mjs'
 import { applySharingToggle, eventLogInput, eventRecipients, isSharing, sharingInput, visibleEntryFor } from './event-log.mjs'
+import { rollDice, rollInput, rollRecipients, visibleRollFor, applyReaction, reactionInput } from './dice.mjs'
 
 const username = z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/)
 const password = z.string().min(12).max(256)
@@ -81,6 +82,10 @@ export async function initializeDatabase(db) {
     db.collection('eventLog').createIndex({ DMId: 1, CampaignName: 1, CreatedAt: -1 }),
     db.collection('eventLog').createIndex({ 'Targets.OwnerId': 1, CreatedAt: -1 }),
     db.collection('eventSharing').createIndex({ DMId: 1, CampaignName: 1, UserId: 1 }, { unique: true }),
+    // Dice rolls, read by the DM per campaign, by the roller, and by the sharing pool.
+    db.collection('rollLog').createIndex({ Id: 1 }, { unique: true }),
+    db.collection('rollLog').createIndex({ DMId: 1, CampaignName: 1, CreatedAt: -1 }),
+    db.collection('rollLog').createIndex({ RollerId: 1, CreatedAt: -1 }),
     ...[...resourceKinds].map((kind) => db.collection(kind).createIndex({ OwnerId: 1, Id: 1 }, { unique: true })),
   ])
 }
@@ -622,6 +627,72 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     }
     await eventSharing.updateOne(key, { $set: { ...outcome.next, UpdatedAt: new Date() } }, { upsert: true })
     res.json({ sharing: outcome.next.Sharing, lockedUntil: outcome.next.LockedUntil ? outcome.next.LockedUntil.toISOString() : null })
+  })
+  // Dice rolls. The client resolves stat tokens to numbers; the server rolls the dice so results cannot be forged,
+  // stores the outcome, and announces it to the DM, the roller, and (for shared rolls) the campaign's sharing pool.
+  const rollLog = db.collection('rollLog')
+  app.post('/api/rolls', async (req, res) => {
+    safeData(req.body)
+    const input = rollInput.parse(req.body)
+    const DMId = req.user.Role === 'dm' ? req.user.Id : await playerCampaign(req.user, input.CampaignName)
+    let character = null
+    if (input.CharacterId) {
+      const scope = req.user.SecondaryOwner
+        ? { Id: input.CharacterId, CampaignName: input.CampaignName }
+        : req.user.Role === 'dm'
+          ? { Id: input.CharacterId, DMId: req.user.Id, CampaignName: input.CampaignName }
+          : { Id: input.CharacterId, OwnerId: req.user.Id, CampaignName: input.CampaignName }
+      character = await characters.findOne(scope, { projection: { Id: 1, Name: 1, Essence: { Alias: 1 } } })
+      if (!character) throw fail(403, 'That character is not yours to roll for.')
+    }
+    let outcome
+    try { outcome = rollDice(input.Formula) } catch (error) { throw error.dice ? fail(400, error.message) : error }
+    const entry = {
+      Id: randomUUID(), CampaignName: input.CampaignName, DMId, RollerId: req.user.Id, RollerName: req.user.Username,
+      ...(character ? { CharacterId: character.Id, CharacterName: character.Essence?.Alias || character.Name } : {}),
+      Command: input.Command, Formula: input.Formula, Label: input.Label, Tokens: input.Tokens,
+      Rolls: outcome.rolls, Total: outcome.total, MaxTotal: outcome.maxTotal, Secret: input.Secret, CreatedAt: new Date().toISOString(),
+    }
+    await rollLog.insertOne({ ...entry })
+    realtime.publish({ type: 'roll', id: entry.Id, campaignName: entry.CampaignName, recipients: rollRecipients(entry, await sharersFor(DMId, entry.CampaignName)) })
+    res.status(201).json(entry)
+  })
+  app.get('/api/rolls', async (req, res) => {
+    const campaign = typeof req.query.campaign === 'string' && req.query.campaign ? req.query.campaign : null
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50))
+    let filter
+    if (req.user.SecondaryOwner) filter = {}
+    else if (req.user.Role === 'dm') filter = { DMId: req.user.Id }
+    else {
+      // A player sees their own rolls plus shared rolls from the campaigns they play in; the pool check follows.
+      const memberships = await characters.find({ OwnerId: req.user.Id }, { projection: { DMId: 1, CampaignName: 1 } }).toArray()
+      const pairs = [...new Map(memberships.map((record) => [`${record.DMId}\n${record.CampaignName}`, record])).values()]
+      filter = { $or: [{ RollerId: req.user.Id }, ...pairs.map((pair) => ({ DMId: pair.DMId, CampaignName: pair.CampaignName, Secret: { $ne: true } }))] }
+    }
+    if (campaign) filter.CampaignName = campaign
+    const rows = await rollLog.find(filter).sort({ CreatedAt: -1 }).limit(limit).toArray()
+    const pools = new Map()
+    if (req.user.Role !== 'dm' && !req.user.SecondaryOwner) {
+      for (const row of rows) {
+        const key = `${row.DMId}\n${row.CampaignName}`
+        if (!pools.has(key)) pools.set(key, await sharersFor(row.DMId, row.CampaignName))
+      }
+    }
+    res.json({ rolls: rows.map((row) => visibleRollFor(req.user, row, pools.get(`${row.DMId}\n${row.CampaignName}`))).filter(Boolean) })
+  })
+  // Reacting to a natural 20 or natural 1: anyone who can see the roll (except the roller) may leave one reaction.
+  app.post('/api/rolls/:id/react', async (req, res) => {
+    safeData(req.body)
+    const { reaction } = reactionInput.parse(req.body)
+    const roll = await rollLog.findOne({ Id: req.params.id })
+    if (!roll) throw fail(404, 'Roll not found.')
+    const sharers = await sharersFor(roll.DMId, roll.CampaignName)
+    if (!visibleRollFor(req.user, roll, sharers)) throw fail(404, 'Roll not found.')
+    const outcome = applyReaction(roll, req.user, reaction)
+    if (!outcome.ok) throw fail(outcome.status, outcome.message)
+    await rollLog.updateOne({ Id: roll.Id }, { $set: { Reactions: outcome.reactions } })
+    realtime.publish({ type: 'roll-reaction', id: roll.Id, campaignName: roll.CampaignName, recipients: rollRecipients(roll, sharers) })
+    res.json({ reactions: outcome.reactions })
   })
   app.use('/api', (req, res) => res.status(404).json({ error: 'Endpoint not found.' }))
   if (staticDir) {
