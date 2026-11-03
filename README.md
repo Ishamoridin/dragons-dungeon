@@ -45,6 +45,16 @@ Saved characters have numeric versions. Undo restores the last database-saved ch
 
 The DM character modal can add or remove tracked Essence quantities. It also provides current/max HP, Reiryoku, and Willpower fields with per-pool Apply controls. These values are saved separately as temporary overrides, leaving attributes and permanent bonuses unchanged. Reset temporary values clears the overrides and restores derived maxima with full current pools. These saves participate in version history and Undo.
 
+## Events
+
+DMs compose events from the campaign header, a character's modal, or the Events page templates. An event has a title, a long description, a skin (one of the page skins plus an optional accent colour and banner image, kept under 300 KB), recipients (chosen characters or every player in the campaign), and effects. Effects cover the full DM toolset: attribute, skill and development changes, essence adjustments, universal points, statuses, injuries, items, HP/Reiryoku/Willpower changes and notes on Essence sheets; XP, skill progress and level-ups on other rulesets. Effects can apply to every recipient or to one character.
+
+Events send immediately or schedule at a campaign time. Schedules and the campaign clock persist in the `campaigns` resource (keyed by the campaign name's slug, so two names that slug identically share one record) and fire when the DM advances campaign time on the Timeline page. Effects are applied through the normal character saves, so they take part in version history and Undo; a sheet that cannot be updated is recorded on the event with the error rather than blocking the rest.
+
+Every fired event is written to the `eventLog` collection with each target's applied effects and announced over the live socket as an `event-notification` addressed to the DM and the targeted owners. Players get a pop-up, see unread events on their next sign-in, and browse their Events log. The DM sees every target; a player sees only their own characters unless they join the campaign's sharing pool, in which case they also see other sharers' outcomes (never those of players who keep theirs private). Joining locks sharing on for seven days.
+
+Routes: `POST /api/event-log` (DM), `GET /api/event-log?campaign=`, `POST /api/event-log/:id/ack`, `GET`/`PUT /api/event-log/sharing`. Descriptions are limited to 20,000 characters.
+
 ## Wound Results and Burden
 
 Burden counts carried inventory only; equipped armour and other equipped items do not contribute. Each inventory entry retains its recorded burden total.
