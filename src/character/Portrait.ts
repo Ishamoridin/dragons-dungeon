@@ -107,7 +107,7 @@ async function loadImage(file: File): Promise<HTMLImageElement> {
 }
 
 // Resizes to a sheet-friendly size, encodes as JPEG under the size budget, and samples the palette.
-export async function readPortraitFile(file: File): Promise<Portrait> {
+export async function readPortraitFile(file: File, maxBytes = MAX_PORTRAIT_BYTES): Promise<Portrait> {
   if (!file.type.startsWith('image/')) throw new Error('Choose an image file (PNG, JPEG, WebP, or GIF).')
   const image = await loadImage(file)
   const scale = Math.min(1, MAX_PORTRAIT_EDGE / Math.max(image.naturalWidth, image.naturalHeight))
@@ -133,10 +133,10 @@ export async function readPortraitFile(file: File): Promise<Portrait> {
 
   let quality = 0.86
   let dataUrl = canvas.toDataURL('image/jpeg', quality)
-  while (dataUrl.length > MAX_PORTRAIT_BYTES && quality > 0.4) {
+  while (dataUrl.length > maxBytes && quality > 0.4) {
     quality -= 0.1
     dataUrl = canvas.toDataURL('image/jpeg', quality)
   }
-  if (dataUrl.length > MAX_PORTRAIT_BYTES) throw new Error('That image is too detailed to store; try a smaller or simpler picture.')
+  if (dataUrl.length > maxBytes) throw new Error('That image is too detailed to store; try a smaller or simpler picture.')
   return { DataUrl: dataUrl, Palette: palette, UpdatedAt: new Date().toISOString() }
 }

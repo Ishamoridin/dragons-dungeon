@@ -33,7 +33,7 @@ import { d20Roll, toRoll } from './Roll20'
 const fmt = (value: number): string => Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, '')
 const signed = (value: number): string => (value > 0 ? `+${fmt(value)}` : fmt(value))
 
-const METAPHYSICAL_LABELS: Record<string, string> = {
+export const METAPHYSICAL_LABELS: Record<string, string> = {
   reiatsuManipulation: 'Reiatsu Manipulation',
   spiritWeapon: 'Spirit Weapon',
   reishiManipulation: 'Reishi Manipulation',
@@ -44,7 +44,7 @@ const METAPHYSICAL_LABELS: Record<string, string> = {
   essenceCultivation: 'Essence Cultivation',
 }
 
-const STAT_LABELS: Record<string, string> = {
+export const STAT_LABELS: Record<string, string> = {
   reducedToZeroHP: 'Reduced to 0 HP',
   tookOverTenPercent: 'Took over 10% HP in damage',
   tookNoDamage: 'Took no damage',

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { CalendarClock, Flag, GanttChart, Package, Pencil, Plus, Save, Skull, Swords, Users, type LucideIcon } from 'lucide-react'
+import { BellRing, CalendarClock, Flag, GanttChart, Package, Pencil, Plus, Save, Skull, Swords, Users, type LucideIcon } from 'lucide-react'
 import { loadResources, resourceList, saveResource } from './Api'
-import { onDataChanged } from './Realtime'
+import { onDataChanged, onEventNotification } from './Realtime'
+import EventCard from './EventCard'
+import EventComposerModal, { type EventDraft } from './EventComposerModal'
 import NewSystemModal from './NewSystemModal'
 import ImportSheetModal from './ImportSheetModal'
 import PortraitControl from './PortraitControl'
@@ -12,7 +14,7 @@ import SettingsMenu from './SettingsMenu'
 import EssenceAdjustmentModal from './essence/EssenceAdjustmentModal'
 import type { CampaignAction, CampaignData, CampaignEventType, NPCFactionGroup } from './Campaign'
 import { actionToEffect, applyEventEffect, describeEffect, flattenSkills, type AppliedEffect, type EventEffect, type EventTargetResult } from './EventEffects'
-import { recordEvent } from './EventLogApi'
+import { fetchEventLog, recordEvent, type EventLogEntry } from './EventLogApi'
 import type Person from './Person'
 import { PlayerClass, PRIMARY_ATTRIBUTE_NAMES } from './PlayerClass'
 import { AUGMENTATION_OPTIONS, EQUIPMENT_OPTIONS, INJURY_OPTIONS, INVENTORY_OPTIONS } from './CharacterOptions'
@@ -564,12 +566,11 @@ function CharacterActionModal({
   onClose,
   onApply,
   onOpenSheet,
-  onSchedule,
+  onComposeEvent,
   onApplyEssence,
   onDelete,
   onSyncSheet,
   onTransfer,
-  initialEventType,
 }: {
   record: CharacterSheetRecord
   campaign: Campaign
@@ -580,61 +581,29 @@ function CharacterActionModal({
   onOpenSheet: () => void
   onSyncSheet?: () => Promise<void>
   onTransfer?: () => void
-  onSchedule: (type: CampaignEventType, title: string, description: string, time: Date, actions: CampaignAction[]) => void
-  initialEventType?: CampaignEventType
+  onComposeEvent: () => void
 }) {
   const allSkills = flattenSkills(record.Skills)
-  const initialTemplate = CAMPAIGN_EVENT_TEMPLATES.find((template) => template.type === initialEventType) ??
-    CAMPAIGN_EVENT_TEMPLATES.find((template) => template.type === 'quest') ?? CAMPAIGN_EVENT_TEMPLATES[0]
   const [xpAmount, setXpAmount] = useState(100)
   const [skillName, setSkillName] = useState(allSkills[0]?.Name ?? '')
   const [progressAmount, setProgressAmount] = useState(10)
-  const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [scheduleType, setScheduleType] = useState<CampaignEventType>(initialTemplate.type)
-  const [scheduleTitle, setScheduleTitle] = useState(initialTemplate.title)
-  const [scheduleDescription, setScheduleDescription] = useState(initialTemplate.description)
-  const [scheduleTime, setScheduleTime] = useState(() => localDateTime(new Date(campaign.currentTime.getTime() + 60 * 60_000)))
-  const [scheduleAmount, setScheduleAmount] = useState(100)
-  const [scheduleProgress, setScheduleProgress] = useState(10)
-  const [scheduleSkillNames, setScheduleSkillNames] = useState<string[]>(allSkills[0] ? [allSkills[0].Name] : [])
-  const [selectedActions, setSelectedActions] = useState<CampaignAction['type'][]>(initialTemplate.suggestedActions)
-  const [scheduleError, setScheduleError] = useState('')
   const [essenceAdjustmentOpen, setEssenceAdjustmentOpen] = useState(false)
-
-  const toggleAction = (type: CampaignAction['type']) => {
-    setSelectedActions((current) =>
-      current.includes(type) ? current.filter((item) => item !== type) : [...current, type],
-    )
-  }
-
-  const submitSchedule = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setScheduleError('')
-    if (selectedActions.includes('add-skill-progress') && scheduleSkillNames.length === 0) {
-      setScheduleError('Choose at least one skill to receive progress.')
-      return
-    }
-
-    const actions: CampaignAction[] = selectedActions.map((type) => {
-      if (type === 'add-xp') {
-        return { type, characterId: record.Id, amount: scheduleAmount }
-      }
-      if (type === 'add-skill-progress') {
-        return { type, characterId: record.Id, skillNames: scheduleSkillNames, amount: scheduleProgress }
-      }
-      if (type === 'level-up-skill') {
-        return { type, characterId: record.Id, skillName }
-      }
-      return { type, characterId: record.Id }
-    })
-
-    try {
-      onSchedule(scheduleType, scheduleTitle, scheduleDescription, new Date(scheduleTime), actions)
-      setScheduleOpen(false)
-    } catch (error) {
-      setScheduleError(error instanceof Error ? error.message : 'Unable to schedule event.')
-    }
-  }
+  const characterEvents = campaign.scheduledEvents.filter((event) => event.targets(campaign.CharacterIds).includes(record.Id))
+  const scheduleBlock = (
+    <section className="dm-action-block schedule-block">
+      <div className="schedule-title-row">
+        <div><h3>Events</h3><p>Campaign time: {campaign.currentTime.toLocaleString()}</p></div>
+        <button type="button" className="dm-secondary-action" onClick={onComposeEvent}>Compose event</button>
+      </div>
+      {characterEvents.map((event) => (
+        <div className="scheduled-event-row" key={event.Id}>
+          <span>{event.Title}</span>
+          <span>{event.ScheduledAt.toLocaleString()}</span>
+          <span className={event.Completed ? 'event-complete' : 'event-pending'}>{event.Completed ? 'Applied' : 'Scheduled'}</span>
+        </div>
+      ))}
+    </section>
+  )
 
   if (record.Essence) {
     return (
@@ -661,6 +630,7 @@ function CharacterActionModal({
               {record.SheetSource && <SheetSyncControl source={record.SheetSource} onSync={onSyncSheet} />}
               <DeleteCharacterControl name={displayName(record)} onDelete={onDelete} />
             </section>
+            {scheduleBlock}
           </div>
           {essenceAdjustmentOpen && <EssenceAdjustmentModal data={record.Essence} onClose={() => setEssenceAdjustmentOpen(false)} onSave={(change) => onApplyEssence((draft) => applyEssenceChange(draft, change, { name: record.DMName, role: 'dm' }))} />}
         </section>
@@ -715,89 +685,7 @@ function CharacterActionModal({
             <DeleteCharacterControl name={record.Name} onDelete={onDelete} />
           </section>
 
-          <section className="dm-action-block schedule-block">
-            <div className="schedule-title-row">
-              <div><h3>Scheduled events</h3><p>Campaign time: {campaign.currentTime.toLocaleString()}</p></div>
-              <button type="button" className="dm-secondary-action" onClick={() => setScheduleOpen((open) => !open)}>{scheduleOpen ? 'Cancel' : 'Schedule event'}</button>
-            </div>
-            {campaign.scheduledEvents.filter((event) => event.Actions.some((action) => action.characterId === record.Id)).map((event) => (
-              <div className="scheduled-event-row" key={event.Id}>
-                <span>{event.Title}</span>
-                <span>{event.ScheduledAt.toLocaleString()}</span>
-                <span className={event.Completed ? 'event-complete' : 'event-pending'}>{event.Completed ? 'Applied' : 'Scheduled'}</span>
-              </div>
-            ))}
-            {scheduleOpen && (
-              <form className="schedule-form" onSubmit={submitSchedule}>
-                  <label className="dm-field-label">Event type
-                    <select
-                      value={scheduleType}
-                      onChange={(event) => {
-                        const template = CAMPAIGN_EVENT_TEMPLATES.find((item) => item.type === event.currentTarget.value)
-                        if (!template) {
-                          return
-                        }
-                        setScheduleType(template.type)
-                        setScheduleTitle(template.title)
-                        setScheduleDescription(template.description)
-                        setSelectedActions(template.suggestedActions)
-                      }}
-                    >
-                      {CAMPAIGN_EVENT_TEMPLATES.map((template) => (
-                        <option key={template.type} value={template.type}>{template.type[0].toUpperCase() + template.type.slice(1)}</option>
-                      ))}
-                    </select>
-                  </label>
-                <label className="dm-field-label">Event name
-                  <input value={scheduleTitle} onChange={(event) => setScheduleTitle(event.currentTarget.value)} required />
-                </label>
-                  <label className="dm-field-label">Description
-                    <textarea value={scheduleDescription} onChange={(event) => setScheduleDescription(event.currentTarget.value)} rows={2} />
-                  </label>
-                <label className="dm-field-label">Campaign time
-                  <input type="datetime-local" min={localDateTime(campaign.currentTime)} value={scheduleTime} onChange={(event) => setScheduleTime(event.currentTarget.value)} required />
-                </label>
-                <fieldset className="scheduled-action-options">
-                  <legend>Actions to run</legend>
-                  <label><input type="checkbox" checked={selectedActions.includes('add-xp')} onChange={() => toggleAction('add-xp')} /> Add XP</label>
-                  <label><input type="checkbox" checked={selectedActions.includes('add-skill-progress')} onChange={() => toggleAction('add-skill-progress')} /> Add skill progress</label>
-                  <label><input type="checkbox" checked={selectedActions.includes('level-up')} onChange={() => toggleAction('level-up')} /> Level up character</label>
-                  <label><input type="checkbox" checked={selectedActions.includes('level-up-skill')} onChange={() => toggleAction('level-up-skill')} /> Level up skill</label>
-                </fieldset>
-                {selectedActions.includes('add-xp') && (
-                  <label className="dm-field-label">XP amount
-                    <input type="number" min={1} step={1} value={scheduleAmount} onChange={(event) => setScheduleAmount(Number(event.currentTarget.value))} />
-                  </label>
-                )}
-                {selectedActions.includes('add-skill-progress') && (
-                  <>
-                    <label className="dm-field-label">Skills receiving progress
-                      <select
-                        multiple
-                        size={Math.min(allSkills.length, 5)}
-                        value={scheduleSkillNames}
-                        onChange={(event) => setScheduleSkillNames(Array.from(event.currentTarget.selectedOptions, (option) => option.value))}
-                      >
-                        {allSkills.map((skill) => <option key={skill.Name} value={skill.Name}>{skill.Name}</option>)}
-                      </select>
-                    </label>
-                    <label className="dm-field-label">Progress amount per skill
-                      <input type="number" min={0.1} max={100} step={0.1} value={scheduleProgress} onChange={(event) => setScheduleProgress(Number(event.currentTarget.value))} />
-                    </label>
-                  </>
-                )}
-                {selectedActions.includes('level-up-skill') && (
-                  <label className="dm-field-label">Skill to level up
-                    <select value={skillName} onChange={(event) => setSkillName(event.currentTarget.value)}>
-                      {allSkills.map((skill) => <option key={skill.Name} value={skill.Name}>{skill.Name}</option>)}
-                    </select>
-                  </label>
-                )}
-                {scheduleError && <p className="schedule-error" role="alert">{scheduleError}</p>}
-                <button type="submit" className="dm-primary-action" disabled={selectedActions.length === 0}>Save scheduled event</button>
-              </form>
-            )}
-          </section>
+          {scheduleBlock}
         </div>
       </section>
     </div>
@@ -1306,7 +1194,9 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
   const [campaignPage, setCampaignPage] = useState<CampaignPage>(() => { const page = getScreen<string>('dmPage'); return CAMPAIGN_PAGES.includes(page as CampaignPage) ? (page as CampaignPage) : 'Players' })
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(getScreen<string>('dmCharacterId') ?? null)
   const [previewCharacterId, setPreviewCharacterId] = useState<string | null>(getScreen<string>('dmPreviewId') ?? null)
-  const [eventTargetCharacterId, setEventTargetCharacterId] = useState('')
+  const [composer, setComposer] = useState<{ targetIds?: string[]; type?: CampaignEventType } | null>(null)
+  const [eventLogEntries, setEventLogEntries] = useState<EventLogEntry[]>([])
+  const [openLogEntry, setOpenLogEntry] = useState<EventLogEntry | null>(null)
   const [selectedFactionName, setSelectedFactionName] = useState<string | null>(null)
   const [selectedNpc, setSelectedNpc] = useState<Person | null>(null)
   const [, setNpcRevision] = useState(0)
@@ -1316,7 +1206,6 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
   const [openTechnique, setOpenTechnique] = useState<{ key: string; source: TechniqueSource | null; technique: EssenceTechnique } | null>(null)
   const [itemCatalog, setItemCatalog] = useState<ArmourCatalogEntry[]>(() => listItemCatalog())
   const [openItem, setOpenItem] = useState<{ key: string; isNew: boolean; entry: ArmourCatalogEntry } | null>(null)
-  const [eventTemplateType, setEventTemplateType] = useState<CampaignEventType | null>(null)
   const [timeInputs, setTimeInputs] = useState<Record<string, string>>({})
   const [status, setStatus] = useState('Loading campaign records')
   const [error, setError] = useState('')
@@ -1597,11 +1486,37 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
       : <button type="button" className="essence-inline-button npc-sheet-button" onClick={(event) => { event.stopPropagation(); void createNpcSheet(npc) }}>Create sheet</button>
   }
 
+  // The campaign's event log, refreshed whenever an event lands.
+  const loadEventLog = async (campaignName: string | undefined) => {
+    if (!campaignName) { setEventLogEntries([]); return }
+    try { setEventLogEntries((await fetchEventLog(campaignName)).entries) } catch { /* the log panel shows what it has */ }
+  }
   useEffect(() => {
-    if (!campaignCharacters.some((record) => record.Id === eventTargetCharacterId)) {
-      setEventTargetCharacterId(campaignCharacters[0]?.Id ?? '')
+    void loadEventLog(selectedCampaign?.Name)
+    const stop = onEventNotification((notification) => { if (notification.campaignName === selectedCampaign?.Name) void loadEventLog(selectedCampaign?.Name) })
+    return stop
+  }, [selectedCampaign?.Name])
+
+  // Sending now: every recipient's sheet takes the effects, then the outcome is logged and announced.
+  const sendEvent = async (campaign: Campaign, draft: EventDraft) => {
+    const roster = characters.filter((record) => record.CampaignName === campaign.Name && !record.Tags.includes('NPC'))
+    const recipients = draft.targetIds === 'all' ? roster : roster.filter((record) => (draft.targetIds as string[]).includes(record.Id))
+    if (recipients.length === 0) throw new Error('Choose at least one character.')
+    const targets: EventTargetResult[] = []
+    for (const record of recipients) {
+      const effects = [...draft.effects, ...draft.targetEffects.filter((entry) => entry.CharacterId === record.Id).flatMap((entry) => entry.Effects)]
+      const result = effects.length > 0 ? await applyEffects(record.Id, effects) : { applied: [] as AppliedEffect[], error: undefined }
+      targets.push({ CharacterId: record.Id, CharacterName: displayName(record), OwnerId: record.OwnerId, Effects: result.applied, ...(result.error ? { Error: result.error } : {}) })
     }
-  }, [selectedCampaign?.Name, characters])
+    await recordEvent({
+      CampaignName: campaign.Name, Title: draft.title, Description: draft.description, Skin: draft.skin, Source: 'manual',
+      CampaignTime: campaign.currentTime.toISOString(),
+      Targets: targets.map((target) => ({ CharacterId: target.CharacterId, Effects: target.Effects, ...(target.Error ? { Error: target.Error } : {}) })),
+    })
+    const failed = targets.filter((target) => target.Error).length
+    setStatus(`Sent "${draft.title}" to ${targets.length} character${targets.length === 1 ? '' : 's'}${failed ? ` · ${failed} could not be updated` : ''}`)
+    void loadEventLog(campaign.Name)
+  }
 
   if (previewCharacter) {
     return <PlayerSheetView record={previewCharacter} onBack={() => setPreviewCharacterId(null)} skin={skin} onSkinChange={onSkinChange} onEssenceChange={(change) => updateEssence(previewCharacter.Id, (draft) => applySheetChange(draft, change, { name: user.Username, role: 'dm' }))} onEssenceEdit={(mutate) => updateEssence(previewCharacter.Id, mutate)} onEssenceAmount={(change) => updateEssence(previewCharacter.Id, (draft) => applyEssenceChange(draft, change, { name: user.Username, role: 'dm' }))} onPortraitChange={(portrait) => updatePortrait(previewCharacter.Id, portrait)} />
@@ -1656,12 +1571,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
   }
 
   const openScheduleTemplate = (type: CampaignEventType) => {
-    if (!campaignCharacters.some((record) => record.Id === eventTargetCharacterId)) {
-      setError('Choose a character for this event.')
-      return
-    }
-    setSelectedCharacterId(eventTargetCharacterId)
-    setEventTemplateType(type)
+    setComposer({ type })
     setError('')
   }
 
@@ -1734,6 +1644,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
               <h2>{selectedCampaign.Name}</h2>
               <p className="campaign-time-readout">Current time · {selectedCampaign.currentTime.toLocaleString()}</p>
             </div>
+            <button type="button" className="essence-inline-button send-event-button" onClick={() => setComposer({})}><BellRing size={16} aria-hidden="true" />Send event</button>
             <label className="campaign-picker">
               <span>Campaign</span>
               <select value={selectedCampaign.Name} onChange={(event) => setSelectedCampaignName(event.currentTarget.value)}>
@@ -1906,12 +1817,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
                     )) : <p className="campaign-empty-message">No events scheduled for this campaign.</p>}
                   </section>
                   <section className="event-template-panel">
-                    <div className="campaign-page-heading"><div><p className="eyebrow">Schedule</p><h3>Event templates</h3></div></div>
-                    <label className="dm-field-label event-character-picker">Character
-                      <select value={eventTargetCharacterId} onChange={(event) => setEventTargetCharacterId(event.currentTarget.value)}>
-                        {campaignCharacters.map((record) => <option key={record.Id} value={record.Id}>{displayName(record)}</option>)}
-                      </select>
-                    </label>
+                    <div className="campaign-page-heading"><div><p className="eyebrow">Compose</p><h3>Event templates</h3></div><button type="button" className="essence-inline-button" onClick={() => setComposer({})}>Blank event</button></div>
                     <div className="event-template-grid">
                       {CAMPAIGN_EVENT_TEMPLATES.map((template) => (
                         <article className="event-template-card" key={template.type}>
@@ -1919,10 +1825,23 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
                           <h4>{template.title}</h4>
                           <p>{template.description}</p>
                           <small>{template.suggestedActions.map((action) => action.replaceAll('-', ' ')).join(' · ')}</small>
-                          <button type="button" onClick={() => openScheduleTemplate(template.type)} disabled={!campaignCharacters.length}>Schedule</button>
+                          <button type="button" onClick={() => openScheduleTemplate(template.type)}>Compose</button>
                         </article>
                       ))}
                     </div>
+                  </section>
+                  <section className="campaign-events event-log-panel">
+                    <h3>Event log</h3>
+                    {eventLogEntries.length > 0 ? eventLogEntries.map((entry) => (
+                      <article className="campaign-event-row event-log-row" key={entry.Id}>
+                        <span className="event-type-tag">{entry.Source === 'scheduled' ? 'scheduled' : 'sent'}</span>
+                        <strong>{entry.Title}</strong>
+                        <span>{new Date(entry.CreatedAt).toLocaleString()}{entry.CampaignTime ? ` · campaign ${new Date(entry.CampaignTime).toLocaleString()}` : ''}</span>
+                        <span className="event-complete">{entry.Targets.length} character{entry.Targets.length === 1 ? '' : 's'} · {Math.max(0, (entry.Acknowledgements ?? 1) - 1)} acknowledged</span>
+                        <small>{entry.Targets.map((target) => `${target.CharacterName}: ${target.Error ? `failed (${target.Error})` : target.Effects.map((effect) => effect.Summary).join(', ') || 'no changes'}`).join(' · ')}</small>
+                        <button type="button" className="essence-inline-button" onClick={() => setOpenLogEntry(entry)}>View</button>
+                      </article>
+                    )) : <p className="campaign-empty-message">No events have fired in this campaign yet.</p>}
                   </section>
                 </div>
               </section>
@@ -2089,13 +2008,10 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
       )}
       {selectedCharacter && (
         <CharacterActionModal
-          key={`${selectedCharacter.Id}:${eventTemplateType ?? 'character'}`}
+          key={selectedCharacter.Id}
           record={selectedCharacter}
           campaign={campaigns.find((campaign) => campaign.Name === selectedCharacter.CampaignName) ?? new Campaign(selectedCharacter.CampaignName)}
-          onClose={() => {
-            setSelectedCharacterId(null)
-            setEventTemplateType(null)
-          }}
+          onClose={() => setSelectedCharacterId(null)}
           onApply={(action) => updateSheet(selectedCharacter.Id, [action])}
           onApplyEssence={(mutate) => updateEssence(selectedCharacter.Id, mutate)}
           onDelete={() => void deleteCharacter(selectedCharacter)}
@@ -2109,9 +2025,32 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
             setStatus(result.changed ? `Pulled sheet changes for ${displayName(result.record)}` : `${displayName(result.record)} already matches the sheet${result.pushed ? ` · pushed ${result.pushed} cells` : ''}`)
           } : undefined}
           onTransfer={() => setTransferTarget(selectedCharacter)}
-          onSchedule={(type, title, description, time, actions) => scheduleEvent(selectedCharacter.CampaignName, { type, title, description, scheduledAt: time, actions, targetIds: [selectedCharacter.Id] })}
-          initialEventType={eventTemplateType ?? undefined}
+          onComposeEvent={() => { setComposer({ targetIds: [selectedCharacter.Id] }); setSelectedCharacterId(null) }}
         />
+      )}
+      {composer && selectedCampaign && (
+        <EventComposerModal
+          campaign={selectedCampaign}
+          characters={campaignCharacters.filter((record) => !record.Tags.includes('NPC'))}
+          isEssence={isEssenceSystem}
+          initialTargetIds={composer.targetIds}
+          initialType={composer.type}
+          onClose={() => setComposer(null)}
+          onSend={(draft) => sendEvent(selectedCampaign, draft)}
+          onSchedule={(draft, scheduledAt) => {
+            scheduleEvent(selectedCampaign.Name, { type: draft.type, title: draft.title, description: draft.description, scheduledAt, effects: draft.effects, targetIds: draft.targetIds, targetEffects: draft.targetEffects, skin: draft.skin })
+            setStatus(`Scheduled "${draft.title}" for ${scheduledAt.toLocaleString()}`)
+          }}
+        />
+      )}
+      {openLogEntry && (
+        <div className="dm-modal-backdrop" onClick={() => setOpenLogEntry(null)}>
+          <section className="dm-character-modal event-log-detail" role="dialog" aria-modal="true" aria-label={openLogEntry.Title} onClick={(event) => event.stopPropagation()}>
+            <EventCard title={openLogEntry.Title} description={openLogEntry.Description} skin={openLogEntry.Skin} campaignName={openLogEntry.CampaignName} meta={new Date(openLogEntry.CreatedAt).toLocaleString()} targets={openLogEntry.Targets}>
+              <button type="button" className="dm-secondary-action" onClick={() => setOpenLogEntry(null)}>Close</button>
+            </EventCard>
+          </section>
+        </div>
       )}
     </div>
   )
