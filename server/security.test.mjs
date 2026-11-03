@@ -1,7 +1,22 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { canAccessCharacter, hashPassword, publicUser, sessionDigest, verifyPassword } from './security.mjs'
+import { canAccessCharacter, hashPassword, openPacket, publicUser, sealPacket, sessionDigest, verifyPassword } from './security.mjs'
 import { tsImport } from 'tsx/esm/api'
+
+test('sealed packets round-trip and refuse tampering or a different key', () => {
+  const key = 'packet-test-key-with-at-least-32-bytes!!'
+  const payload = { username: 'Lirril', email: 'l@example.com', role: 'player', passwordHash: '$argon2id$x', exp: 1234 }
+  const token = sealPacket(payload, key)
+  assert.match(token, /^[A-Za-z0-9_-]+$/)
+  assert.notEqual(token, sealPacket(payload, key))
+  assert.deepEqual(openPacket(token, key), payload)
+  assert.equal(openPacket(token, 'another-key-that-is-also-32-bytes-long!'), null)
+  const flipped = Buffer.from(token, 'base64url')
+  flipped[20] ^= 0xff
+  assert.equal(openPacket(flipped.toString('base64url'), key), null)
+  assert.equal(openPacket('not-a-token', key), null)
+  assert.equal(openPacket('', key), null)
+})
 
 test('passwords are salted Argon2id hashes and only the correct password verifies', async () => {
   const hash = await hashPassword('a-test-password')

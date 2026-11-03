@@ -3,7 +3,7 @@ import helmet from 'helmet'
 import { rateLimit } from 'express-rate-limit'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { canAccessCharacter, hashPassword, publicUser, sessionDigest, verifyPassword } from './security.mjs'
+import { canAccessCharacter, hashPassword, openPacket, publicUser, sealPacket, sessionDigest, verifyPassword } from './security.mjs'
 import { recordConflict, revisionEvents, saveRevision, undoLatest } from './character-history.mjs'
 import { createRealtime, describeChange } from './realtime.mjs'
 import { resolveCopies } from '../src/character/RevisionMerge.mjs'
@@ -17,6 +17,9 @@ const password = z.string().min(12).max(256)
 const accountInput = z.object({ Username: username, Password: password, Role: z.enum(['player', 'dm']) }).strict()
 const loginInput = z.object({ username: z.string().min(1).max(64), password: z.string().min(1).max(256) }).strict()
 const registrationInput = z.object({ email: z.string().trim().toLowerCase().email().max(254), username, password, role: z.enum(['player', 'dm']).default('player') }).strict()
+// What an emailed registration link carries once decrypted; the password is already hashed.
+const registrationPacket = z.object({ username, email: z.string().email().max(254), role: z.enum(['player', 'dm']), passwordHash: z.string().startsWith('$argon2id$').max(512), exp: z.number().int() }).strict()
+export const REGISTRATION_TTL_MS = 24 * 60 * 60 * 1000
 const accountUpdate = z.object({ Username: username.optional(), Password: password.optional(), PreferredSkin: z.enum(['basalt', 'tideglass', 'wildwood', 'moonstone', 'matrix', 'sao', 'startrek', 'stone', 'moonsilver', 'steel', 'arcane', 'rust']).optional(), CurrentPassword: z.string().max(256).optional() }).strict()
 const resourceKinds = new Set(['campaigns', 'items', 'techniques', 'development', 'systems'])
 const systemData = z.object({
@@ -67,9 +70,7 @@ export async function initializeDatabase(db) {
     db.collection('characters').createIndex({ OwnerId: 1, DMId: 1 }),
     db.collection('changeHistory').createIndex({ ActorId: 1, Undone: 1, CreatedAt: -1 }),
     db.collection('conflicts').createIndex({ DMId: 1, Resolved: 1 }),
-    // Pending registrations and email changes expire on their own.
-    db.collection('registrations').createIndex({ TokenDigest: 1 }, { unique: true }),
-    db.collection('registrations').createIndex({ ExpiresAt: 1 }, { expireAfterSeconds: 0 }),
+    // Pending email changes expire on their own. (Registrations are not stored: the emailed link carries the packet.)
     db.collection('emailChanges').createIndex({ UserId: 1 }, { unique: true }),
     db.collection('emailChanges').createIndex({ ExpiresAt: 1 }, { expireAfterSeconds: 0 }),
     // One activity log per session, kept after the session ends.
@@ -92,6 +93,8 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
   const mail = mailer ?? createMailer()
   // Where emailed links should open the app; the Pages deployment lives under a sub-path, so this is not always the origin.
   const appLink = (appUrl || `${origin}/`).replace(/\/?$/, '/')
+  // Header artwork for emails; it ships in public/ so it resolves wherever the app is served from (root or sub-path).
+  const artworkUrl = new URL('email-hero.png', appLink).href
   const app = express()
   app.disable('x-powered-by')
   // Hosts such as Render, Railway, and Fly.io sit behind a reverse proxy; trusting the first hop lets
@@ -200,34 +203,26 @@ export function createApp(db, { key, origin = 'http://localhost:5173', secureCoo
     const input = registrationInput.parse(req.body)
     const usernameKey = input.username.toLowerCase()
     if (await users.findOne({ $or: [{ UsernameKey: usernameKey }, { Email: input.email }] })) throw fail(409, 'Username or email is already in use.')
-    // The account is only created when the emailed link is opened; until then the request waits here for 24 hours.
-    const token = randomBytes(32).toString('base64url')
-    const registration = {
-      TokenDigest: sessionDigest(token, key), Username: input.username, UsernameKey: usernameKey, Email: input.email, Role: input.role,
-      PasswordHash: await hashPassword(input.password), CreatedAt: new Date().toISOString(), ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    }
-    await db.collection('registrations').deleteMany({ $or: [{ UsernameKey: usernameKey }, { Email: input.email }] })
-    await db.collection('registrations').insertOne(registration)
+    // Nothing is stored yet: the whole request travels inside the emailed link as an encrypted packet, and the account
+    // is created when that link is opened. Opening it proves the address is real and belongs to the person registering.
+    const token = sealPacket({ username: input.username, email: input.email, role: input.role, passwordHash: await hashPassword(input.password), exp: Date.now() + REGISTRATION_TTL_MS }, key)
     const link = `${appLink}?register=${token}`
-    const { delivered } = await mail.send({ to: input.email, ...registrationEmail({ username: input.username, link }) })
+    const { delivered } = await mail.send({ to: input.email, ...registrationEmail({ username: input.username, role: input.role, link, artworkUrl }) })
     // Without an email provider the link is handed back so the flow can still be completed (development, tests).
     res.status(202).json({ ok: true, email: input.email, delivered, ...(delivered ? {} : { previewLink: link }) })
   })
   app.post('/api/auth/register/complete', rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false }), async (req, res) => {
-    const { token } = z.object({ token: z.string().min(16).max(128) }).strict().parse(req.body)
-    const registration = await db.collection('registrations').findOne({ TokenDigest: sessionDigest(token, key) })
-    if (!registration || new Date(registration.ExpiresAt).getTime() < Date.now()) throw fail(410, 'This registration link has expired or was already used. Register again to get a new one.')
-    if (await users.findOne({ $or: [{ UsernameKey: registration.UsernameKey }, { Email: registration.Email }] })) {
-      await db.collection('registrations').deleteOne({ _id: registration._id })
-      throw fail(409, 'Username or email is already in use.')
-    }
-    const user = {
-      Id: randomUUID(), Username: registration.Username, UsernameKey: registration.UsernameKey,
-      Email: registration.Email, EmailVerified: true, Role: registration.Role,
-      PasswordHash: registration.PasswordHash, CreatedAt: new Date().toISOString(),
-    }
+    const { token } = z.object({ token: z.string().min(16).max(4096) }).strict().parse(req.body)
+    const packet = openPacket(token, key)
+    const registration = packet && registrationPacket.safeParse(packet)
+    if (!registration?.success) throw fail(410, 'This registration link is not valid. Register again to get a new one.')
+    const { username: Username, email: Email, role: Role, passwordHash: PasswordHash, exp } = registration.data
+    if (exp < Date.now()) throw fail(410, 'This registration link has expired. Register again to get a new one.')
+    const UsernameKey = Username.toLowerCase()
+    // The link is single-use in effect: once the account exists, the same packet can only ever collide here.
+    if (await users.findOne({ $or: [{ UsernameKey }, { Email }] })) throw fail(409, 'This account was already created, or the name is now taken. Sign in instead.')
+    const user = { Id: randomUUID(), Username, UsernameKey, Email, EmailVerified: true, Role, PasswordHash, CreatedAt: new Date().toISOString() }
     await users.insertOne(user)
-    await db.collection('registrations').deleteOne({ _id: registration._id })
     await applyPendingGrants(user)
     await issueSession(req, res, user)
     res.status(201).json(publicUser(user))

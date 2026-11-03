@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { connectDatabase } from './database.mjs'
 import { createApp, initializeDatabase } from './app.mjs'
-import { hashPassword } from './security.mjs'
+import { hashPassword, sealPacket } from './security.mjs'
 
 test('cross-origin frontends get CORS, cross-site cookies, and a served SPA', { skip: process.env.RUN_DB_INTEGRATION !== '1' }, async () => {
   const { client } = await connectDatabase()
@@ -52,7 +52,8 @@ test('Atlas account, session, character, and owned-resource CRUD', { skip: proce
   try {
     await initializeDatabase(db)
     await db.collection('users').insertOne({ Id: 'dm-test', Username: 'testdm', UsernameKey: 'testdm', Role: 'dm', PasswordHash: await hashPassword('test-password-1234') })
-    server = createApp(db, { key: 'test-session-key-with-at-least-32-bytes' }).listen(0, '127.0.0.1')
+    const testKey = 'test-session-key-with-at-least-32-bytes'
+    server = createApp(db, { key: testKey }).listen(0, '127.0.0.1')
     await once(server, 'listening')
     const base = `http://127.0.0.1:${server.address().port}/api`
     const call = async (path, method = 'GET', body, cookie) => {
@@ -62,20 +63,30 @@ test('Atlas account, session, character, and owned-resource CRUD', { skip: proce
     assert.equal((await call('/characters')).status, 401)
     assert.equal((await call('/auth/providers')).data.google, false)
     // Registration is two steps: the request returns the emailed link (shown as a preview because no mailer is
-    // configured here), and opening it creates the account.
+    // configured here), and opening it creates the account. The link carries the encrypted packet; nothing is stored.
+    const tokenOf = (requested) => new URL(requested.data.previewLink).searchParams.get('register')
     const register = async (input) => {
       const requested = await call('/auth/register', 'POST', input)
       assert.equal(requested.status, 202)
       assert.equal(requested.data.delivered, false)
-      const token = new URL(requested.data.previewLink).searchParams.get('register')
-      return call('/auth/register/complete', 'POST', { token })
+      return call('/auth/register/complete', 'POST', { token: tokenOf(requested) })
     }
-    const registration = await register({ email: ' NewPlayer@Example.com ', username: 'newplayer', password: 'a-strong-password-1234' })
+    const firstRequest = await call('/auth/register', 'POST', { email: ' NewPlayer@Example.com ', username: 'newplayer', password: 'a-strong-password-1234' })
+    assert.equal(await db.collection('users').countDocuments({ UsernameKey: 'newplayer' }), 0)
+    assert.equal(await db.collection('registrations').countDocuments(), 0)
+    const firstToken = tokenOf(firstRequest)
+    const tampered = Buffer.from(firstToken, 'base64url'); tampered[30] ^= 0x01
+    assert.equal((await call('/auth/register/complete', 'POST', { token: tampered.toString('base64url') })).status, 410)
+    assert.equal((await call('/auth/register/complete', 'POST', { token: sealPacket({ username: 'stale', email: 'stale@example.com', role: 'player', passwordHash: await hashPassword('a-strong-password-1234'), exp: Date.now() - 1000 }, testKey) })).status, 410)
+    const registration = await call('/auth/register/complete', 'POST', { token: firstToken })
     assert.equal(registration.status, 201)
     assert.equal(registration.data.Role, 'player')
     assert.equal(registration.data.PasswordHash, undefined)
+    // The same link again cannot create a second account.
+    assert.equal((await call('/auth/register/complete', 'POST', { token: firstToken })).status, 409)
     const registered = await db.collection('users').findOne({ Id: registration.data.Id })
     assert.equal(registered.Email, 'newplayer@example.com')
+    assert.equal(registered.EmailVerified, true)
     assert.match(registered.PasswordHash, /^\$argon2id\$/)
     assert.equal(registered.password, undefined)
     assert.equal((await call('/auth/register', 'POST', { email: 'another@example.com', username: 'NEWPLAYER', password: 'a-strong-password-1234' })).status, 409)

@@ -30,6 +30,8 @@ try {
   })
   await initializeDatabase(connection.database)
   await bootstrap(connection.database)
+  // Registration depends on email delivery; make a silent "preview link only" mode obvious in production logs.
+  if (!process.env.RESEND_API_KEY?.trim()) console.warn('RESEND_API_KEY is not set: registration links are shown on screen instead of emailed.')
   // Linked characters are pulled from their Google Sheets on an interval; sheet values win over app edits.
   sheetSync.start(Number(process.env.SHEET_SYNC_INTERVAL_MS) || DEFAULT_SYNC_INTERVAL_MS)
   // Sessions idle for 30 minutes have their activity logs closed even if the user never returns.

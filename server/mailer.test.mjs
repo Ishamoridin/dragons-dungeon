@@ -27,10 +27,15 @@ test('with a Resend key messages are posted to the API and failures surface', as
 })
 
 test('message templates carry the link or code and escape HTML', () => {
-  const registration = registrationEmail({ username: 'Lirril <3', link: 'https://example.com/?register=abc&x=1' })
+  const registration = registrationEmail({ username: 'Lirril <3', role: 'dm', link: 'https://example.com/?register=abc&x=1', artworkUrl: 'https://example.com/email-hero.png' })
   assert.match(registration.text, /https:\/\/example.com\/\?register=abc&x=1/)
+  assert.match(registration.text, /ignore this email/)
   assert.match(registration.html, /Lirril &lt;3/)
   assert.match(registration.html, /register=abc&amp;x=1/)
+  assert.match(registration.html, /<img src="https:\/\/example.com\/email-hero.png"/)
+  assert.match(registration.html, /Dungeon Master/)
+  assert.match(registration.html, /did not register with Dragon&#39;s Dungeon, you can safely ignore this email/)
+  assert.doesNotMatch(registrationEmail({ username: 'x', link: 'https://example.com/' }).html, /<img/)
   const change = emailChangeEmail({ username: 'Gym', code: '123456' })
   assert.match(change.text, /123456/)
   assert.match(change.subject, /confirm your new email/)
