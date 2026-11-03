@@ -10,11 +10,12 @@ import { skinArtStyle } from '../skins'
 import { getScreen, rememberScreen } from './ScreenState'
 import SettingsMenu from './SettingsMenu'
 import EssenceAdjustmentModal from './essence/EssenceAdjustmentModal'
-import type { CampaignAction, CampaignEventType, NPCFactionGroup } from './Campaign'
+import type { CampaignAction, CampaignData, CampaignEventType, NPCFactionGroup } from './Campaign'
+import { actionToEffect, applyEventEffect, describeEffect, flattenSkills, type AppliedEffect, type EventEffect, type EventTargetResult } from './EventEffects'
 import type Person from './Person'
 import { PlayerClass, PRIMARY_ATTRIBUTE_NAMES } from './PlayerClass'
 import { AUGMENTATION_OPTIONS, EQUIPMENT_OPTIONS, INJURY_OPTIONS, INVENTORY_OPTIONS } from './CharacterOptions'
-import { CAMPAIGN_EVENT_TEMPLATES, Campaign } from './Campaign'
+import { CAMPAIGN_EVENT_TEMPLATES, Campaign, type CampaignEvent } from './Campaign'
 import {
   refreshCharacterSheets,
   updateCharacterSheet,
@@ -26,10 +27,8 @@ import {
   listDeletedCharacterSheets,
   restoreCharacterSheet,
   syncCharacterSheetWithGoogleSheets,
-  type CharacterAttributeData,
   type CharacterSheetData,
   type CharacterSheetRecord,
-  type CharacterSkillData,
   type SheetSource,
 } from './CharacterSheetDatabase'
 import TransferModal from './TransferModal'
@@ -136,21 +135,6 @@ const toCharacterSheetData = (record: CharacterSheetRecord): CharacterSheetData 
   Attributes: structuredClone(record.Attributes),
   Skills: structuredClone(record.Skills),
 })
-
-const findSkill = (skills: CharacterSkillData[], name: string): CharacterSkillData | undefined => {
-  for (const skill of skills) {
-    if (skill.Name === name) {
-      return skill
-    }
-    const nested = findSkill(skill.subtypes, name)
-    if (nested) {
-      return nested
-    }
-  }
-}
-
-const flattenSkills = (skills: CharacterSkillData[]): CharacterSkillData[] =>
-  skills.flatMap((skill) => [skill, ...flattenSkills(skill.subtypes)])
 
 type FactionRosterCard = {
   key: string
@@ -308,53 +292,6 @@ const describeEssenceFactionEntry = (data: EssenceCharacterData): string => {
   const identity = `${data.Race} · ${spiritWeaponLabel(data)}`
   const weapons = weaponSummary ? ` · Weapons: ${weaponSummary}` : ''
   return `${identity} · Resero: ${highestResero}${weapons}`
-}
-
-const adjustLeafAttributes = (attribute: CharacterAttributeData, amount: number): void => {
-  if (!attribute.subAttributes?.length) {
-    attribute.value = Math.max(1, Math.min(1000, attribute.value + amount))
-    return
-  }
-
-  attribute.subAttributes.forEach((child) => adjustLeafAttributes(child, amount))
-  attribute.value = Math.sqrt(
-    attribute.subAttributes.reduce((sum, child) => sum + child.value * child.value, 0) /
-      attribute.subAttributes.length,
-  )
-}
-
-const applyAction = (data: CharacterSheetData, action: CampaignAction): void => {
-  switch (action.type) {
-    case 'add-xp':
-      data.XP = Math.max(0, data.XP + action.amount)
-      return
-    case 'add-skill-progress': {
-      for (const skillName of action.skillNames) {
-        const skill = findSkill(data.Skills, skillName)
-        if (!skill) {
-          throw new Error(`Skill "${skillName}" was not found.`)
-        }
-        skill.Progress = Math.max(0, Math.min(100, skill.Progress + action.amount))
-      }
-      return
-    }
-    case 'level-up':
-      data.Level += 1
-      for (const [name, attribute] of Object.entries(data.Attributes)) {
-        adjustLeafAttributes(attribute, data.PlayerClass.AttributeGrowth[name as keyof typeof data.PlayerClass.AttributeGrowth])
-      }
-      return
-    case 'level-up-skill': {
-      const skill = findSkill(data.Skills, action.skillName)
-      if (!skill) {
-        throw new Error(`Skill "${action.skillName}" was not found.`)
-      }
-      skill.Value = Math.min(100, skill.Value + 1)
-      skill.Progress = 0
-      skill.tier = Math.floor(skill.Value / 20)
-      return
-    }
-  }
 }
 
 const getResources = (record: CharacterSheetRecord) => [
@@ -1393,9 +1330,13 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
       // Campaigns a stat system defines stay listed even when every character in them has been deleted.
       const names = [...new Set([...availableSystems.flatMap((system) => system.CampaignNames), ...rows.map((row) => row.CampaignName)])]
       setSelectedCampaignName((selected) => names.includes(selected) ? selected : names[0] ?? '')
+      // The clock and schedule live in the campaigns resource; every change saves there, so it is the source of truth.
+      const stored = resourceList<CampaignData>('campaigns')
       setCampaigns((existing) => names.map((name) => {
         const current = existing.find((campaign) => campaign.Name === name)
-        const campaign = current?.clone() ?? new Campaign(name)
+        const saved = stored.find((data) => data.Name === name)
+        const campaign = saved ? Campaign.fromData(saved, name) : current?.clone() ?? new Campaign(name)
+        if (saved && current) { campaign.NPCs = current.NPCs; campaign.Monsters = current.Monsters }
         campaign.CharacterIds = rows.filter((row) => row.CampaignName === name).map((row) => row.Id)
         return campaign
       }))
@@ -1462,30 +1403,37 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
     void loadCharacters()
   }
 
-  const updateSheet = async (characterId: string, actions: CampaignAction[]) => {
+  // Applies effects to one sheet and saves it; returns the applied summaries, or an error if the sheet rejected them.
+  const applyEffects = async (characterId: string, effects: EventEffect[]): Promise<{ saved: CharacterSheetRecord | null; applied: AppliedEffect[]; error?: string }> => {
     const current = characters.find((record) => record.Id === characterId)
-    if (!current) {
-      setError('Character sheet not found.')
-      return
-    }
+    if (!current) return { saved: null, applied: [], error: 'Character sheet not found.' }
 
     const draft = toCharacterSheetData(current)
+    const applied: AppliedEffect[] = []
     try {
-      actions.forEach((action) => applyAction(draft, action))
+      for (const effect of effects) {
+        applyEventEffect(draft, effect, { name: user.Username })
+        applied.push({ ...effect, Summary: describeEffect(effect) })
+      }
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Unable to apply the action.')
-      return
+      return { saved: null, applied, error: actionError instanceof Error ? actionError.message : 'Unable to apply the effect.' }
     }
 
-    const saved = await updateCharacterSheet(characterId, draft, user)
-    if (!saved) {
-      setError('This character is not assigned to your campaign or you no longer have access.')
-      return
+    let saved: CharacterSheetRecord | null = null
+    try { saved = await updateCharacterSheet(characterId, draft, user) } catch (failure) {
+      return { saved: null, applied, error: failure instanceof Error ? failure.message : 'Save failed.' }
     }
+    if (!saved) return { saved: null, applied, error: 'This character is not assigned to your campaign or you no longer have access.' }
 
-    setCharacters((records) => records.map((record) => record.Id === saved.Id ? saved : record))
+    setCharacters((records) => records.map((record) => record.Id === saved!.Id ? saved! : record))
     setStatus(`Saved ${displayName(saved)} · ${new Date().toLocaleTimeString()}`)
     setError('')
+    return { saved, applied }
+  }
+
+  const updateSheet = async (characterId: string, actions: CampaignAction[]) => {
+    const result = await applyEffects(characterId, actions.map(actionToEffect))
+    if (result.error) setError(result.error)
   }
 
   const updateEssence = async (characterId: string, mutate: (draft: EssenceCharacterData) => void) => {
@@ -1519,22 +1467,30 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
     setError('')
   }
 
-  const scheduleEvent = (
-    campaignName: string,
-    type: CampaignEventType,
-    title: string,
-    description: string,
-    time: Date,
-    actions: CampaignAction[],
-  ) => {
+  // Schedule and clock changes replace the campaign in state and save it to the campaigns resource.
+  const persistCampaign = (next: Campaign) => {
+    setCampaigns((items) => items.map((item) => item.Name === next.Name ? next : item))
+    saveResource('campaigns', next.Id, next.toData()).catch(() => setError('Unable to save the campaign schedule.'))
+  }
+
+  const scheduleEvent = (campaignName: string, input: Parameters<Campaign['scheduleEvent']>[0]) => {
     const campaign = campaigns.find((item) => item.Name === campaignName)
     if (!campaign) {
       throw new Error('Campaign was not found.')
     }
 
     const next = campaign.clone()
-    next.scheduleEvent(type, title, description, time, actions)
-    setCampaigns((items) => items.map((item) => item.Name === campaignName ? next : item))
+    const event = next.scheduleEvent(input)
+    persistCampaign(next)
+    return event
+  }
+
+  const cancelEvent = (campaignName: string, eventId: string) => {
+    const campaign = campaigns.find((item) => item.Name === campaignName)
+    if (!campaign) return
+    const next = campaign.clone()
+    next.removeEvent(eventId)
+    persistCampaign(next)
   }
 
   // Timeline board drags and keyboard nudges.
@@ -1545,9 +1501,10 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
     }
     const next = campaign.clone()
     next.moveEvent(eventId, scheduledAt, location)
-    setCampaigns((items) => items.map((item) => item.Name === campaignName ? next : item))
+    persistCampaign(next)
   }
 
+  // Fires every event due by the new time: effects land on each target's sheet and the outcome is recorded per event.
   const advanceCampaign = async (campaignName: string, timeValue: string) => {
     const campaign = campaigns.find((item) => item.Name === campaignName)
     if (!campaign || !timeValue) {
@@ -1563,17 +1520,26 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
       return
     }
 
-    setCampaigns((items) => items.map((item) => item.Name === campaignName ? next : item))
+    persistCampaign(next)
     setTimeInputs((inputs) => ({ ...inputs, [campaignName]: localDateTime(next.currentTime) }))
-    const actions = dueEvents.flatMap((event) => event.Actions)
-    const affectedCharacterIds = [...new Set(actions.map((action) => action.characterId))]
-    for (const characterId of affectedCharacterIds) {
-      await updateSheet(characterId, actions.filter((action) => action.characterId === characterId))
+    const roster = characters.filter((record) => record.CampaignName === campaignName && !record.Tags.includes('NPC'))
+    for (const event of dueEvents) {
+      const targets: EventTargetResult[] = []
+      for (const characterId of event.targets(roster.map((record) => record.Id))) {
+        const record = characters.find((item) => item.Id === characterId)
+        if (!record) continue
+        const result = await applyEffects(characterId, event.effectsFor(characterId))
+        targets.push({ CharacterId: characterId, CharacterName: displayName(record), OwnerId: record.OwnerId, Effects: result.applied, ...(result.error ? { Error: result.error } : {}) })
+      }
+      await recordFiredEvent(campaignName, event, targets, next.currentTime)
     }
     setStatus(dueEvents.length > 0
       ? `Applied ${dueEvents.length} scheduled event${dueEvents.length === 1 ? '' : 's'}`
       : `Campaign time advanced · ${next.currentTime.toLocaleString()}`)
   }
+
+  // Event-log recording lands with the server routes; until then fired events only update sheets.
+  const recordFiredEvent = async (_campaignName: string, _event: CampaignEvent, _targets: EventTargetResult[], _campaignTime: Date) => {}
 
   const selectedCharacter = characters.find((record) => record.Id === selectedCharacterId) ?? null
   const previewCharacter = characters.find((record) => record.Id === previewCharacterId) ?? null
@@ -1922,7 +1888,8 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
                         <span>{event.ScheduledAt.toLocaleString()}</span>
                         <span className={event.Completed ? 'event-complete' : 'event-pending'}>{event.Completed ? 'Applied' : 'Pending'}</span>
                         <small>{event.Description}</small>
-                        <small>{event.Actions.map(actionLabel).join(' · ')}</small>
+                        <small>{[...event.Effects.map(describeEffect), ...event.Actions.map(actionLabel)].join(' · ') || 'Announcement only'}</small>
+                        {!event.Completed && <button type="button" className="essence-inline-button" onClick={() => cancelEvent(selectedCampaign.Name, event.Id)}>Cancel</button>}
                       </article>
                     )) : <p className="campaign-empty-message">No events scheduled for this campaign.</p>}
                   </section>
@@ -2130,7 +2097,7 @@ export default function DMConsole({ user, onSignOut, skin, onSkinChange, onUserC
             setStatus(result.changed ? `Pulled sheet changes for ${displayName(result.record)}` : `${displayName(result.record)} already matches the sheet${result.pushed ? ` · pushed ${result.pushed} cells` : ''}`)
           } : undefined}
           onTransfer={() => setTransferTarget(selectedCharacter)}
-          onSchedule={(type, title, description, time, actions) => scheduleEvent(selectedCharacter.CampaignName, type, title, description, time, actions)}
+          onSchedule={(type, title, description, time, actions) => scheduleEvent(selectedCharacter.CampaignName, { type, title, description, scheduledAt: time, actions, targetIds: [selectedCharacter.Id] })}
           initialEventType={eventTemplateType ?? undefined}
         />
       )}

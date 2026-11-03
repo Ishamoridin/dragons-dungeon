@@ -11,8 +11,8 @@ const { Campaign } = await tsImport('../src/character/Campaign.ts', import.meta.
 
 test('timeline moves re-time and re-place pending events but never applied ones', () => {
   const campaign = new Campaign('Dustwater Run', new Date('2026-11-02T10:00:00Z'))
-  const event = campaign.scheduleEvent('raid', 'Bandits', 'At the ford', new Date('2026-11-03T10:00:00Z'), [{ type: 'add-xp', characterId: 'c1', amount: 10 }])
-  const later = campaign.scheduleEvent('quest', 'Caravan', 'Escort', new Date('2026-11-04T10:00:00Z'), [{ type: 'add-xp', characterId: 'c1', amount: 5 }])
+  const event = campaign.scheduleEvent({ type: 'raid', title: 'Bandits', description: 'At the ford', scheduledAt: new Date('2026-11-03T10:00:00Z'), actions: [{ type: 'add-xp', characterId: 'c1', amount: 10 }] })
+  const later = campaign.scheduleEvent({ type: 'quest', title: 'Caravan', description: 'Escort', scheduledAt: new Date('2026-11-04T10:00:00Z'), actions: [{ type: 'add-xp', characterId: 'c1', amount: 5 }] })
 
   campaign.moveEvent(event.Id, new Date('2026-11-05T12:00:00Z'), 'Old Mill')
   assert.equal(event.ScheduledAt.toISOString(), '2026-11-05T12:00:00.000Z')
@@ -28,6 +28,39 @@ test('timeline moves re-time and re-place pending events but never applied ones'
 
   const copy = campaign.clone()
   assert.equal(copy.scheduledEvents.find((item) => item.Id === event.Id).Location, 'Old Mill', 'clones keep locations')
+})
+
+test('campaign schedules round-trip through the campaigns resource and resolve effects per target', () => {
+  const campaign = new Campaign('Ashen Vale', new Date('2026-11-02T10:00:00Z'))
+  const shared = { type: 'dm-points', amount: 5 }
+  const own = { type: 'add-status', status: { Name: 'Shaken', Duration: '1 scene', Rules: '-1 to rolls' } }
+  const event = campaign.scheduleEvent({
+    type: 'ambush', title: 'Night raid', description: 'Torches on the ridge.', scheduledAt: new Date('2026-11-03T10:00:00Z'),
+    effects: [shared], targetIds: 'all', targetEffects: [{ CharacterId: 'c2', Effects: [own] }], skin: { skin: 'rust', accent: '#aa3311' },
+  })
+  const legacy = campaign.scheduleEvent({ type: 'quest', title: 'Old job', description: '', scheduledAt: new Date('2026-11-04T10:00:00Z'), actions: [{ type: 'add-xp', characterId: 'c1', amount: 10 }] })
+  assert.throws(() => campaign.scheduleEvent({ type: 'quest', title: 'Nobody', description: '', scheduledAt: new Date('2026-11-05T10:00:00Z') }), /at least one target/)
+
+  assert.deepEqual(event.targets(['c1', 'c2']), ['c1', 'c2'])
+  assert.deepEqual(event.effectsFor('c1'), [shared])
+  assert.deepEqual(event.effectsFor('c2'), [shared, own])
+  assert.deepEqual(legacy.targets(['c1', 'c2']), ['c1'])
+  assert.deepEqual(legacy.effectsFor('c1'), [{ type: 'add-xp', amount: 10 }])
+
+  const restored = Campaign.fromData(JSON.parse(JSON.stringify(campaign.toData())))
+  assert.equal(restored.currentTime.toISOString(), '2026-11-02T10:00:00.000Z')
+  assert.deepEqual(restored.scheduledEvents.map((item) => item.Id), [event.Id, legacy.Id])
+  const copy = restored.scheduledEvents[0]
+  assert.equal(copy.TargetIds, 'all')
+  assert.deepEqual(copy.Skin, { skin: 'rust', accent: '#aa3311' })
+  assert.deepEqual(copy.effectsFor('c2'), [shared, own])
+  assert.equal(copy.Completed, false)
+
+  restored.removeEvent(legacy.Id)
+  assert.deepEqual(restored.scheduledEvents.map((item) => item.Id), [event.Id])
+  restored.advanceTo(new Date('2026-11-03T12:00:00Z'))
+  restored.removeEvent(event.Id)
+  assert.equal(restored.scheduledEvents.length, 1, 'applied events stay in the record')
 })
 
 test('DMs transfer characters between managed owners and campaigns', { skip: process.env.RUN_DB_INTEGRATION !== '1' }, async () => {

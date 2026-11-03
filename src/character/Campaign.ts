@@ -2,6 +2,7 @@ import Person from './Person'
 import { COMMONER, PRIMARY_ATTRIBUTE_NAMES } from './PlayerClass'
 import { DEMO_DM } from './MockAuth'
 import { Monster } from './Monster'
+import { actionToEffect, DEFAULT_EVENT_SKIN, type EventEffect, type EventSkin } from './EventEffects'
 
 export type CampaignAction =
   | { type: 'add-xp'; characterId: string; amount: number }
@@ -71,6 +72,42 @@ export const CAMPAIGN_EVENT_TEMPLATES: CampaignEventTemplate[] = [
   },
 ]
 
+// Effects that apply to one target only; shared `Effects` apply to every target.
+export type TargetEffects = { CharacterId: string; Effects: EventEffect[] }
+
+export type CampaignEventInput = {
+  type: CampaignEventType
+  title: string
+  description: string
+  scheduledAt: Date
+  // Legacy per-character actions; new events carry effects and targets instead.
+  actions?: CampaignAction[]
+  effects?: EventEffect[]
+  targetIds?: string[] | 'all'
+  targetEffects?: TargetEffects[]
+  skin?: EventSkin
+  id?: string
+  location?: string
+}
+
+// Plain JSON form of an event, as stored in the campaigns resource.
+export type CampaignEventData = {
+  Id: string
+  Type: CampaignEventType
+  Title: string
+  Description: string
+  ScheduledAt: string
+  Actions: CampaignAction[]
+  Effects: EventEffect[]
+  TargetIds: string[] | 'all'
+  TargetEffects: TargetEffects[]
+  Skin: EventSkin
+  Completed: boolean
+  Location: string
+}
+
+export type CampaignData = { Name: string; CurrentTime: string; ScheduledEvents: CampaignEventData[] }
+
 export class CampaignEvent {
   public readonly Id: string
   public readonly Type: CampaignEventType
@@ -78,28 +115,71 @@ export class CampaignEvent {
   public readonly Description: string
   public ScheduledAt: Date
   public readonly Actions: CampaignAction[]
+  public readonly Effects: EventEffect[]
+  public readonly TargetIds: string[] | 'all'
+  public readonly TargetEffects: TargetEffects[]
+  public readonly Skin: EventSkin
   public Completed: boolean
   // Where the event happens; matches a monster location group on the timeline board, or '' when unplaced.
   public Location: string
 
-  constructor(
-    type: CampaignEventType,
-    title: string,
-    description: string,
-    scheduledAt: Date,
-    actions: CampaignAction[],
-    id = createEventId(),
-    location = '',
-  ) {
-    this.Id = id
-    this.Type = type
-    this.Title = title
-    this.Description = description
-    this.ScheduledAt = new Date(scheduledAt)
-    this.Actions = actions.map((action) => ({ ...action }))
+  constructor(input: CampaignEventInput) {
+    this.Id = input.id ?? createEventId()
+    this.Type = input.type
+    this.Title = input.title
+    this.Description = input.description
+    this.ScheduledAt = new Date(input.scheduledAt)
+    this.Actions = (input.actions ?? []).map((action) => ({ ...action }))
+    this.Effects = structuredClone(input.effects ?? [])
+    this.TargetIds = input.targetIds === 'all' ? 'all' : [...(input.targetIds ?? [])]
+    this.TargetEffects = structuredClone(input.targetEffects ?? [])
+    this.Skin = structuredClone(input.skin ?? DEFAULT_EVENT_SKIN)
     this.Completed = false
-    this.Location = location
+    this.Location = input.location ?? ''
   }
+
+  // Characters this event touches: explicit targets plus anyone a legacy action names.
+  public targets(allCharacterIds: string[]): string[] {
+    const explicit = this.TargetIds === 'all' ? allCharacterIds : this.TargetIds
+    return [...new Set([...explicit, ...this.Actions.map((action) => action.characterId), ...this.TargetEffects.map((entry) => entry.CharacterId)])]
+  }
+
+  // Everything that applies to one character, in order: shared effects, their own effects, legacy actions.
+  public effectsFor(characterId: string): EventEffect[] {
+    return [
+      ...this.Effects,
+      ...this.TargetEffects.filter((entry) => entry.CharacterId === characterId).flatMap((entry) => entry.Effects),
+      ...this.Actions.filter((action) => action.characterId === characterId).map(actionToEffect),
+    ]
+  }
+
+  public toData(): CampaignEventData {
+    return {
+      Id: this.Id, Type: this.Type, Title: this.Title, Description: this.Description, ScheduledAt: this.ScheduledAt.toISOString(),
+      Actions: structuredClone(this.Actions), Effects: structuredClone(this.Effects), TargetIds: this.TargetIds === 'all' ? 'all' : [...this.TargetIds],
+      TargetEffects: structuredClone(this.TargetEffects), Skin: structuredClone(this.Skin), Completed: this.Completed, Location: this.Location,
+    }
+  }
+
+  public static fromData(data: CampaignEventData): CampaignEvent {
+    const event = new CampaignEvent({
+      id: data.Id, type: data.Type, title: data.Title, description: data.Description, scheduledAt: parseDate(data.ScheduledAt),
+      actions: data.Actions ?? [], effects: data.Effects ?? [], targetIds: data.TargetIds ?? [], targetEffects: data.TargetEffects ?? [],
+      skin: data.Skin ?? DEFAULT_EVENT_SKIN, location: data.Location ?? '',
+    })
+    event.Completed = Boolean(data.Completed)
+    return event
+  }
+
+  public clone(): CampaignEvent {
+    const copied = CampaignEvent.fromData(this.toData())
+    return copied
+  }
+}
+
+const parseDate = (value: string | undefined): Date => {
+  const date = new Date(value ?? '')
+  return Number.isNaN(date.getTime()) ? new Date() : date
 }
 
 export class Campaign {
@@ -121,24 +201,23 @@ export class Campaign {
     this.scheduledEvents = []
   }
 
-  public scheduleEvent(
-    type: CampaignEventType,
-    title: string,
-    description: string,
-    scheduledAt: Date,
-    actions: CampaignAction[],
-  ): CampaignEvent {
-    if (scheduledAt.getTime() <= this.currentTime.getTime()) {
+  public scheduleEvent(input: Omit<CampaignEventInput, 'id' | 'location'>): CampaignEvent {
+    if (input.scheduledAt.getTime() <= this.currentTime.getTime()) {
       throw new Error('Scheduled events must be later than campaign currentTime.')
     }
-    if (actions.length === 0) {
-      throw new Error('A scheduled event needs at least one action.')
+    const hasTargets = input.targetIds === 'all' || (input.targetIds?.length ?? 0) > 0 || (input.actions?.length ?? 0) > 0
+    if (!hasTargets) {
+      throw new Error('A scheduled event needs at least one target.')
     }
 
-    const event = new CampaignEvent(type, title, description, scheduledAt, actions)
+    const event = new CampaignEvent(input)
     this.scheduledEvents.push(event)
     this.scheduledEvents.sort((left, right) => left.ScheduledAt.getTime() - right.ScheduledAt.getTime())
     return event
+  }
+
+  public removeEvent(id: string): void {
+    this.scheduledEvents = this.scheduledEvents.filter((event) => event.Id !== id || event.Completed)
   }
 
   // Timeline board drags: a pending event can move to any later-than-now time and any location lane.
@@ -181,19 +260,19 @@ export class Campaign {
       ...group,
       Monsters: group.Monsters.map((monster) => monster.clone()),
     }))
-    campaign.scheduledEvents = this.scheduledEvents.map((event) => {
-      const copied = new CampaignEvent(
-        event.Type,
-        event.Title,
-        event.Description,
-        event.ScheduledAt,
-        event.Actions,
-        event.Id,
-        event.Location,
-      )
-      copied.Completed = event.Completed
-      return copied
-    })
+    campaign.scheduledEvents = this.scheduledEvents.map((event) => event.clone())
+    return campaign
+  }
+
+  // The schedule and clock are what the campaigns resource stores; NPCs, monsters and the roster come from elsewhere.
+  public toData(): CampaignData {
+    return { Name: this.Name, CurrentTime: this.currentTime.toISOString(), ScheduledEvents: this.scheduledEvents.map((event) => event.toData()) }
+  }
+
+  public static fromData(data: CampaignData, name = data.Name, characterIds: string[] = []): Campaign {
+    const campaign = new Campaign(name, parseDate(data.CurrentTime), characterIds)
+    campaign.scheduledEvents = (data.ScheduledEvents ?? []).map(CampaignEvent.fromData)
+      .sort((left, right) => left.ScheduledAt.getTime() - right.ScheduledAt.getTime())
     return campaign
   }
 }
