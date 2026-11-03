@@ -11,6 +11,7 @@ import {
   currentEssenceResources,
   skillCap,
   spiritWeaponLabel,
+  spiritWeaponTitle,
   toParagraphs,
   damageLabel,
   type EssenceDerived,
@@ -814,23 +815,31 @@ export function EssenceSheetBody({
         <>
       <section className="essence-panel" data-collapsed={panelProps('weapons')['data-collapsed']}>
         <h2><PanelTitle {...panelProps('weapons')}>Spirit weapons</PanelTitle></h2>
-        {data.SpiritWeapons.map((weapon) => (
-          <details className="essence-detail" key={weapon.Name} open>
-            <summary><strong>{weapon.Name}</strong> · {weapon.Category} · {weapon.Damage}</summary>
-            <div className="essence-facts">
-              <span>Summon <strong>{weapon.CostToSummon}</strong></span>
-              <span>Maintain <strong>{weapon.CostToMaintain}</strong></span>
-              <span>To hit <strong>{weapon.ToHit}</strong></span>
-              <span>Action <strong>{weapon.ActionType}</strong></span>
-              <span>Range <strong>{weapon.Range}</strong></span>
-              {toRoll(weapon.Name, 'Damage', weapon.Damage) && <span>Damage <strong>{weapon.Damage}</strong> <RollButton roll={toRoll(weapon.Name, 'Damage', weapon.Damage)!} /></span>}
-            </div>
+        {data.SpiritWeapons.map((weapon, index) => {
+          // Pact- or curse-only blocks have no weapon name yet; they are titled by the pact or curse and keep a
+          // tracker key of their own so same-named or unnamed entries never collide.
+          const title = spiritWeaponTitle(weapon)
+          const trackerKey = weapon.Name ? `weapon:${weapon.Name}` : `weapon:${title}#${index}`
+          return (
+          <details className="essence-detail" key={`${index}:${title}`} open>
+            <summary><strong>{title}</strong>{weapon.Category && <> · {weapon.Category}</>}{weapon.Damage && <> · {weapon.Damage}</>}</summary>
+            {weapon.Name && (
+              <div className="essence-facts">
+                <span>Summon <strong>{weapon.CostToSummon}</strong></span>
+                <span>Maintain <strong>{weapon.CostToMaintain}</strong></span>
+                <span>To hit <strong>{weapon.ToHit}</strong></span>
+                <span>Action <strong>{weapon.ActionType}</strong></span>
+                <span>Range <strong>{weapon.Range}</strong></span>
+                {toRoll(weapon.Name, 'Damage', weapon.Damage) && <span>Damage <strong>{weapon.Damage}</strong> <RollButton roll={toRoll(weapon.Name, 'Damage', weapon.Damage)!} /></span>}
+              </div>
+            )}
             {weapon.Details && <p>{weapon.Details}</p>}
             {weapon.Pact.Name && <p><strong>Pact: {weapon.Pact.Name}.</strong> {weapon.Pact.Description} {weapon.Pact.Effect}</p>}
             {weapon.Curse.Name && <p><strong>Curse: {weapon.Curse.Name}.</strong> {weapon.Curse.Description} {weapon.Curse.Effect}</p>}
-            <AbilityTrackers abilityKey={`weapon:${weapon.Name}`} sourceText={`${weapon.Details} ${weapon.Pact.Effect} ${weapon.Curse.Effect}`} trackers={data.AbilityTrackers?.[`weapon:${weapon.Name}`]} onEdit={isDm ? onEditData : undefined} />
+            <AbilityTrackers abilityKey={trackerKey} sourceText={`${weapon.Details} ${weapon.Pact.Effect} ${weapon.Curse.Effect}`} trackers={data.AbilityTrackers?.[trackerKey]} onEdit={isDm ? onEditData : undefined} />
           </details>
-        ))}
+          )
+        })}
       </section>
 
       <section className="essence-panel" data-collapsed={panelProps('resero')['data-collapsed']}>

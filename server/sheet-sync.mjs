@@ -31,7 +31,8 @@ function modules() {
     tsImport('../src/character/essence/EssenceWorkbook.ts', import.meta.url),
     tsImport('../src/character/StatSystems.ts', import.meta.url),
     tsImport('../src/character/CharacterSheetDatabase.ts', import.meta.url),
-  ]).then(([workbook, systems, sheets]) => ({
+    tsImport('../src/character/essence/EssenceSystem.ts', import.meta.url),
+  ]).then(([workbook, systems, sheets, essence]) => ({
     detectWorkbookSystem: workbook.detectWorkbookSystem,
     importEssenceFromWorkbook: workbook.importEssenceFromWorkbook,
     essenceCellUpdates: workbook.essenceCellUpdates,
@@ -40,6 +41,7 @@ function modules() {
     STAT_SYSTEMS: systems.STAT_SYSTEMS,
     placeholderAttributes: sheets.placeholderAttributes,
     placeholderGrowth: sheets.placeholderGrowth,
+    spiritWeaponLabel: essence.spiritWeaponLabel,
   }))
   return modulesPromise
 }
@@ -127,7 +129,7 @@ export function createSheetSync(db, { sheets = createSheetsClient(), now = () =>
       warnings.push(...imported.warnings)
       data = {
         SystemId: system.Id, Essence: imported.essence, Name: imported.name, Level: 0, XP: 0, CampaignName: campaignName,
-        Tags: tagsFor(imported.essence), PlayerClass: { Name: imported.essence.SpiritWeaponCategory || 'Spirit Weapon', AttributeGrowth: m.placeholderGrowth() },
+        Tags: tagsFor(imported.essence), PlayerClass: { Name: m.spiritWeaponLabel(imported.essence) || 'Spirit Weapon', AttributeGrowth: m.placeholderGrowth() },
         Attributes: m.placeholderAttributes(), Skills: [],
         SheetSource: sourceFor(spreadsheetId, workbook, detection.fullTitle, imported.essence, marker, stamp, m.APP_ONLY_ESSENCE_FIELDS),
       }

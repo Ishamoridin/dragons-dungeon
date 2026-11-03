@@ -285,19 +285,9 @@ const describeEssenceFactionEntry = (data: EssenceCharacterData): string => {
   )
   const highestResero = [...RESERO_ORDER].reverse().find((stage) => unlockedStages.has(stage)) ?? 'Off'
 
-  const weaponsByType = new Map<string, string[]>()
-  data.SpiritWeapons.forEach((weapon) => {
-    const list = weaponsByType.get(weapon.Category) ?? []
-    list.push(weapon.Name)
-    weaponsByType.set(weapon.Category, list)
-  })
-  const weaponSummary = [...weaponsByType.entries()]
-    .map(([category, names]) => names.length > 0 ? `${category} (${names.join(', ')})` : category)
-    .join(' · ')
-
+  // spiritWeaponLabel already names every weapon with its category.
   const identity = `${data.Race} · ${spiritWeaponLabel(data)}`
-  const weapons = weaponSummary ? ` · Weapons: ${weaponSummary}` : ''
-  return `${identity} · Resero: ${highestResero}${weapons}`
+  return `${identity} · Resero: ${highestResero}`
 }
 
 const getResources = (record: CharacterSheetRecord) => [

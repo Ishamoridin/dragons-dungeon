@@ -3,9 +3,20 @@ import { applyWoundModifiers, interpretWoundResult, type WoundTarget } from './W
 
 export const ESSENCE_SYSTEM_ID = 'essence'
 
+// A block on the Spirit Weapon tab may hold a pact or curse before its weapon is named; such entries are titled by
+// the pact or curse so they still appear wherever weapons are listed.
+export function spiritWeaponTitle(weapon: EssenceSpiritWeapon): string {
+  if (weapon.Name) return weapon.Name
+  if (weapon.Pact.Name) return `Pact: ${weapon.Pact.Name}`
+  if (weapon.Curse.Name) return `Curse: ${weapon.Curse.Name}`
+  return 'Unnamed spirit weapon'
+}
+
+// Every spirit weapon by name with its category, e.g. "Snowball (Spirit Body) · Stick (Spirit Blade)". Falls back
+// to the Character Sheet's single category when no weapon blocks have been filled in.
 export function spiritWeaponLabel(data: EssenceCharacterData): string {
-  const categories = [...new Set(data.SpiritWeapons.map((weapon) => weapon.Category).filter(Boolean))]
-  return categories.length ? categories.join(' · ') : data.SpiritWeaponCategory
+  const labels = data.SpiritWeapons.map((weapon) => weapon.Name && weapon.Category ? `${weapon.Name} (${weapon.Category})` : spiritWeaponTitle(weapon))
+  return labels.length ? [...new Set(labels)].join(' · ') : data.SpiritWeaponCategory
 }
 
 export type AttributeGroupId = 'mental' | 'physical' | 'spiritual'

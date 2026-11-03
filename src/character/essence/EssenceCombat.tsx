@@ -99,7 +99,8 @@ function buildActions(data: EssenceCharacterData, stats: EssenceDerived): Action
     { ...base, id: 'std-ally', name: 'React for an ally', source: 'Reaction', kind: 'reaction', sheetAction: 'Reaction', will: 50, effect: 'Take an ally\'s reaction in their place.' },
   ]
 
-  for (const weapon of data.SpiritWeapons) {
+  // Pact- or curse-only blocks carry no weapon to summon.
+  for (const weapon of data.SpiritWeapons.filter((entry) => entry.Name)) {
     const kind = kindOf(weapon.ActionType) ?? 'minor'
     const cost = parseCost(weapon.CostToSummon)
     actions.push({
@@ -387,14 +388,14 @@ export function EssenceCombatModule({
 
       <div className="essence-combat-resero essence-combat-weapons" role="group" aria-label="Spirit weapons">
         <span className="essence-sub">Spirit weapons</span>
-        {data.SpiritWeapons.map((weapon) => {
+        {data.SpiritWeapons.filter((entry) => entry.Name).map((weapon, index) => {
           const active = activeWeapons.includes(weapon.Name)
           const form = weaponFormBonus(weapon)
           const effects = [form.armour && `${signed(form.armour)} armour`, form.hp && `${signed(form.hp)} HP`, form.reiryoku && `${signed(form.reiryoku)} Rei`, form.extraMinorActions && `+${form.extraMinorActions} minor action`].filter(Boolean).join(', ')
           return (
             <button
               type="button"
-              key={weapon.Name}
+              key={`${index}:${weapon.Name}`}
               aria-pressed={active}
               title={`${weapon.Category} · summon ${weapon.CostToSummon} · ${weapon.ActionType}${effects ? ` · while wielded: ${effects}` : ''}${weapon === reseroWeapon ? ' · Resero weapon' : ''}`}
               onClick={() => toggleWeapon(weapon)}
