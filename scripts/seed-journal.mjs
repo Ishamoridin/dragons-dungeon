@@ -16,12 +16,17 @@ import { eventLogInput } from '../server/event-log.mjs'
 export const JOURNAL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../docs/journal/welcome-to-the-sprawl')
 export const CAMPAIGN_NAME = 'Welcome to the Sprawl'
 
-// Which character record each "Present:" name belongs to. Vinnie and Hotwire were Ishamoridin's earlier
-// characters and share Gym's record; Crash Vandal has no record and is text-only.
+// Which character record each "Present:" name belongs to. Vinnie (who became Hotwire through the story) and Gym
+// are different characters by the same player, Ishamoridin; Vinnie has no record of his own, so his scenes are
+// filed under Gym's record for ownership while keeping Vinnie's or Hotwire's name on the entry. Crash Vandal has
+// no record and is text-only.
 export const CHARACTER_ALIASES = {
   Vinnie: 'Giles Yavin Megatron', Hotwire: 'Giles Yavin Megatron', Gym: 'Giles Yavin Megatron',
   Sylas: 'Sylas Enders', Glitz: 'Glitz',
 }
+
+// How a name in the journal should read on the entry when it is not the record's own name.
+export const DISPLAY_NAMES = { Vinnie: 'Vinnie (Hollow)', Hotwire: 'Hotwire (InduDrake)' }
 
 // Cost estimate basis. The real billing of the generating session is not observable from inside it, so the
 // field records the assumption it was computed under: roughly four characters per token, at a nominal output
@@ -96,10 +101,12 @@ export function describeScene(scene) {
 // `dm` is the owning DM user.
 export function buildEntries(scenes, { characters, dm, seedStart = new Date() }) {
   return scenes.map((scene, index) => {
-    const targets = [...new Set(scene.Present.map((name) => CHARACTER_ALIASES[name]).filter(Boolean))]
-      .map((recordName) => characters[recordName])
-      .filter(Boolean)
-      .map((record) => ({ CharacterId: record.Id, CharacterName: record.Alias || record.Name, OwnerId: record.OwnerId, Effects: [] }))
+    const targets = []
+    for (const name of scene.Present) {
+      const record = characters[CHARACTER_ALIASES[name]]
+      if (!record || targets.some((target) => target.CharacterId === record.Id)) continue
+      targets.push({ CharacterId: record.Id, CharacterName: DISPLAY_NAMES[name] ?? record.Alias ?? record.Name, OwnerId: record.OwnerId, Effects: [] })
+    }
     const description = describeScene(scene)
     const input = {
       CampaignName: CAMPAIGN_NAME, Title: scene.Title, Description: description, Skin: { skin: 'basalt' }, Source: 'manual',

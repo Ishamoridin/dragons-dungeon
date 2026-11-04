@@ -6,14 +6,14 @@ A narrative record of the campaign, reconstructed from the Roll20 chat archive. 
 
 | Character | Played by | Notes |
 | --- | --- | --- |
-| Vinnie, later Vinnie (Hollow), later Hotwire the InduDrake | Ishamoridin | Night-aligned smoker and smoke-shaper. Died early and returned as a Hollow; later reforged as Hotwire. Fell at Shimmering Sands. |
-| Gym (Giles Yavin Megatron), Weasel of Ambition | Ishamoridin | Joined after Vinnie's death. Brawler whose spirit weapon is himself. |
+| Vinnie, later Vinnie (Hollow), later Hotwire the InduDrake | Ishamoridin | One character throughout: a Night-aligned smoker and smoke-shaper who died early and returned as a Hollow, then became Hotwire for lore reasons. Fell at Shimmering Sands. |
+| Gym (Giles Yavin Megatron), Weasel of Ambition | Ishamoridin | A new character by the same player, joining after Vinnie's death. Brawler whose spirit weapon is himself. |
 | Sylas, Goat of Nature | Rangerium (Ranger Drox) | Began under Gloom; a dancer whose rhythm shapes Nature. Later rescinded by Water. |
 | Glitz, Snake of Surprise | kbub | Rock-pose spirit weapon (headbang, arms crossed, guitar solo). Married to Aureon of Fire. |
 | Crash Vandal | God | Card-deck spirit weapon, cigarettes, panic problem. The player has since left the campaign. |
 | The Dungeon Master | Lirril | Also voices every NPC: Verbem, Flock, Kaeris, Lazarus, Director, Aureon, and the rest. |
 
-Vinnie and Gym share one character record in the app (Giles Yavin Megatron, alias Gym). Crash Vandal has no record, so he appears in the text but is never an event target.
+Vinnie has no character record in the app, so his scenes are filed under Gym's record (Giles Yavin Megatron) purely so Ishamoridin can see them; the entries still name him Vinnie (Hollow) or Hotwire (InduDrake). Crash Vandal has no record, so he appears in the text but is never an event target.
 
 ## Calendar convention
 
@@ -44,7 +44,7 @@ Narrative paragraphs. Rolls are written as outcomes, never dice strings.
 - Out-of-character events: breaks, rules questions, banter. Never part of the story.
 ```
 
-Present names map to characters: Vinnie, Hotwire and Gym resolve to Gym's record; Sylas and Glitz to theirs; Crash Vandal to nothing.
+Present names map to characters: Vinnie and Hotwire (the same character) file under Gym's record for ownership but keep their own names; Gym, Sylas and Glitz resolve to their records; Crash Vandal to nothing.
 
 ## Re-seeding
 

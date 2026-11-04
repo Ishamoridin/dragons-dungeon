@@ -52,8 +52,9 @@ test('builds API-shaped entries with aliases resolved, stable ids and hidden cos
   const [first, second] = entries
   assert.equal(first.Id, stableId('S99.1'))
   assert.equal(first.Id, buildEntries(parseSessionFile(sample, '99-test.md'), context)[0].Id, 'ids are deterministic')
-  assert.deepEqual(first.Targets.map((target) => target.CharacterId), ['c-gym', 'c-sylas'], 'Vinnie maps to Gym; Crash has no record')
-  assert.equal(first.Targets[0].CharacterName, 'Gym')
+  assert.deepEqual(first.Targets.map((target) => target.CharacterId), ['c-gym', 'c-sylas'], 'Vinnie files under Gym\'s record; Crash has no record')
+  assert.equal(first.Targets[0].CharacterName, 'Vinnie (Hollow)', 'but keeps his own name on the entry')
+  assert.equal(second.Targets[0].CharacterName, 'Gym')
   assert.deepEqual(first.AcknowledgedBy, ['dm-1', 'u-isham', 'u-ranger'])
   assert.equal(first.CampaignTime, '3500-07-01T19:00:00.000Z', 'journal times are read as UTC')
   assert.equal(first.CreatedAt, '2026-11-03T12:00:00.000Z')
