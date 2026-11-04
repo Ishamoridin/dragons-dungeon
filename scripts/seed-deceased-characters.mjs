@@ -1,5 +1,6 @@
-// Creates sheet records for the campaign's dead: Vinnie (who became Hotwire) and Crash Vandal, named with a
-// <Deceased> tag. Every number is an estimate reconstructed from the roll modifiers and events in the Roll20
+// Creates sheet records for the campaign's dead, named with a <Deceased> tag: Vinnie (the Hollow), Hotwire (the
+// InduDrake Vinnie became, kept as its own sheet because the body, weapon form and essence access all changed)
+// and Crash Vandal. Every number is an estimate reconstructed from the roll modifiers and events in the Roll20
 // archive (docs/journal/welcome-to-the-sprawl); the Notes on each sheet say so. Re-running updates in place.
 //
 //   node scripts/seed-deceased-characters.mjs --dry-run
@@ -29,11 +30,70 @@ const armourSet = (name, type, value, burden) => ['Helmet', 'Chestplate', 'Greav
 
 export const VINNIE = {
   Name: `Vinnie${DECEASED_TAG}`,
-  Tags: ['Hollow', 'Spirit Beast', 'Deceased'],
-  PlayerClass: playerClass('Spirit Body'),
+  Tags: ['Hollow', 'Deceased'],
+  PlayerClass: playerClass('Reishi Weapon'),
   Essence: {
-    PlayerName: 'Ishamoridin', Alias: 'Hotwire',
-    Concept: 'Night-aligned smoke-shaper; died, returned as a Hollow, and ended as Hotwire the InduDrake, a Spirit Beast of smoke. Fell at Shimmering Sands.',
+    PlayerName: 'Ishamoridin',
+    Concept: 'Night-aligned smoker and smoke-shaper. Died in the Township of Water and came back as a Hollow; later left this body behind to become Hotwire (see that sheet).',
+    Age: 34, Race: 'Hollow', SpiritWeaponCategory: 'Reishi Weapon',
+    Attributes: fill(ATTRIBUTE_IDS, { strength: 5, agility: 4, constitution: 10, intelligence: 4, wisdom: 4, presence: 8, manipulation: 1, composure: 6, resolve: 4, reiryokuControl: 12, reishiManipulation: 12, reiatsuRelease: 13 }),
+    Skills: fill(SKILL_IDS, { brawl: 12, adaptation: 12, zeal: 6, occult: 5, intimidation: 4, athletics: 4, survival: 3, faith: 3, investigation: 2, weaponry: 2, empathy: 2, persuasion: 1 }),
+    Development: {
+      Metaphysical: fill(['reiatsuManipulation', 'spiritWeapon', 'reishiManipulation', 'kido', 'hado', 'essenceHarvesting', 'essenceCasting', 'essenceCultivation'], { spiritWeapon: 380, reishiManipulation: 120, essenceCultivation: 40, essenceHarvesting: 10 }),
+      AttributeUses: fill(ATTRIBUTE_IDS, { reishiManipulation: 50, reiatsuRelease: 20, reiryokuControl: 25, constitution: 12, presence: 15, resolve: 20 }),
+      SkillUses: fill(SKILL_IDS, { brawl: 15, occult: 15, adaptation: 6 }),
+      Stats: { reducedToZeroHP: 2, tookOverTenPercent: 12, tookNoDamage: 2, dodged: 2, defended: 0 },
+    },
+    DMIssuedPoints: 0,
+    Zodiac: { Name: '', Essence: 'Night', Passive: '', Active: '' },
+    Armour: armourSet('Ferno Killer Suit (The Butcher\'s Suit)', 'Human-conditional set', 40, 3),
+    Wearables: { mask: 0, badge: 0, talisman: 0, pouch: 0, charm: 0 },
+    SheetBonuses: { hp: 1200, reiryoku: 900, willpower: 400, armour: 0, initiative: 0 },
+    Essences: [
+      { Name: 'Fire', Tier: 1, Amount: 50000, Tempered: false },
+      { Name: 'Water', Tier: 1, Amount: 30000, Tempered: false },
+      { Name: 'Surprise', Tier: 1, Amount: 4600, Tempered: false },
+      { Name: 'Night', Tier: 2, Amount: 2000, Tempered: false },
+      { Name: 'Dragon', Tier: 3, Amount: 44, Tempered: false },
+    ],
+    Mastery: 0, PotentialStored: 0,
+    SpiritWeapons: [
+      {
+        Name: 'Smoke Dragon', Category: 'Reishi Weapon', CostToSummon: '50 Reiryoku', CostToMaintain: '10 Reiryoku', ToHit: 'Reishi Manipulation', ActionType: 'Major', Range: '10 Tiles', Damage: '1d50 + 25 per smoke stack (up to 10 stacks)',
+        Details: 'Vinnie converts inert Reishi, melted walls and his own cigarette smoke into charges of Smoke, then shapes them into a dragon that strikes in bursts, or compresses them into temporary Reishi ingots worn as bands.',
+      },
+    ],
+    Resero: [
+      { Stage: 'Partial', Name: 'Partial Resero: Smoke Dragon', Action: 'Major Action', DC: 'Reishi Manipulation 15+', CostToTrigger: 50, CostToMaintain: 10, BonusHP: 100, BonusReiryoku: 100, BonusArmour: 25, RequiredSpiritWeaponUses: 100, RequiredSkillPoints: 100, AlignedEssence: 'Fire', EssenceInvested: 10000, Details: 'The Smoke Dragon gains detail and hovers above and behind him.' },
+    ],
+    Techniques: [
+      { Name: 'Burning Nimbus', MinReiryoku: 50, MaxReiryoku: 150, MinSkill: 'Brawl (10)', DC: '15+', Action: 'Major', Range: 'Melee', Damage: '1d80+80', Details: 'Grapple and strike with a burning cloud of smoke.' },
+      { Name: 'Self-immolating repair', MinReiryoku: 100, MaxReiryoku: 150, MinSkill: 'Reishi Manipulation (10)', DC: '15+', Action: 'Major', Range: 'Personal', Damage: 'Heals', Details: 'Lights his wounds aflame so the edges burn toward each other and close. 100 Reiryoku for the first turn, +50 per extra turn; a chosen injury per use.' },
+      { Name: 'Chaotic Reishi (mutative trait)', MinReiryoku: 5, MaxReiryoku: 5, MinSkill: '', DC: '', Action: 'Free', Range: 'Personal', Damage: 'Not Applicable', Details: 'Converts any Tier 1 essence into any other Tier 1 essence at 5 Reiryoku per mote. Gained from Clerk Phiré\'s test.' },
+      { Name: 'The Crux of Fire', MinReiryoku: 0, MaxReiryoku: 0, MinSkill: '', DC: '', Action: '', Range: '', Damage: '', Details: 'The flame still burns and must be reignited; Vinnie may become a Fire Hollow or the Heart will remember being broken. Convertible to a Hex or Pact once the method is found.' },
+    ],
+    Spells: [],
+    Notes: [
+      ESTIMATE_NOTE,
+      { Title: 'Fate', Body: 'Died in the Township of Water on 5 July 3500 and returned as a Hollow the same hour. Fought from the scav camp to the fall of the Doom barrier at Air. Seven weeks later this body was gone and Hotwire stood in its place; Hotwire has his own sheet.' },
+      { Title: 'Essence note', Body: 'Gave 10,000 Fire to the Fangs to make their leader a Native. The 44 Dragon is a tertiary essence he wove himself: fire magnified by fire.' },
+    ],
+    Injuries: [],
+    Inventory: [
+      { Name: 'Reishooter', Quantity: 1, Size: 2, Burden: 2 },
+      { Name: 'Rush Guard Helmet (century-old pattern, freshly forged)', Quantity: 1, Size: 2, Burden: 2 },
+      { Name: 'Cigarettes', Quantity: 1, Size: 1, Burden: 0 },
+    ],
+  },
+}
+
+export const HOTWIRE = {
+  Name: `Hotwire${DECEASED_TAG}`,
+  Tags: ['Hollow', 'Spirit Beast', 'InduDrake', 'Deceased'],
+  PlayerClass: playerClass('Spirit Beast'),
+  Essence: {
+    PlayerName: 'Ishamoridin',
+    Concept: 'What Vinnie became: an InduDrake, a Spirit Beast of smoke and iron, still a Hollow underneath. Could draw on nothing but Steel and Industry. Fell at Shimmering Sands.',
     Age: 34, Race: 'Hollow', SpiritWeaponCategory: 'Spirit Beast',
     Attributes: fill(ATTRIBUTE_IDS, { strength: 5, agility: 4, constitution: 15, intelligence: 4, wisdom: 4, presence: 15, manipulation: 1, composure: 6, resolve: 4, reiryokuControl: 15, reishiManipulation: 16, reiatsuRelease: 15 }),
     Skills: fill(SKILL_IDS, { brawl: 15, intimidation: 15, adaptation: 12, athletics: 4, survival: 3, occult: 5, investigation: 2, weaponry: 2, empathy: 2, persuasion: 1 }),
@@ -41,7 +101,7 @@ export const VINNIE = {
       Metaphysical: fill(['reiatsuManipulation', 'spiritWeapon', 'reishiManipulation', 'kido', 'hado', 'essenceHarvesting', 'essenceCasting', 'essenceCultivation'], { spiritWeapon: 520, reishiManipulation: 160, essenceCultivation: 40, essenceHarvesting: 10 }),
       AttributeUses: fill(ATTRIBUTE_IDS, { reishiManipulation: 60, reiatsuRelease: 25, reiryokuControl: 30, constitution: 15, presence: 20, resolve: 20 }),
       SkillUses: fill(SKILL_IDS, { brawl: 20, occult: 15, adaptation: 8 }),
-      Stats: { reducedToZeroHP: 2, tookOverTenPercent: 14, tookNoDamage: 3, dodged: 2, defended: 0 },
+      Stats: { reducedToZeroHP: 1, tookOverTenPercent: 4, tookNoDamage: 1, dodged: 0, defended: 0 },
     },
     DMIssuedPoints: 0,
     Zodiac: { Name: '', Essence: 'Night', Passive: '', Active: '' },
@@ -55,30 +115,27 @@ export const VINNIE = {
     Mastery: 0, PotentialStored: 0,
     SpiritWeapons: [
       {
-        Name: 'Smoke Dragon', Category: 'Spirit Beast', CostToSummon: '50 Reiryoku', CostToMaintain: '10 Reiryoku', ToHit: 'Reishi Manipulation', ActionType: 'Major', Range: '10 Tiles', Damage: '1d50 + 25 per smoke stack (up to 10 stacks)',
-        Details: 'Vinnie converts inert Reishi, melted walls and his own cigarette smoke into charges of Smoke, then shapes them into a dragon that strikes in bursts. As Hotwire the dragon became his body: an InduDrake of smoke fed only by Steel and Industry. Screw, a tiny white helix-copy, scavenges useful objects and converts inert Reishi into Smoke for him.',
+        Name: 'InduDrake form', Category: 'Spirit Beast', CostToSummon: 'Permanent', CostToMaintain: '0', ToHit: 'Brawl / Reishi Manipulation', ActionType: 'Major', Range: 'Melee / 10 Tiles', Damage: '2d50+250 (smoke) / 1d50+200 (Reishi)',
+        Details: 'The Smoke Dragon became his body. Smoke is shaped from Steel and Industry only. Screw, a tiny white helix-moving copy, scavenges useful objects and converts inert Reishi into Smoke for him while in range.',
       },
     ],
     Resero: [
-      { Stage: 'Partial', Name: 'Partial Resero: Smoke Dragon', Action: 'Major Action', DC: 'Reishi Manipulation 15+', CostToTrigger: 50, CostToMaintain: 10, BonusHP: 100, BonusReiryoku: 100, BonusArmour: 25, RequiredSpiritWeaponUses: 100, RequiredSkillPoints: 100, AlignedEssence: 'Steel', EssenceInvested: 10000, Details: 'The Smoke Dragon gains detail and hovers above and behind him; smoke can be compressed into temporary Reishi ingots worn as bands.' },
+      { Stage: 'Partial', Name: 'Partial Resero: Iron Smoke', Action: 'Major Action', DC: 'Reishi Manipulation 15+', CostToTrigger: 50, CostToMaintain: 10, BonusHP: 100, BonusReiryoku: 100, BonusArmour: 25, RequiredSpiritWeaponUses: 100, RequiredSkillPoints: 100, AlignedEssence: 'Steel', EssenceInvested: 10000, Details: 'Smoke compresses into temporary Reishi ingots worn as bands around chest and arms.' },
     ],
     Techniques: [
       { Name: 'Burning Nimbus', MinReiryoku: 50, MaxReiryoku: 150, MinSkill: 'Brawl (10)', DC: '15+', Action: 'Major', Range: 'Melee', Damage: '1d80+80', Details: 'Grapple and strike with a burning cloud of smoke.' },
-      { Name: 'Self-immolating repair', MinReiryoku: 100, MaxReiryoku: 150, MinSkill: 'Reishi Manipulation (10)', DC: '15+', Action: 'Major', Range: 'Personal', Damage: 'Heals', Details: 'Lights his wounds aflame so the edges burn toward each other and close. 100 Reiryoku for the first turn, +50 per extra turn; a chosen injury per use.' },
-      { Name: 'Chaotic Reishi (mutative trait)', MinReiryoku: 5, MaxReiryoku: 5, MinSkill: '', DC: '', Action: 'Free', Range: 'Personal', Damage: 'Not Applicable', Details: 'Converts any Tier 1 essence into any other Tier 1 essence at 5 Reiryoku per mote. Gained from Clerk Phiré\'s test.' },
-      { Name: 'The Crux of Fire', MinReiryoku: 0, MaxReiryoku: 0, MinSkill: '', DC: '', Action: '', Range: '', Damage: '', Details: 'The flame still burns and must be reignited; Vinnie may become a Fire Hollow or the Heart will remember being broken. Convertible to a Hex or Pact once the method is found.' },
+      { Name: 'Self-immolating repair', MinReiryoku: 100, MaxReiryoku: 150, MinSkill: 'Reishi Manipulation (10)', DC: '15+', Action: 'Major', Range: 'Personal', Damage: 'Heals', Details: '100 Reiryoku for the first turn, +50 per extra turn; a chosen injury per use.' },
+      { Name: 'Screw (construct)', MinReiryoku: 25, MaxReiryoku: 25, MinSkill: 'Reishi Manipulation (15)', DC: '20+', Action: 'Major', Range: '10 Tiles', Damage: 'Not Applicable', Details: 'A tiny white helix-moving copy of Hotwire with the instinct to find useful objects and bring them back, converting inert Reishi into Smoke on the way.' },
     ],
     Spells: [],
     Notes: [
       ESTIMATE_NOTE,
-      { Title: 'Fate', Body: 'Died in the Township of Water and returned as a Hollow. Became Hotwire the InduDrake seven weeks after the Doom barrier fell. Did not walk out of Thorne\'s barracks at Shimmering Sands; his Mote of Power remained.' },
-      { Title: 'Essence access', Body: 'As Hotwire he could cultivate and spend only Steel and Industry.' },
+      { Title: 'Fate', Body: 'Appeared seven weeks after the Doom barrier fell, on the road to Shimmering Sands. Fought the Reimalgam and Thorne; did not walk out of the factory barracks. His Mote of Power remained with the party.' },
+      { Title: 'Essence access', Body: 'Could cultivate and spend only Steel and Industry.' },
     ],
     Injuries: [],
     Inventory: [
-      { Name: 'Reishooter', Quantity: 1, Size: 2, Burden: 2 },
       { Name: 'Rush Guard Helmet (century-old pattern, freshly forged)', Quantity: 1, Size: 2, Burden: 2 },
-      { Name: 'Cigarettes', Quantity: 1, Size: 1, Burden: 0 },
     ],
   },
 }
@@ -88,7 +145,7 @@ export const CRASH = {
   Tags: ['Human', 'Deceased'],
   PlayerClass: playerClass('Reiatsu Casting'),
   Essence: {
-    PlayerName: 'God', Alias: 'Crash',
+    PlayerName: 'God',
     Concept: 'Former detective with a proper space gun, a panic problem and an infinite deck of cards. Felt more like a person after shedding his shell.',
     Age: 41, Race: 'Human', SpiritWeaponCategory: 'Reiatsu Casting',
     Attributes: fill(ATTRIBUTE_IDS, { strength: 6, agility: 8, constitution: 9, intelligence: 8, wisdom: 2, presence: 13, manipulation: 6, composure: 8, resolve: 13, reiryokuControl: 12, reishiManipulation: 9, reiatsuRelease: 13 }),
@@ -144,7 +201,7 @@ export const CRASH = {
   },
 }
 
-export const DECEASED = [VINNIE, CRASH]
+export const DECEASED = [VINNIE, HOTWIRE, CRASH]
 
 export function buildRecord(template, { owner, dm, existing, now = new Date().toISOString() }) {
   return {
@@ -171,8 +228,10 @@ async function main() {
     const anchor = await characters.findOne({ CampaignName: CAMPAIGN_NAME, Name: { $not: /\(Deleted\)/ } }, { projection: { DMId: 1 } })
     if (!anchor) throw new Error(`No characters in "${CAMPAIGN_NAME}" to borrow a DM from.`)
     const dm = await db.collection('users').findOne({ Id: anchor.DMId })
+    const ishamoridin = await db.collection('users').findOne({ Username: 'Ishamoridin' }) ?? dm
     const owners = {
-      [VINNIE.Name]: await db.collection('users').findOne({ Username: 'Ishamoridin' }) ?? dm,
+      [VINNIE.Name]: ishamoridin,
+      [HOTWIRE.Name]: ishamoridin,
       [CRASH.Name]: dm, // The player has left; the DM holds the sheet.
     }
     for (const template of DECEASED) {

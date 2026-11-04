@@ -16,11 +16,11 @@ import { eventLogInput } from '../server/event-log.mjs'
 export const JOURNAL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../docs/journal/welcome-to-the-sprawl')
 export const CAMPAIGN_NAME = 'Welcome to the Sprawl'
 
-// Which character record each "Present:" name belongs to. Vinnie became Hotwire through the story and is one
-// character with one sheet (seeded by seed-deceased-characters.mjs); Gym is a different character by the same
-// player. Crash Vandal has his own deceased sheet too.
+// Which character record each "Present:" name belongs to. Vinnie, Hotwire and Gym are three sheets: Vinnie became
+// Hotwire through the story (new body, weapon form and essence access), and Gym is a new character by the same
+// player. The deceased sheets come from seed-deceased-characters.mjs.
 export const CHARACTER_ALIASES = {
-  Vinnie: 'Vinnie <Deceased>', Hotwire: 'Vinnie <Deceased>', Gym: 'Giles Yavin Megatron',
+  Vinnie: 'Vinnie <Deceased>', Hotwire: 'Hotwire <Deceased>', Gym: 'Giles Yavin Megatron',
   Sylas: 'Sylas Enders', Glitz: 'Glitz', 'Crash Vandal': 'Crash Vandal <Deceased>',
 }
 

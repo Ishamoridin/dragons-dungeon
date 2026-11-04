@@ -29,8 +29,9 @@ const context = {
   dm: { Id: 'dm-1', Username: 'Lirril' },
   characters: {
     'Giles Yavin Megatron': { Id: 'c-gym', Name: 'Giles Yavin Megatron', Alias: 'Gym', OwnerId: 'u-isham' },
-    'Vinnie <Deceased>': { Id: 'c-vinnie', Name: 'Vinnie <Deceased>', Alias: 'Hotwire', OwnerId: 'u-isham' },
-    'Crash Vandal <Deceased>': { Id: 'c-crash', Name: 'Crash Vandal <Deceased>', Alias: 'Crash', OwnerId: 'dm-1' },
+    'Vinnie <Deceased>': { Id: 'c-vinnie', Name: 'Vinnie <Deceased>', OwnerId: 'u-isham' },
+    'Hotwire <Deceased>': { Id: 'c-hotwire', Name: 'Hotwire <Deceased>', OwnerId: 'u-isham' },
+    'Crash Vandal <Deceased>': { Id: 'c-crash', Name: 'Crash Vandal <Deceased>', OwnerId: 'dm-1' },
     'Sylas Enders': { Id: 'c-sylas', Name: 'Sylas Enders', OwnerId: 'u-ranger' },
     Glitz: { Id: 'c-glitz', Name: 'Glitz', OwnerId: 'u-kbub' },
   },
@@ -57,6 +58,8 @@ test('builds API-shaped entries with aliases resolved, stable ids and hidden cos
   assert.deepEqual(first.Targets.map((target) => target.CharacterId), ['c-vinnie', 'c-sylas', 'c-crash'], 'Vinnie and Crash have their own deceased sheets')
   assert.equal(first.Targets[0].CharacterName, 'Vinnie (Hollow)', 'the entry names him as he appeared in the scene')
   assert.equal(second.Targets[0].CharacterName, 'Gym')
+  const hotwire = buildEntries(parseSessionFile(sample.replace('Present: Gym', 'Present: Hotwire'), '99-test.md'), context)[1]
+  assert.deepEqual(hotwire.Targets.map((target) => [target.CharacterId, target.CharacterName]), [['c-hotwire', 'Hotwire (InduDrake)']], 'Hotwire is a separate sheet from Vinnie')
   assert.deepEqual(first.AcknowledgedBy, ['dm-1', 'u-isham', 'u-ranger'])
   assert.equal(first.CampaignTime, '3500-07-01T19:00:00.000Z', 'journal times are read as UTC')
   assert.equal(first.CreatedAt, '2026-11-03T12:00:00.000Z')

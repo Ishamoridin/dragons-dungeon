@@ -6,14 +6,15 @@ A narrative record of the campaign, reconstructed from the Roll20 chat archive. 
 
 | Character | Played by | Notes |
 | --- | --- | --- |
-| Vinnie, later Vinnie (Hollow), later Hotwire the InduDrake | Ishamoridin | One character throughout: a Night-aligned smoker and smoke-shaper who died early and returned as a Hollow, then became Hotwire, a Spirit Beast of smoke, for lore reasons. As Hotwire he could use only Steel and Industry essence. Fell at Shimmering Sands. |
-| Gym (Giles Yavin Megatron), Weasel of Ambition | Ishamoridin | A new character by the same player, joining after Vinnie's death. Brawler whose spirit weapon is himself. |
+| Vinnie, later Vinnie (Hollow) | Ishamoridin | Night-aligned smoker and smoke-shaper who died early and returned as a Hollow. Sheet: `Vinnie <Deceased>`. |
+| Hotwire the InduDrake | Ishamoridin | What Vinnie became seven weeks after the Doom barrier fell: a Spirit Beast of smoke and iron, still a Hollow, able to use only Steel and Industry essence. Same person, different body, so a separate sheet: `Hotwire <Deceased>`. Fell at Shimmering Sands. |
+| Gym (Giles Yavin Megatron), Weasel of Ambition | Ishamoridin | A new character by the same player, joining after Hotwire's death. Brawler whose spirit weapon is himself. |
 | Sylas, Goat of Nature | Rangerium (Ranger Drox) | Began under Gloom; a dancer whose rhythm shapes Nature. Later rescinded by Water. |
 | Glitz, Snake of Surprise | kbub | Rock-pose spirit weapon (headbang, arms crossed, guitar solo). Married to Aureon of Fire. |
-| Crash Vandal | God | Card-deck spirit weapon, cigarettes, panic problem. The player has since left the campaign. |
+| Crash Vandal | God | Card-deck spirit weapon, cigarettes, panic problem. The player has since left the campaign. Sheet: `Crash Vandal <Deceased>`. |
 | The Dungeon Master | Lirril | Also voices every NPC: Verbem, Flock, Kaeris, Lazarus, Director, Aureon, and the rest. |
 
-Vinnie and Crash Vandal have their own sheets in the app, named `Vinnie <Deceased>` and `Crash Vandal <Deceased>`, created by `scripts/seed-deceased-characters.mjs` with stats estimated from the roll modifiers in the archive. Vinnie's sheet is owned by Ishamoridin; Crash's by the DM, since his player left.
+Vinnie, Hotwire and Crash Vandal have their own sheets in the app, each named with a `<Deceased>` tag and created by `scripts/seed-deceased-characters.mjs` with stats estimated from the roll modifiers in the archive. Vinnie's and Hotwire's sheets are owned by Ishamoridin; Crash's by the DM, since his player left.
 
 ## Calendar convention
 
@@ -44,7 +45,7 @@ Narrative paragraphs. Rolls are written as outcomes, never dice strings.
 - Out-of-character events: breaks, rules questions, banter. Never part of the story.
 ```
 
-Present names map to characters: Vinnie and Hotwire (the same character) resolve to Vinnie's deceased sheet and keep the name they used in the scene; Gym, Sylas, Glitz and Crash Vandal resolve to their own sheets.
+Present names map to sheets one to one: Vinnie, Hotwire, Gym, Sylas, Glitz and Crash Vandal each resolve to their own record, and the entry keeps the name used in the scene.
 
 ## Re-seeding
 
