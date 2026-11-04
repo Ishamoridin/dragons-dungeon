@@ -16,13 +16,12 @@ import { eventLogInput } from '../server/event-log.mjs'
 export const JOURNAL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../docs/journal/welcome-to-the-sprawl')
 export const CAMPAIGN_NAME = 'Welcome to the Sprawl'
 
-// Which character record each "Present:" name belongs to. Vinnie (who became Hotwire through the story) and Gym
-// are different characters by the same player, Ishamoridin; Vinnie has no record of his own, so his scenes are
-// filed under Gym's record for ownership while keeping Vinnie's or Hotwire's name on the entry. Crash Vandal has
-// no record and is text-only.
+// Which character record each "Present:" name belongs to. Vinnie became Hotwire through the story and is one
+// character with one sheet (seeded by seed-deceased-characters.mjs); Gym is a different character by the same
+// player. Crash Vandal has his own deceased sheet too.
 export const CHARACTER_ALIASES = {
-  Vinnie: 'Giles Yavin Megatron', Hotwire: 'Giles Yavin Megatron', Gym: 'Giles Yavin Megatron',
-  Sylas: 'Sylas Enders', Glitz: 'Glitz',
+  Vinnie: 'Vinnie <Deceased>', Hotwire: 'Vinnie <Deceased>', Gym: 'Giles Yavin Megatron',
+  Sylas: 'Sylas Enders', Glitz: 'Glitz', 'Crash Vandal': 'Crash Vandal <Deceased>',
 }
 
 // How a name in the journal should read on the entry when it is not the record's own name.

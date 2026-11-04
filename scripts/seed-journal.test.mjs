@@ -29,6 +29,8 @@ const context = {
   dm: { Id: 'dm-1', Username: 'Lirril' },
   characters: {
     'Giles Yavin Megatron': { Id: 'c-gym', Name: 'Giles Yavin Megatron', Alias: 'Gym', OwnerId: 'u-isham' },
+    'Vinnie <Deceased>': { Id: 'c-vinnie', Name: 'Vinnie <Deceased>', Alias: 'Hotwire', OwnerId: 'u-isham' },
+    'Crash Vandal <Deceased>': { Id: 'c-crash', Name: 'Crash Vandal <Deceased>', Alias: 'Crash', OwnerId: 'dm-1' },
     'Sylas Enders': { Id: 'c-sylas', Name: 'Sylas Enders', OwnerId: 'u-ranger' },
     Glitz: { Id: 'c-glitz', Name: 'Glitz', OwnerId: 'u-kbub' },
   },
@@ -52,8 +54,8 @@ test('builds API-shaped entries with aliases resolved, stable ids and hidden cos
   const [first, second] = entries
   assert.equal(first.Id, stableId('S99.1'))
   assert.equal(first.Id, buildEntries(parseSessionFile(sample, '99-test.md'), context)[0].Id, 'ids are deterministic')
-  assert.deepEqual(first.Targets.map((target) => target.CharacterId), ['c-gym', 'c-sylas'], 'Vinnie files under Gym\'s record; Crash has no record')
-  assert.equal(first.Targets[0].CharacterName, 'Vinnie (Hollow)', 'but keeps his own name on the entry')
+  assert.deepEqual(first.Targets.map((target) => target.CharacterId), ['c-vinnie', 'c-sylas', 'c-crash'], 'Vinnie and Crash have their own deceased sheets')
+  assert.equal(first.Targets[0].CharacterName, 'Vinnie (Hollow)', 'the entry names him as he appeared in the scene')
   assert.equal(second.Targets[0].CharacterName, 'Gym')
   assert.deepEqual(first.AcknowledgedBy, ['dm-1', 'u-isham', 'u-ranger'])
   assert.equal(first.CampaignTime, '3500-07-01T19:00:00.000Z', 'journal times are read as UTC')
@@ -81,7 +83,7 @@ test('the real journal parses, validates and keeps story order', () => {
     assert.ok(new Date(scenes[index].CampaignTime) >= new Date(scenes[index - 1].CampaignTime), `${scenes[index].Id} is out of order`)
   }
   for (const scene of scenes) {
-    for (const name of scene.Present) assert.ok(name in CHARACTER_ALIASES || name === 'Crash Vandal', `${scene.Id}: unknown name ${name}`)
+    for (const name of scene.Present) assert.ok(name in CHARACTER_ALIASES, `${scene.Id}: unknown name ${name}`)
   }
   const entries = buildEntries(scenes, context)
   for (const entry of entries) {

@@ -10,6 +10,7 @@
     "prepare": "node scripts/render-prepare.mjs",
     "test:server": "node --test server/*.test.mjs scripts/*.test.mjs",
     "seed:journal": "node scripts/seed-journal.mjs",
+    "seed:deceased": "node scripts/seed-deceased-characters.mjs",
     "db:check": "node server/database.mjs",
     "test:db": "node --test server/database.test.mjs",
     "build": "tsc && vite build",

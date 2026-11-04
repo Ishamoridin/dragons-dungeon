@@ -5,7 +5,7 @@
 - Present: Hotwire, Sylas, Glitz, Crash Vandal
 - Location: The road to Shimmering Sands
 
-Seven weeks later the thing that had been Vinnie called itself Hotwire, an InduDrake of smoke and Dragon essence. He turned to Glitz as Crash walked off: "Ay, you know I was just kiddin' about not givin' you a boon. You want it?" The Truthseer noted that Crash's soul had adapted to a flood of Wraith-drain and would now take only a quarter from it. Ashmaw tested the party's release and found Crash sharpest.
+Seven weeks later the man who had been Vinnie called himself Hotwire: still a Hollow, now wearing the shape of an InduDrake, a Spirit Beast of smoke and iron that could draw on nothing but Steel and Industry. He turned to Glitz as Crash walked off: "Ay, you know I was just kiddin' about not givin' you a boon. You want it?" The Truthseer noted that Crash's soul had adapted to a flood of Wraith-drain and would now take only a quarter from it. Ashmaw tested the party's release and found Crash sharpest.
 
 Hotwire's first attempt to make a companion failed; the second produced Screw, a tiny white helix-moving copy of himself, given the instinct to find useful objects and the ability to convert inert reishi into smoke and feed it back to Hotwire within range. As Sylas drew out Nature essence a weight settled on the world like a gravity well, and when he consumed it a ripple of restoration passed through everyone before the weight vanished.
 
